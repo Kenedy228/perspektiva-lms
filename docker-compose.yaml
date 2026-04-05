@@ -1,0 +1,10 @@
+name: lms
+
+services:
+  db:
+    image: postgres:18
+    ports:
+      - 5432:5432
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: 12345
