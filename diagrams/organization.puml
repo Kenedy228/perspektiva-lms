@@ -1,0 +1,11 @@
+@startuml
+class Organization {
+	id : UUID
+	name : String
+	createdAt : Timestamp
+	updatedAt : Timestamp
+}
+
+ReviewerUser -- Organization
+StudentUser -- Organization
+@enduml

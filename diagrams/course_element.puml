@@ -1,0 +1,38 @@
+@startuml
+abstract class CourseElement {
+	id : UUID
+	title : String
+}
+
+abstract class ContentElement {
+	contentRef : ContentReference
+	mimeType : String
+}
+
+class TextElement {}
+class PresentationElement {}
+class VideoElement {}
+class FileElement {}
+
+abstract class InteractiveElement {
+}
+
+class QuizElement {
+	questions : QuestionSequence
+	passingScore : int
+	timeLimit : int
+	attemptLimit : int
+	shuffleQuestions: bool
+	shuffleAnswers: bool
+}
+
+CourseElement <|-- ContentElement
+CourseElement <|-- InteractiveElement
+
+ContentElement <|-- TextElement
+ContentElement <|-- PresentationElement
+ContentElement <|-- VideoElement
+ContentElement <|-- FileElement
+
+InteractiveElement <|-- QuizElement
+@enduml

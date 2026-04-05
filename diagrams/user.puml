@@ -1,0 +1,29 @@
+@startuml
+abstract class User {
+	-id : UUID
+	login : String
+	passwordHash : String
+	firstName : String
+	lastName : String
+	middleName : String
+	isBlocked : boolean = false
+	createdAt : Timestamp
+	updatedAt : Timestamp
+}
+
+class AdminUser {
+	permissions : Permission[]
+}
+
+class ReviewerUser {
+	organization : Organization
+}
+
+class StudentUser {
+	organization : Organization?
+}
+
+User <|-- AdminUser
+User <|-- ReviewerUser
+User <|-- StudentUser
+@enduml

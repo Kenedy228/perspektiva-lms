@@ -1,0 +1,35 @@
+@startuml
+class CourseLineage {
+	id : UUID
+	title : String
+	versions : VersionChain<Course>
+	createdAt : Timestamp
+	updatedAt : Timestamp
+}
+
+class Course {
+	id : UUID
+	lineage : CourseLineage
+	title : String
+	shortName : String
+	description : String
+	category : CourseCategory
+	blocks : BlockSequence
+	questionBanks: QuestionBank[]
+	createdAt : Timestamp
+	updatedAt : Timestamp
+	deletedAt : Timestamp
+}
+
+class CourseBlock {
+	id : UUID
+	title : String
+	elements : CourseElementsSequence
+	createdAt : Timestamp
+	updatedAt : Timestamp
+}
+
+CourseLineage *-- Course
+Course *-- CourseBlock
+CourseBlock -- CourseElement
+@enduml

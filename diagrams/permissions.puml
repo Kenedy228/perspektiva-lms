@@ -1,0 +1,20 @@
+@startuml
+class Permission {
+	resource : PermissionResource
+	action : PermissionAction
+	description : String
+}
+
+enum PermissionResource {
+	USER
+	COURSE
+}
+
+enum PermissionAction {
+	READ
+	WRITE
+}
+
+Permission -- PermissionResource
+Permission -- PermissionAction
+@enduml

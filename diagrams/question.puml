@@ -1,0 +1,34 @@
+@startuml
+class QuestionBank {
+	id : UUID
+	course : Course
+	title : String
+	questions: QuestionSequence
+}
+
+class Question {
+	id: UUID
+	text: String
+	description : String
+	explanation: String
+	points: int
+}
+
+class SelectableAnswerQuestion {
+	options: ChoiceQuestionSequence
+}
+
+class TypedAnswerQuestion {
+	acceptedAnswers: AcceptedAnswerSequence
+	caseSensitive: bool
+}
+
+class OrderedAnswerQuestion {
+	items: OrderedItemSequence	
+}
+
+class MatchingAnswerQuestion {
+	prompts: MatchingPromptSequence
+	options: MatchingOptionSequence
+}
+@enduml
