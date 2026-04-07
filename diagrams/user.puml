@@ -1,29 +1,62 @@
 @startuml
-abstract class User {
-	-id : UUID
+class Account {
+	id: UUID
 	login : String
-	passwordHash : String
-	firstName : String
-	lastName : String
-	middleName : String
+	passwordHash: String
+	roleID : UUID
+	personID: UUID
 	isBlocked : boolean = false
 	createdAt : Timestamp
 	updatedAt : Timestamp
 }
 
-class AdminUser {
-	permissions : Permission[]
+class Role {
+	id : UUID
+	name : String
+	permissions : PermissionSet
+	createdAt: Timestamp
+	updatedAt: Timestamp
 }
 
-class ReviewerUser {
-	organization : Organization
+class PermissionSet {
+	items: HashMap<Resource, Action>
 }
 
-class StudentUser {
-	organization : Organization?
+class Permission {
+	resource : Resource
+	actions : []Action
 }
 
-User <|-- AdminUser
-User <|-- ReviewerUser
-User <|-- StudentUser
+enum Resource {
+	COURSE
+	USER
+}
+
+enum Action {
+	READ
+	WRITE
+}
+
+class Person {
+	id : UUID
+	firstName : String
+	lastName : String
+	middleName : String
+	organizationID : UUID
+	createdAt : Timestamp
+	updatedAt : Timestamp
+}
+
+class Organization {
+	id : UUID
+	name : String
+	createdAt : Timestamp
+	updatedAt : Timestamp
+}
+
+Account -- Role
+Role -- PermissionSet
+PermissionSet -- Permission
+Account -- Person
+Person -- Organization
 @enduml
