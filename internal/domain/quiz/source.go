@@ -1,10 +1,12 @@
 package quiz
 
 import (
-	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/utils"
 	"github.com/google/uuid"
 )
+
+type Strategy interface {
+}
 
 type Source struct {
 	id       uuid.UUID
@@ -30,6 +32,4 @@ func New(bankID uuid.UUID, strategy Strategy) (Source, error) {
 	}, nil
 }
 
-func (s Source) CountQuestions() int
 
-func (s Source) SelectQuestion() []question.Question
