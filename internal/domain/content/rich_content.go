@@ -6,8 +6,7 @@ type RichContent struct {
 }
 
 func New(cType ContentType, value string) (RichContent, error) {
-	validator := validator{}
-	if err := validator.validateContentType(cType); err != nil {
+	if err := validateContentType(cType); err != nil {
 		return RichContent{}, err
 	}
 
