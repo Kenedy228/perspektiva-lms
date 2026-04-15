@@ -22,6 +22,7 @@ var (
 
 type Criteria interface {
 	Type() CriteriaType
+	QuestionCount() int
 }
 
 type RandomCriteria struct {
@@ -40,6 +41,10 @@ func NewRandomCriteria(count int) (RandomCriteria, error) {
 
 func (c RandomCriteria) Count() int {
 	return c.count
+}
+
+func (c RandomCriteria) QuestionCount() int {
+	return c.Count()
 }
 
 func (c RandomCriteria) Type() CriteriaType {
@@ -72,4 +77,8 @@ func (c ManualCriteria) QuestionIDs() []uuid.UUID {
 
 func (c ManualCriteria) Type() CriteriaType {
 	return CriteriaTypeManual
+}
+
+func (c ManualCriteria) QuestionCount() int {
+	return len(c.questionIDs)
 }

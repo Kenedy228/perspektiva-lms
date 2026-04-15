@@ -1,35 +1,35 @@
 package quiz
 
 import (
+	"errors"
+
 	"gitflic.ru/lms/internal/domain/utils"
 	"github.com/google/uuid"
 )
 
-type Strategy interface {
-}
-
 type Source struct {
 	id       uuid.UUID
-	bank     uuid.UUID
-	strategy Strategy
+	bankID   uuid.UUID
+	criteria Criteria
 }
 
-func New(bankID uuid.UUID, strategy Strategy) (Source, error) {
-	if err := validateBank(bankID); err != nil {
-		return Source{}, err
+var (
+	ErrNilBank = errors.New("bank cannot be nil")
+)
+
+func NewSource(bankID uuid.UUID, criteria Criteria) (Source, error) {
+	if bankID == uuid.Nil {
+		return Source{}, ErrNilBank
 	}
 
 	id, err := utils.GenerateID()
-
 	if err != nil {
 		return Source{}, err
 	}
 
 	return Source{
 		id:       id,
-		bank:     bankID,
-		strategy: strategy,
+		bankID:   bankID,
+		criteria: criteria,
 	}, nil
 }
-
-

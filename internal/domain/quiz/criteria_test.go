@@ -43,8 +43,8 @@ func TestRandomCriteria(t *testing.T) {
 					t.Errorf("expected type %v, got %v", CriteriaTypeRandom, c.Type())
 				}
 
-				if c.Count() != tt.count {
-					t.Errorf("expected count %v, got %v", tt.count, c.Count())
+				if c.QuestionCount() != tt.count {
+					t.Errorf("expected count %v, got %v", tt.count, c.QuestionCount())
 				}
 			}
 		})
@@ -87,13 +87,12 @@ func TestManualCriteria(t *testing.T) {
 					t.Errorf("expected type %v, got %v", CriteriaTypeManual, c.Type())
 				}
 
-				ids := c.QuestionIDs()
-
-				if len(ids) != len(tt.ids) {
-					t.Errorf("expected len %d, got %d", len(tt.ids), len(ids))
+				if c.QuestionCount() != len(tt.ids) {
+					t.Errorf("expected len %d, got %d", len(tt.ids), c.QuestionCount())
 				}
 
-				if len(ids) > 0 {
+				if c.QuestionCount() > 0 {
+					ids := c.QuestionIDs()
 					if &tt.ids[0] == &ids[0] {
 						t.Errorf("expected to find copy of slice, got the same slice")
 					}
