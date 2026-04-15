@@ -14,12 +14,17 @@ type Source struct {
 }
 
 var (
-	ErrNilBank = errors.New("bank cannot be nil")
+	ErrNilBank     = errors.New("bank cannot be nil")
+	ErrNilCriteria = errors.New("nil criteria")
 )
 
 func NewSource(bankID uuid.UUID, criteria Criteria) (Source, error) {
 	if bankID == uuid.Nil {
 		return Source{}, ErrNilBank
+	}
+
+	if criteria == nil {
+		return Source{}, ErrNilCriteria
 	}
 
 	id, err := utils.GenerateID()
@@ -32,4 +37,16 @@ func NewSource(bankID uuid.UUID, criteria Criteria) (Source, error) {
 		bankID:   bankID,
 		criteria: criteria,
 	}, nil
+}
+
+func (s Source) ID() uuid.UUID {
+	return s.id
+}
+
+func (s Source) BankID() uuid.UUID {
+	return s.bankID
+}
+
+func (s Source) Criteria() Criteria {
+	return s.criteria
 }
