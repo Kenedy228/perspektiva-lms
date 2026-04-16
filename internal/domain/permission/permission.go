@@ -1,35 +1,42 @@
 package permission
 
+import (
+	"slices"
+
+	"gitflic.ru/lms/internal/domain/permission/action"
+	"gitflic.ru/lms/internal/domain/permission/resource"
+)
+
 type Permission struct {
-	resource Resource
-	actions  []Action
+	resource resource.Resource
+	actions  []action.Action
 }
 
-func New(resource Resource, actions []Action) (*Permission, error) {
-	if !resource.IsValid() {
-		return nil, ErrInvalidResource
+func New(params Params) (Permission, error) {
+	if err := validateResource(params.Resource); err != nil {
+		return Permission{}, err
 	}
 
-	if err := reviewActions(actions); err != nil {
-		return nil, err
+	if err := validateActions(params.Actions); err != nil {
+		return Permission{}, err
 	}
 
-	copyActions := make([]Action, len(actions))
-	copy(copyActions, actions)
+	cActions := slices.Clone(params.Actions)
 
-	return &Permission{
-		resource: resource,
-		actions:  copyActions,
+	return Permission{
+		resource: params.Resource,
+		actions:  cActions,
 	}, nil
 }
 
-func (p *Permission) Resource() Resource {
+func (p Permission) Resource() resource.Resource {
 	return p.resource
 }
 
-func (p *Permission) Actions() []Action {
-	copyActions := make([]Action, len(p.actions))
-	copy(copyActions, p.actions)
+func (p Permission) Actions() []action.Action {
+	return slices.Clone(p.actions)
+}
 
-	return copyActions
+func (p Permission) HasAction(action action.Action) bool {
+	return slices.Contains(p.actions, action)
 }
