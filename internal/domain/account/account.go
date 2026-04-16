@@ -1,10 +1,10 @@
 package account
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
+	"gitflic.ru/lms/internal/domain/role"
+	"gitflic.ru/lms/internal/domain/utils"
 	"github.com/google/uuid"
 )
 
@@ -12,36 +12,40 @@ type Account struct {
 	id           uuid.UUID
 	login        string
 	passwordHash string
-	roleID       uuid.UUID
+	role         role.Role
 	personID     uuid.UUID
 	isBlocked    bool
 	createdAt    time.Time
 	updatedAt    time.Time
 }
 
-func New(login, passwordHash string, roleID, personID uuid.UUID) (*Account, error) {
-	if strings.TrimSpace(login) == "" {
-		return nil, ErrEmptyLogin
+func New(params Params) (*Account, error) {
+	if err := validateLogin(params.Login); err != nil {
+		return nil, err
 	}
 
-	if strings.TrimSpace(passwordHash) == "" {
-		return nil, ErrEmptyPasswordHash
+	if err := validatePasswordHash(params.PasswordHash); err != nil {
+		return nil, err
 	}
 
-	id, err := uuid.NewV7()
+	if err := validatePersonID(params.PersonID); err != nil {
+		return nil, err
+	}
+
+	id, err := utils.GenerateID()
 
 	if err != nil {
-		return nil, fmt.Errorf("generate id error: %w", err)
+		return nil, err
 	}
 
 	now := time.Now()
 
 	return &Account{
 		id:           id,
-		login:        login,
-		passwordHash: passwordHash,
-		roleID:       roleID,
-		personID:     personID,
+		login:        params.Login,
+		passwordHash: params.PasswordHash,
+		role:         params.Role,
+		personID:     params.PersonID,
 		isBlocked:    false,
 		createdAt:    now,
 		updatedAt:    now,
@@ -57,8 +61,8 @@ func (a *Account) Login() string {
 }
 
 func (a *Account) ChangeLogin(login string) error {
-	if strings.TrimSpace(login) == "" {
-		return ErrEmptyLogin
+	if err := validateLogin(login); err != nil {
+		return err
 	}
 
 	a.login = login
@@ -67,8 +71,8 @@ func (a *Account) ChangeLogin(login string) error {
 }
 
 func (a *Account) ChangePassword(hash string) error {
-	if strings.TrimSpace(hash) == "" {
-		return ErrEmptyPasswordHash
+	if err := validatePasswordHash(hash); err != nil {
+		return err
 	}
 
 	a.passwordHash = hash
@@ -80,12 +84,12 @@ func (a *Account) ComparePassword(plain string, comparer PasswordComparer) bool 
 	return comparer.Compare(a.passwordHash, plain)
 }
 
-func (a *Account) RoleID() uuid.UUID {
-	return a.roleID
+func (a *Account) Role() role.Role {
+	return a.role
 }
 
-func (a *Account) ChangeRoleID(id uuid.UUID) {
-	a.roleID = id
+func (a *Account) ChangeRole(role role.Role) {
+	a.role = role
 	a.updatedAt = time.Now()
 }
 
@@ -93,9 +97,13 @@ func (a *Account) PersonID() uuid.UUID {
 	return a.personID
 }
 
-func (a *Account) ChangePersonID(id uuid.UUID) {
+func (a *Account) ChangePersonID(id uuid.UUID) error {
+	if err := validatePersonID(id); err != nil {
+		return err
+	}
 	a.personID = id
 	a.updatedAt = time.Now()
+	return nil
 }
 
 func (a *Account) IsBlocked() bool {
@@ -103,11 +111,17 @@ func (a *Account) IsBlocked() bool {
 }
 
 func (a *Account) Block() {
+	if a.IsBlocked() {
+		return
+	}
 	a.isBlocked = true
 	a.updatedAt = time.Now()
 }
 
 func (a *Account) Unblock() {
+	if !a.IsBlocked() {
+		return
+	}
 	a.isBlocked = false
 	a.updatedAt = time.Now()
 }

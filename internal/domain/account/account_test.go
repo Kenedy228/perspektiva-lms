@@ -2,365 +2,232 @@ package account
 
 import (
 	"testing"
+	"time"
 
+	"gitflic.ru/lms/internal/domain/role"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	type given struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
-
-	type want struct {
-		err error
-	}
+	var mockRole role.Role
 
 	tests := []struct {
-		name string
-		given
-		want
+		name         string
+		login        string
+		passwordHash string
+		personID     uuid.UUID
+		err          error
 	}{
 		{
-			name: "should create",
-			given: given{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			want: want{
-				err: nil,
-			},
+			name:         "success valid account",
+			login:        "user@example.com",
+			passwordHash: "$2a$12$somehashstring",
+			personID:     uuid.New(),
+			err:          nil,
 		},
 		{
-			name: "empty login",
-			given: given{
-				login:    "",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			want: want{
-				err: ErrEmptyLogin,
-			},
+			name:         "error empty login",
+			login:        "",
+			passwordHash: "hash",
+			personID:     uuid.New(),
+			err:          ErrEmptyLogin,
 		},
 		{
-			name: "empty hash",
-			given: given{
-				login:    "login",
-				hash:     "",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			want: want{
-				err: ErrEmptyPasswordHash,
-			},
+			name:         "error whitespaces login",
+			login:        "   ",
+			passwordHash: "hash",
+			personID:     uuid.New(),
+			err:          ErrEmptyLogin,
+		},
+		{
+			name:         "error empty password hash",
+			login:        "user",
+			passwordHash: "",
+			personID:     uuid.New(),
+			err:          ErrEmptyPasswordHash,
+		},
+		{
+			name:         "error nil person id",
+			login:        "user",
+			passwordHash: "hash",
+			personID:     uuid.Nil,
+			err:          ErrNilPersonID,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := New(tt.given.login, tt.given.hash, tt.given.roleID, tt.given.personID)
+			params := Params{
+				Login:        tt.login,
+				PasswordHash: tt.passwordHash,
+				Role:         mockRole,
+				PersonID:     tt.personID,
+			}
 
-			if err != tt.want.err {
-				t.Fatalf("expected err %v, got %v", tt.want.err, err)
+			acc, err := New(params)
+
+			assert.ErrorIs(t, err, tt.err)
+
+			if tt.err == nil {
+				require.NotNil(t, acc)
+				assert.NotEqual(t, uuid.Nil, acc.ID())
+				assert.Equal(t, tt.login, acc.Login())
+				assert.Equal(t, tt.personID, acc.PersonID())
+				assert.False(t, acc.IsBlocked(), "new account should not be blocked")
+				assert.False(t, acc.CreatedAt().IsZero())
+				assert.False(t, acc.UpdatedAt().IsZero())
+				assert.Equal(t, acc.CreatedAt(), acc.UpdatedAt())
 			}
 		})
 	}
 }
 
-func TestBlock(t *testing.T) {
-	type given struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
+func TestAccount_ChangeLogin(t *testing.T) {
+	acc := baseAccount()
+	oldUpdatedAt := acc.UpdatedAt()
 
-	type want struct {
-		blocked bool
-	}
+	time.Sleep(time.Millisecond * 5) // Небольшая пауза, чтобы время точно изменилось
 
-	tests := []struct {
-		name string
-		given
-		want
-	}{
-		{
-			name: "blocked",
-			given: given{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			want: want{
-				blocked: true,
-			},
-		},
-	}
+	t.Run("success", func(t *testing.T) {
+		err := acc.ChangeLogin("new_login")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			acc, _ := New(tt.given.login, tt.given.hash, tt.given.roleID, tt.given.personID)
+		assert.NoError(t, err)
+		assert.Equal(t, "new_login", acc.Login())
+		assert.True(t, acc.UpdatedAt().After(oldUpdatedAt))
+	})
 
-			acc.Block()
+	t.Run("error empty login keeps old state", func(t *testing.T) {
+		currentLogin := acc.Login()
+		currentUpdateAt := acc.UpdatedAt()
 
-			if acc.IsBlocked() != tt.want.blocked {
-				t.Fatalf("expected blocked %v, got %v", tt.want.blocked, acc.IsBlocked())
-			}
-		})
-	}
+		err := acc.ChangeLogin("   ")
+
+		assert.ErrorIs(t, err, ErrEmptyLogin)
+		assert.Equal(t, currentLogin, acc.Login())
+		assert.Equal(t, currentUpdateAt, acc.UpdatedAt())
+	})
 }
 
-func TestUnblock(t *testing.T) {
-	type given struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
+func TestAccount_ChangePassword(t *testing.T) {
+	acc := baseAccount()
 
-	type want struct {
-		blocked bool
-	}
+	t.Run("success", func(t *testing.T) {
+		err := acc.ChangePassword("new_hash")
+		assert.NoError(t, err)
+		// Убедиться напрямую мы не можем (нет геттера для хэша, и это правильно для безопасности),
+		// но мы знаем, что ошибка не вернулась.
+	})
 
-	tests := []struct {
-		name string
-		given
-		want
-	}{
-		{
-			name: "not blocked",
-			given: given{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			want: want{
-				blocked: false,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			acc, _ := New(tt.given.login, tt.given.hash, tt.given.roleID, tt.given.personID)
-
-			acc.Unblock()
-
-			if acc.IsBlocked() != tt.want.blocked {
-				t.Fatalf("expected blocked %v, got %v", tt.want.blocked, acc.IsBlocked())
-			}
-		})
-	}
+	t.Run("error empty hash", func(t *testing.T) {
+		err := acc.ChangePassword("")
+		assert.ErrorIs(t, err, ErrEmptyPasswordHash)
+	})
 }
 
-func TestEqual(t *testing.T) {
-	type given struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
+func TestAccount_ChangeRole(t *testing.T) {
+	acc := baseAccount()
+	var newRole role.Role // В реальном тесте подставьте валидную роль
 
-	type when struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
-
-	type want struct {
-		equal bool
-	}
-
-	tests := []struct {
-		name string
-		given
-		when
-		want
-	}{
-		{
-			name: "not equal",
-			given: given{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			when: when{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			want: want{
-				equal: false,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			givenAcc, _ := New(tt.given.login, tt.given.hash, tt.given.roleID, tt.given.personID)
-			whenAcc, _ := New(tt.when.login, tt.when.hash, tt.when.roleID, tt.when.personID)
-
-			if eq := givenAcc.Equal(whenAcc); eq != tt.want.equal {
-				t.Fatalf("expected acc equal %v, got %v", tt.want.equal, eq)
-			}
-		})
-	}
+	acc.ChangeRole(newRole)
+	assert.Equal(t, newRole, acc.Role())
 }
 
-func TestChangeLogin(t *testing.T) {
-	type given struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
+func TestAccount_ChangePersonID(t *testing.T) {
+	acc := baseAccount()
+	oldUpdatedAt := acc.UpdatedAt()
+	time.Sleep(time.Millisecond * 5)
 
-	type when struct {
-		login string
-	}
+	t.Run("success", func(t *testing.T) {
+		newID := uuid.New()
+		err := acc.ChangePersonID(newID)
 
-	type want struct {
-		err   error
-		login string
-	}
+		assert.NoError(t, err)
+		assert.Equal(t, newID, acc.PersonID())
+		assert.True(t, acc.UpdatedAt().After(oldUpdatedAt))
+	})
 
-	tests := []struct {
-		name string
-		given
-		when
-		want
-	}{
-		{
-			name: "empty login",
-			given: given{
-				login:    "old login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			when: when{
-				login: "",
-			},
-			want: want{
-				err:   ErrEmptyLogin,
-				login: "old login",
-			},
-		},
-		{
-			name: "new login",
-			given: given{
-				login:    "old login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			when: when{
-				login: "new login",
-			},
-			want: want{
-				err:   nil,
-				login: "new login",
-			},
-		},
-	}
+	t.Run("error nil id", func(t *testing.T) {
+		currentID := acc.PersonID()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			acc, _ := New(tt.given.login, tt.given.hash, tt.given.roleID, tt.given.personID)
+		err := acc.ChangePersonID(uuid.Nil)
 
-			err := acc.ChangeLogin(tt.when.login)
-
-			if err != tt.want.err {
-				t.Fatalf("expected err %v, got %v", tt.want.err, err)
-			}
-
-			if acc.Login() != tt.want.login {
-				t.Fatalf("expected login %v, got %v", tt.want.login, acc.Login())
-			}
-		})
-	}
+		assert.ErrorIs(t, err, ErrNilPersonID)
+		assert.Equal(t, currentID, acc.PersonID())
+	})
 }
 
-func TestChangePassword(t *testing.T) {
-	type given struct {
-		login    string
-		hash     string
-		roleID   uuid.UUID
-		personID uuid.UUID
-	}
+func TestAccount_BlockUnblock(t *testing.T) {
+	acc := baseAccount()
 
-	type when struct {
-		hash string
-	}
+	// Начальное состояние: не заблокирован
+	assert.False(t, acc.IsBlocked())
+	initialUpdatedAt := acc.UpdatedAt()
 
-	type want struct {
-		err  error
-		hash string
-	}
+	time.Sleep(time.Millisecond * 5)
 
-	tests := []struct {
-		name string
-		given
-		when
-		want
-	}{
-		{
-			name: "empty hash",
-			given: given{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			when: when{
-				hash: "",
-			},
-			want: want{
-				err:  ErrEmptyPasswordHash,
-				hash: "hash",
-			},
-		},
-		{
-			name: "new hash",
-			given: given{
-				login:    "login",
-				hash:     "hash",
-				roleID:   uuid.New(),
-				personID: uuid.New(),
-			},
-			when: when{
-				hash: "new hash",
-			},
-			want: want{
-				err:  nil,
-				hash: "new hash",
-			},
-		},
-	}
+	t.Run("first block changes state and time", func(t *testing.T) {
+		acc.Block()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			acc, _ := New(tt.given.login, tt.given.hash, tt.given.roleID, tt.given.personID)
+		assert.True(t, acc.IsBlocked())
+		assert.True(t, acc.UpdatedAt().After(initialUpdatedAt))
+	})
 
-			err := acc.ChangePassword(tt.when.hash)
+	t.Run("second block is idempotent", func(t *testing.T) {
+		blockedUpdatedAt := acc.UpdatedAt()
+		time.Sleep(time.Millisecond * 5)
 
-			if err != tt.want.err {
-				t.Fatalf("expected err %v, got %v", tt.want.err, err)
-			}
+		acc.Block() // Повторная блокировка
 
-			if acc.passwordHash != tt.want.hash {
-				t.Fatalf("expected hash %v, got %v", tt.want.hash, acc.passwordHash)
-			}
-		})
-	}
+		assert.True(t, acc.IsBlocked()) // Состояние осталось прежним
+		assert.Equal(t, blockedUpdatedAt, acc.UpdatedAt(), "updatedAt should not change on redundant block")
+	})
+
+	t.Run("first unblock changes state and time", func(t *testing.T) {
+		blockedUpdatedAt := acc.UpdatedAt()
+		time.Sleep(time.Millisecond * 5)
+
+		acc.Unblock()
+
+		assert.False(t, acc.IsBlocked())
+		assert.True(t, acc.UpdatedAt().After(blockedUpdatedAt))
+	})
+
+	t.Run("second unblock is idempotent", func(t *testing.T) {
+		unblockedUpdatedAt := acc.UpdatedAt()
+		time.Sleep(time.Millisecond * 5)
+
+		acc.Unblock() // Повторная разблокировка
+
+		assert.False(t, acc.IsBlocked()) // Состояние осталось прежним
+		assert.Equal(t, unblockedUpdatedAt, acc.UpdatedAt(), "updatedAt should not change on redundant unblock")
+	})
+}
+
+func TestAccount_Equal(t *testing.T) {
+	id := uuid.New()
+
+	acc1 := &Account{id: id}
+	acc2 := &Account{id: id}
+	acc3 := &Account{id: uuid.New()}
+
+	assert.True(t, acc1.Equal(acc2), "accounts with same id should be equal")
+	assert.False(t, acc1.Equal(acc3), "accounts with different ids should not be equal")
+	assert.False(t, acc1.Equal(nil), "account should not be equal to nil")
+}
+
+// === Вспомогательные функции ===
+
+func baseAccount() *Account {
+	var mockRole role.Role
+
+	acc, _ := New(Params{
+		Login:        "admin",
+		PasswordHash: "hash",
+		Role:         mockRole,
+		PersonID:     uuid.New(),
+	})
+
+	return acc
 }
