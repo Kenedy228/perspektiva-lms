@@ -1,9 +1,10 @@
-package quiz
+package source
 
 import (
 	"errors"
 	"testing"
 
+	"gitflic.ru/lms/internal/domain/quiz/criteria/random"
 	"github.com/google/uuid"
 )
 
@@ -27,12 +28,21 @@ func TestNewSource(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := NewRandomCriteria(10)
+			rParams := random.Params{
+				Count: 10,
+			}
+
+			c, err := random.NewRandomCriteria(rParams)
 			if err != nil {
 				t.Errorf("expected no err, got %v", err)
 			}
 
-			s, err := NewSource(tt.bankID, c)
+			sParams := Params{
+				BankID:   tt.bankID,
+				Criteria: c,
+			}
+
+			s, err := NewSource(sParams)
 			if !errors.Is(tt.err, err) {
 				t.Errorf("expected err %v, got %v", tt.err, err)
 			}
@@ -51,7 +61,12 @@ func TestNewSource(t *testing.T) {
 }
 
 func TestNewSourceWithNilCriteria(t *testing.T) {
-	_, err := NewSource(uuid.New(), nil)
+	sParams := Params{
+		BankID:   uuid.New(),
+		Criteria: nil,
+	}
+
+	_, err := NewSource(sParams)
 	if err != ErrNilCriteria {
 		t.Errorf("expected err %v, got %v", ErrNilCriteria, err)
 	}
