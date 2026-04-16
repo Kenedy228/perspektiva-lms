@@ -1,11 +1,12 @@
 package manual
 
 import (
-	"errors"
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/quiz/criteria"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestManualCriteria(t *testing.T) {
@@ -39,24 +40,22 @@ func TestManualCriteria(t *testing.T) {
 
 			c, err := NewManualCriteria(params)
 
-			if !errors.Is(err, tt.err) {
-				t.Errorf("expected err %v, got %v", tt.err, err)
-			}
+			assert.ErrorIs(t, err, tt.err)
 
-			if err == nil {
-				if c.Type() != criteria.CriteriaTypeManual {
-					t.Errorf("expected type %v, got %v", criteria.CriteriaTypeManual, c.Type())
-				}
+			if tt.err == nil {
+				require.NotNil(t, c)
 
-				if c.QuestionCount() != len(tt.ids) {
-					t.Errorf("expected len %d, got %d", len(tt.ids), c.QuestionCount())
-				}
+				assert.Equal(t, criteria.CriteriaTypeManual, c.Type())
+				assert.Equal(t, len(tt.ids), c.QuestionCount())
 
 				if c.QuestionCount() > 0 {
 					ids := c.QuestionIDs()
-					if &tt.ids[0] == &ids[0] {
-						t.Errorf("expected to find copy of slice, got the same slice")
-					}
+					
+					// Проверяем, что содержимое слайсов совпадает
+					assert.Equal(t, tt.ids, ids)
+					
+					// Проверяем, что это копия (адреса первых элементов отличаются)
+					assert.NotSame(t, &tt.ids[0], &ids[0], "expected to find copy of slice, got the same slice")
 				}
 			}
 		})

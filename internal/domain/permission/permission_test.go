@@ -5,6 +5,7 @@ import (
 
 	"gitflic.ru/lms/internal/domain/permission/action"
 	"gitflic.ru/lms/internal/domain/permission/resource"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {
@@ -51,14 +52,12 @@ func TestNew(t *testing.T) {
 			params := createParams(tt.resource, tt.actions)
 			p, err := New(params)
 
-			if err != tt.err {
-				t.Fatalf("expected err %v, got %v", tt.err, err)
-			}
+			assert.ErrorIs(t, err, tt.err)
 
 			if err == nil {
-				if &p.Actions()[0] == &params.Actions[0] {
-					t.Errorf("expected different slices, got the same")
-				}
+				assert.NotSame(t, &p.Actions()[0], &params.Actions[0], "expected different slices, got the same")
+
+				assert.Equal(t, tt.actions, p.Actions())
 			}
 		})
 	}

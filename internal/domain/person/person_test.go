@@ -1,12 +1,13 @@
 package person
 
 import (
-	"errors"
 	"testing"
 	"time"
 
 	"gitflic.ru/lms/internal/domain/person/dob"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -35,7 +36,7 @@ func TestNew(t *testing.T) {
 			expectedErr:    nil,
 		},
 		{
-			name:           "valid: empty middleName (allowed by validateMiddleName)",
+			name:           "valid: empty middleName",
 			firstName:      "Анна",
 			lastName:       "Смирнова",
 			middleName:     "",
@@ -206,43 +207,38 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := createParams(tt.firstName, tt.lastName, tt.middleName, tt.jobTitle, tt.snils, tt.education, tt.organizationID, tt.dateOfBirth)
+			params := createParams(
+				tt.firstName,
+				tt.lastName,
+				tt.middleName,
+				tt.jobTitle,
+				tt.snils,
+				tt.education,
+				tt.organizationID,
+				tt.dateOfBirth,
+			)
 
 			p, err := New(params)
 
-			if !errors.Is(err, tt.expectedErr) {
-				t.Errorf("expected err %v, got %v", tt.expectedErr, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
+
+			if tt.expectedErr != nil {
+				assert.Nil(t, p)
+				return
 			}
 
-			if err == nil {
-				if p.FirstName() != tt.firstName {
-					t.Errorf("expected firstName %v, got %v", tt.firstName, p.FirstName())
-				}
-
-				if p.LastName() != tt.lastName {
-					t.Errorf("expected lastName %v, got %v", tt.lastName, p.LastName())
-				}
-
-				if p.MiddleName() != tt.middleName {
-					t.Errorf("expected middlename %v, got %v", tt.middleName, p.MiddleName())
-				}
-			
-				if p.JobTitle() != tt.jobTitle {
-					t.Errorf("expected job title %v, got %v", tt.jobTitle, p.JobTitle())
-				}
-
-				if p.Snils() != tt.snils {
-					t.Errorf("expected snils %v, got %v", tt.snils, p.Snils())
-				}
-
-				if p.Education() != tt.education {
-					t.Errorf("expected education %v, got %v", tt.education, p.Education())
-				}
-
-				if p.OrganizationID() != tt.organizationID {
-					t.Errorf("expected organizationID %v, got %v", tt.organizationID, p.OrganizationID())
-				}
-			}
+			require.NotNil(t, p)
+			assert.Equal(t, tt.firstName, p.FirstName())
+			assert.Equal(t, tt.lastName, p.LastName())
+			assert.Equal(t, tt.middleName, p.MiddleName())
+			assert.Equal(t, tt.jobTitle, p.JobTitle())
+			assert.Equal(t, tt.snils, p.Snils())
+			assert.Equal(t, tt.education, p.Education())
+			assert.Equal(t, tt.organizationID, p.OrganizationID())
+			assert.NotEqual(t, uuid.Nil, p.ID())
+			assert.False(t, p.CreatedAt().IsZero())
+			assert.False(t, p.UpdatedAt().IsZero())
+			assert.Equal(t, p.CreatedAt(), p.UpdatedAt())
 		})
 	}
 }
@@ -328,26 +324,24 @@ func TestRename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := basePerson()
+			oldUpdatedAt := p.UpdatedAt()
 
 			err := p.Rename(tt.firstName, tt.lastName, tt.middleName)
 
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("expected err %v, got %v", tt.wantErr, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			if tt.wantErr != nil {
+				assert.Equal(t, "Иван", p.FirstName())
+				assert.Equal(t, "Петров", p.LastName())
+				assert.Equal(t, "Сергеевич", p.MiddleName())
+				assert.Equal(t, oldUpdatedAt, p.UpdatedAt())
+				return
 			}
 
-			if err == nil {
-				if p.FirstName() != tt.wantFirstName {
-					t.Fatalf("expected firstName %v, got %v", tt.wantFirstName, p.FirstName())
-				}
-
-				if p.LastName() != tt.wantLastName {
-					t.Fatalf("expected lastName %v, got %v", tt.wantLastName, p.LastName())
-				}
-
-				if p.MiddleName() != tt.wantMiddleName {
-					t.Fatalf("expected middleName %v, got %v", tt.wantMiddleName, p.MiddleName())
-				}
-			}
+			assert.Equal(t, tt.wantFirstName, p.FirstName())
+			assert.Equal(t, tt.wantLastName, p.LastName())
+			assert.Equal(t, tt.wantMiddleName, p.MiddleName())
+			assert.True(t, p.UpdatedAt().After(oldUpdatedAt) || p.UpdatedAt().Equal(oldUpdatedAt))
 		})
 	}
 }
@@ -380,18 +374,21 @@ func TestChangeJobTitle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := basePerson()
+			oldValue := p.JobTitle()
+			oldUpdatedAt := p.UpdatedAt()
 
 			err := p.ChangeJobTitle(tt.jobTitle)
 
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("expected err %v, got %v", tt.wantErr, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			if tt.wantErr != nil {
+				assert.Equal(t, oldValue, p.JobTitle())
+				assert.Equal(t, oldUpdatedAt, p.UpdatedAt())
+				return
 			}
 
-			if err == nil {
-				if p.JobTitle() != tt.want {
-					t.Fatalf("expected jobTitle %v, got %v", tt.want, p.JobTitle())
-				}
-			}
+			assert.Equal(t, tt.want, p.JobTitle())
+			assert.True(t, p.UpdatedAt().After(oldUpdatedAt) || p.UpdatedAt().Equal(oldUpdatedAt))
 		})
 	}
 }
@@ -424,18 +421,21 @@ func TestChangeEducation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := basePerson()
+			oldValue := p.Education()
+			oldUpdatedAt := p.UpdatedAt()
 
 			err := p.ChangeEducation(tt.education)
 
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("expected err %v, got %v", tt.wantErr, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			if tt.wantErr != nil {
+				assert.Equal(t, oldValue, p.Education())
+				assert.Equal(t, oldUpdatedAt, p.UpdatedAt())
+				return
 			}
 
-			if err == nil {
-				if p.Education() != tt.want {
-					t.Fatalf("expected education %v, got %v", tt.want, p.Education())
-				}
-			}
+			assert.Equal(t, tt.want, p.Education())
+			assert.True(t, p.UpdatedAt().After(oldUpdatedAt) || p.UpdatedAt().Equal(oldUpdatedAt))
 		})
 	}
 }
@@ -473,18 +473,21 @@ func TestChangeSnils(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := basePerson()
+			oldValue := p.Snils()
+			oldUpdatedAt := p.UpdatedAt()
 
 			err := p.ChangeSnils(tt.snils)
 
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("expected err %v, got %v", tt.wantErr, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			if tt.wantErr != nil {
+				assert.Equal(t, oldValue, p.Snils())
+				assert.Equal(t, oldUpdatedAt, p.UpdatedAt())
+				return
 			}
 
-			if err == nil {
-				if p.Snils() != tt.want {
-					t.Fatalf("expected snils %v, got %v", tt.want, p.Snils())
-				}
-			}
+			assert.Equal(t, tt.want, p.Snils())
+			assert.True(t, p.UpdatedAt().After(oldUpdatedAt) || p.UpdatedAt().Equal(oldUpdatedAt))
 		})
 	}
 }
@@ -498,38 +501,39 @@ func TestChangeOrganization(t *testing.T) {
 		wantHasOrg   bool
 	}{
 		{
-			name:       "change to another organization",
-			newOrgID:   uuid.MustParse("33333333-3333-3333-3333-333333333333"),
-			wantOrgID:  uuid.MustParse("33333333-3333-3333-3333-333333333333"),
-			wantHasOrg: true,
+			name:         "change to another organization",
+			initialOrgID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
+			newOrgID:     uuid.MustParse("33333333-3333-3333-3333-333333333333"),
+			wantOrgID:    uuid.MustParse("33333333-3333-3333-3333-333333333333"),
+			wantHasOrg:   true,
 		},
 		{
-			name:       "assign organization from nil",
-			newOrgID:   uuid.MustParse("33333333-3333-3333-3333-333333333333"),
-			wantOrgID:  uuid.MustParse("33333333-3333-3333-3333-333333333333"),
-			wantHasOrg: true,
+			name:         "assign organization from nil",
+			initialOrgID: uuid.Nil,
+			newOrgID:     uuid.MustParse("33333333-3333-3333-3333-333333333333"),
+			wantOrgID:    uuid.MustParse("33333333-3333-3333-3333-333333333333"),
+			wantHasOrg:   true,
 		},
 		{
-			name:       "change to nil removes organization",
-			newOrgID:   uuid.Nil,
-			wantOrgID:  uuid.Nil,
-			wantHasOrg: false,
+			name:         "change to nil removes organization",
+			initialOrgID: uuid.MustParse("22222222-2222-2222-2222-222222222222"),
+			newOrgID:     uuid.Nil,
+			wantOrgID:    uuid.Nil,
+			wantHasOrg:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := basePerson()
+			p.organizationID = tt.initialOrgID
+			oldUpdatedAt := p.UpdatedAt()
 
 			p.ChangeOrganization(tt.newOrgID)
 
-			if p.OrganizationID() != tt.wantOrgID {
-				t.Errorf("expected organization id %v, got %v", tt.wantOrgID, p.OrganizationID())
-
-				if p.HasOrganization() != tt.wantHasOrg {
-					t.Errorf("expected hasOrganization %v, got %v", tt.wantHasOrg, p.HasOrganization())
-				}
-			}
+			assert.Equal(t, tt.wantOrgID, p.OrganizationID())
+			assert.Equal(t, tt.wantHasOrg, p.HasOrganization())
+			assert.True(t, p.UpdatedAt().After(oldUpdatedAt) || p.UpdatedAt().Equal(oldUpdatedAt))
 		})
 	}
 }
@@ -558,16 +562,14 @@ func TestRemoveOrganization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := basePerson()
+			p.organizationID = tt.initialOrgID
+			oldUpdatedAt := p.UpdatedAt()
 
 			p.RemoveOrganization()
 
-			if p.OrganizationID() != tt.wantOrgID {
-				t.Errorf("expected organization id %v, got %v", tt.wantOrgID, p.OrganizationID())
-
-				if p.HasOrganization() != tt.wantHasOrg {
-					t.Errorf("expected hasOrganization %v, got %v", tt.wantHasOrg, p.HasOrganization())
-				}
-			}
+			assert.Equal(t, tt.wantOrgID, p.OrganizationID())
+			assert.Equal(t, tt.wantHasOrg, p.HasOrganization())
+			assert.True(t, p.UpdatedAt().After(oldUpdatedAt) || p.UpdatedAt().Equal(oldUpdatedAt))
 		})
 	}
 }
@@ -606,3 +608,4 @@ func basePerson() *Person {
 		updatedAt:      now,
 	}
 }
+

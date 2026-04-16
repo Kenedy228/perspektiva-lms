@@ -35,7 +35,11 @@ func TestValidateInn(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		org, err := New("ООО Ромашка", "7711223344")
+		params := Params{
+			Name: "ООО Ромашка",
+			Inn:  "7711223344",
+		}
+		org, err := New(params)
 		require.NoError(t, err)
 		require.NotNil(t, org)
 
@@ -48,14 +52,22 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("error invalid name", func(t *testing.T) {
-		org, err := New("", "7711223344")
+		params := Params{
+			Name: "",
+			Inn:  "7711223344",
+		}
+		org, err := New(params)
 		assert.ErrorIs(t, err, ErrEmptyName)
 		assert.Nil(t, org)
 	})
 }
 
 func TestOrganization_Mutators(t *testing.T) {
-	org, _ := New("Старое Имя", "7711223344")
+	params := Params{
+		Name: "Старое Имя",
+		Inn:  "7711223344",
+	}
+	org, _ := New(params)
 	originalUpdatedAt := org.UpdatedAt()
 
 	time.Sleep(time.Millisecond * 10)
@@ -75,7 +87,11 @@ func TestOrganization_Mutators(t *testing.T) {
 }
 
 func TestOrganization_Delete(t *testing.T) {
-	org, _ := New("ООО Ромашка", "7711223344")
+	params := Params{
+		Name: "ООО Ромашка",
+		Inn:  "7711223344",
+	}
+	org, _ := New(params)
 
 	t.Run("initial state", func(t *testing.T) {
 		assert.False(t, org.IsDeleted())

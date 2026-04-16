@@ -16,12 +16,12 @@ type Organization struct {
 	deletedAt time.Time
 }
 
-func New(name, inn string) (*Organization, error) {
-	if err := validateName(name); err != nil {
+func New(params Params) (*Organization, error) {
+	if err := validateName(params.Name); err != nil {
 		return nil, err
 	}
 
-	if err := validateInn(inn); err != nil {
+	if err := validateInn(params.Inn); err != nil {
 		return nil, err
 	}
 
@@ -34,8 +34,8 @@ func New(name, inn string) (*Organization, error) {
 	now := time.Now()
 	return &Organization{
 		id:        id,
-		name:      name,
-		inn:       inn,
+		name:      params.Name,
+		inn:       params.Inn,
 		createdAt: now,
 		updatedAt: now,
 	}, nil

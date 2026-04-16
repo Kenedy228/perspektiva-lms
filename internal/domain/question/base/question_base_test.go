@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -98,10 +100,23 @@ func TestNew(t *testing.T) {
 				Image:       tt.when.image,
 			}
 
-			_, err := New(params)
+			baseObj, err := New(params)
 
-			if err != tt.want.err {
-				t.Errorf("expected err %v, got %v", tt.want.err, err)
+			assert.ErrorIs(t, err, tt.want.err)
+
+			// Если ошибки не ожидалось, дополнительно проверяем, что объект создался корректно
+			if tt.want.err == nil {
+				require.NotNil(t, baseObj)
+				assert.NotEqual(t, uuid.Nil, baseObj.ID())
+				assert.Equal(t, tt.when.text, baseObj.Text())
+				assert.Equal(t, tt.when.description, baseObj.Description())
+
+				if tt.when.image != uuid.Nil {
+					assert.True(t, baseObj.HasImage())
+					assert.Equal(t, tt.when.image, baseObj.Image())
+				} else {
+					assert.False(t, baseObj.HasImage())
+				}
 			}
 		})
 	}
@@ -184,21 +199,13 @@ func TestUpdateText(t *testing.T) {
 				Image:       tt.given.image,
 			}
 
-			base, err := New(params)
+			baseObj, err := New(params)
+			require.NoError(t, err, "expected no errors on setup")
 
-			if err != nil {
-				t.Errorf("expected no errors, got %v", err)
-			}
+			err = baseObj.UpdateText(tt.when.text)
 
-			err = base.UpdateText(tt.when.text)
-
-			if err != tt.want.err {
-				t.Errorf("expected err %v, got %v", tt.want.err, err)
-			}
-
-			if base.Text() != tt.want.text {
-				t.Errorf("expected text %v, got %v", tt.want.text, base.Text())
-			}
+			assert.ErrorIs(t, err, tt.want.err)
+			assert.Equal(t, tt.want.text, baseObj.Text())
 		})
 	}
 }
@@ -276,16 +283,16 @@ func TestUpdateImage(t *testing.T) {
 				Image:       tt.given.image,
 			}
 
-			base, err := New(params)
+			baseObj, err := New(params)
+			require.NoError(t, err, "expected no errors on setup")
 
-			if err != nil {
-				t.Errorf("expected no errors, got %v", err)
-			}
+			baseObj.UpdateImage(tt.when.image)
 
-			base.UpdateImage(tt.when.image)
+			assert.Equal(t, tt.want.hasImage, baseObj.HasImage())
 
-			if base.HasImage() != tt.want.hasImage {
-				t.Errorf("expected hasImage %v, got %v", tt.want.hasImage, base.HasImage())
+			// Дополнительно проверяем, что сама картинка установилась (или сбросилась)
+			if tt.want.hasImage {
+				assert.Equal(t, tt.when.image, baseObj.Image())
 			}
 		})
 	}

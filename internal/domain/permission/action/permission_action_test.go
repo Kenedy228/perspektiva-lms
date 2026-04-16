@@ -1,23 +1,24 @@
 package action
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestIsValid(t *testing.T) {
 	t.Run("valid action", func(t *testing.T) {
 		action := Action(2)
 
-		if !action.IsValid() {
-			t.Errorf("expected valid action")
-		}
+		assert.True(t, action.IsValid(), "expected valid action")
 	})
 
 	t.Run("invalid action", func(t *testing.T) {
 		actions := []Action{unknown, count, Action(100), Action(-1)}
 
-		for i := range actions {
-			if actions[i].IsValid() {
-				t.Errorf("expected invalid action")
-			}
+		for _, a := range actions {
+			assert.False(t, a.IsValid(), "expected invalid action for value: %v", a)
 		}
 	})
 }
+

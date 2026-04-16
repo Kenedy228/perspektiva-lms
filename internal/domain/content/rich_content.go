@@ -5,14 +5,14 @@ type RichContent struct {
 	value       string
 }
 
-func New(cType ContentType, value string) (RichContent, error) {
-	if err := validateContentType(cType); err != nil {
+func New(params Params) (RichContent, error) {
+	if err := validateContentType(params.Type); err != nil {
 		return RichContent{}, err
 	}
 
 	return RichContent{
-		contentType: cType,
-		value:       value,
+		contentType: params.Type,
+		value:       params.Value,
 	}, nil
 }
 

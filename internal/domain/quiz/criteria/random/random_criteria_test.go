@@ -1,10 +1,11 @@
 package random
 
 import (
-	"errors"
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/quiz/criteria"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRandomCriteria(t *testing.T) {
@@ -35,20 +36,17 @@ func TestRandomCriteria(t *testing.T) {
 			params := Params{
 				Count: tt.count,
 			}
+			
 			c, err := NewRandomCriteria(params)
 
-			if !errors.Is(err, tt.err) {
-				t.Errorf("expected err %v, got %v", tt.err, err)
-			}
+			assert.ErrorIs(t, err, tt.err)
 
-			if err == nil {
-				if c.Type() != criteria.CriteriaTypeRandom {
-					t.Errorf("expected type %v, got %v", criteria.CriteriaTypeRandom, c.Type())
-				}
-
-				if c.QuestionCount() != tt.count {
-					t.Errorf("expected count %v, got %v", tt.count, c.QuestionCount())
-				}
+			if tt.err == nil {
+				// Убеждаемся, что при отсутствии ошибки объект точно создался
+				require.NotNil(t, c)
+				
+				assert.Equal(t, criteria.CriteriaTypeRandom, c.Type())
+				assert.Equal(t, tt.count, c.QuestionCount())
 			}
 		})
 	}

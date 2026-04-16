@@ -28,7 +28,11 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rc, err := New(tt.cType, tt.value)
+			p := Params{
+				Type:  tt.cType,
+				Value: tt.value,
+			}
+			rc, err := New(p)
 
 			if !errors.Is(err, tt.err) {
 				t.Errorf("expected err %v, got %v", tt.err, err)
@@ -84,12 +88,20 @@ func TestEqual(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f, err := New(tt.firstCType, tt.firstVal)
+			p := Params{
+				Type:  tt.firstCType,
+				Value: tt.firstVal,
+			}
+			f, err := New(p)
 			if err != nil {
 				t.Errorf("expected no err, got %v", err)
 			}
 
-			s, err := New(tt.secondCType, tt.secondVal)
+			p = Params{
+				Type:  tt.secondCType,
+				Value: tt.secondVal,
+			}
+			s, err := New(p)
 			if err != nil {
 				t.Errorf("expected no err, got %v", err)
 			}

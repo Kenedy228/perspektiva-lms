@@ -1,12 +1,12 @@
 package bank
 
 import (
-	"errors"
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -36,26 +36,13 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			b, err := New(tt.title)
 
-			if !errors.Is(tt.err, err) {
-				t.Errorf("expected err %v, got %v", tt.err, err)
-			}
+			assert.ErrorIs(t, err, tt.err)
 
 			if b != nil {
-				if b.ID() == uuid.Nil {
-					t.Errorf("expected id non nil, got nil")
-				}
-
-				if b.Title() != tt.title {
-					t.Errorf("Expected title %v, got %v", tt.title, b.Title())
-				}
-
-				if len(b.Questions()) != 0 {
-					t.Errorf("expected len of questions 0, got %d", len(b.Questions()))
-				}
-
-				if b.CreatedAt() != b.UpdatedAt() {
-					t.Errorf("createdAt should equal to updatedAt")
-				}
+				assert.NotEqual(t, uuid.Nil, b.ID(), "expected id non nil")
+				assert.Equal(t, tt.title, b.Title())
+				assert.Empty(t, b.Questions(), "expected len of questions 0")
+				assert.Equal(t, b.CreatedAt(), b.UpdatedAt(), "createdAt should equal to updatedAt")
 			}
 		})
 	}
@@ -91,30 +78,17 @@ func TestRename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b, err := New(tt.old)
-
-			if err != nil {
-				t.Errorf("expected err nil, got %v", err)
-			}
+			require.NoError(t, err, "expected err nil on setup")
 
 			oldUpdatedAt := b.UpdatedAt()
 			err = b.Rename(tt.new)
 
-			if !errors.Is(err, tt.err) {
-				t.Errorf("expected err %v, got %v", tt.err, err)
-			}
+			assert.ErrorIs(t, err, tt.err)
 
 			if err == nil {
-				if b.Title() == tt.old {
-					t.Errorf("expected rename title, but got title unchanged")
-				}
-
-				if b.Title() != tt.new {
-					t.Errorf("expected rename title, got %v", b.Title())
-				}
-
-				if oldUpdatedAt.After(b.UpdatedAt()) {
-					t.Errorf("expected updatedAt change")
-				}
+				assert.NotEqual(t, tt.old, b.Title(), "expected rename title, but got title unchanged")
+				assert.Equal(t, tt.new, b.Title())
+				assert.False(t, oldUpdatedAt.After(b.UpdatedAt()), "expected updatedAt change")
 			}
 		})
 	}
@@ -143,47 +117,64 @@ func TestAddQuestionsWithNoErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, _ := New(tt.title)
+			b, err := New(tt.title)
+			require.NoError(t, err)
 
 			total, err := b.AddQuestions(tt.questions...)
 
-			if err != nil {
-				t.Errorf("expected no errors, got %v", err)
-			}
-
-			if total != tt.total {
-				t.Errorf("expected total %v, got %v", tt.total, total)
-			}
-
-			if len(b.Questions()) != total {
-				t.Errorf("expected len %d, got %d", total, len(b.Questions()))
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.total, total)
+			assert.Len(t, b.Questions(), total)
 
 			if len(b.Questions()) != 0 {
 				firstQCopy := b.Questions()
 				secondQCopy := b.Questions()
 
-				if &firstQCopy[0] == &secondQCopy[0] {
-					t.Errorf("expected slices with different addresses")
-				}
+				// Проверяем, что слайсы указывают на разные области памяти (инкапсуляция)
+				assert.NotSame(t, &firstQCopy[0], &secondQCopy[0], "expected slices with different addresses")
 			}
 		})
 	}
 }
 
 func TestAddQuestionsWithError(t *testing.T) {
-	bank, _ := New("title")
+	bank, err := New("title")
+	require.NoError(t, err)
+
 	q := uuid.New()
 
 	total, err := bank.AddQuestions(q, q)
 
-	if !errors.Is(err, ErrQuestionDuplicate) {
-		t.Errorf("expected err %v, got %v", ErrQuestionDuplicate, err)
-	}
+	assert.ErrorIs(t, err, ErrQuestionDuplicate)
+	assert.Equal(t, 0, total)
+}
 
-	if total != 0 {
-		t.Errorf("expected total 0, got %v", total)
-	}
+func TestRemoveQuestions(t *testing.T) {
+	bank, err := New("title")
+	require.NoError(t, err)
+
+	toDel := uuid.New()
+
+	_, err = bank.AddQuestions(uuid.New(), uuid.New(), toDel)
+	require.NoError(t, err)
+
+	bank.RemoveQuestions(toDel)
+
+	// assert.NotContains проверяет, что элемента нет в слайсе (заменяет проверку через slices.Index)
+	assert.NotContains(t, bank.Questions(), toDel)
+}
+
+func TestClearQuestions(t *testing.T) {
+	bank, err := New("title")
+	require.NoError(t, err)
+
+	_, err = bank.AddQuestions(uuid.New(), uuid.New(), uuid.New())
+	require.NoError(t, err)
+
+	bank.ClearQuestions()
+
+	// assert.Empty заменяет проверку длины на 0
+	assert.Empty(t, bank.Questions(), "expected to clear questions")
 }
 
 func BenchmarkAddQuestionsWithNoError(b *testing.B) {
@@ -228,28 +219,3 @@ func BenchmarkAddQuestionsWithError(b *testing.B) {
 	}
 }
 
-func TestRemoveQuestions(t *testing.T) {
-	bank, _ := New("title")
-	toDel := uuid.New()
-
-	bank.AddQuestions(uuid.New(), uuid.New(), toDel)
-	bank.RemoveQuestions(toDel)
-
-	questions := bank.Questions()
-
-	if slices.Index(questions, toDel) != -1 {
-		t.Errorf("expected to delete %v, got present", toDel)
-	}
-}
-
-func TestClearQuestions(t *testing.T) {
-	bank, _ := New("title")
-
-	bank.AddQuestions(uuid.New(), uuid.New(), uuid.New())
-
-	bank.ClearQuestions()
-
-	if length := len(bank.Questions()); length != 0 {
-		t.Errorf("expected to clear questions, got len %d", length)
-	}
-}

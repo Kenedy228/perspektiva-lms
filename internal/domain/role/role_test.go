@@ -5,20 +5,15 @@ import (
 
 	"gitflic.ru/lms/internal/domain/permission/action"
 	"gitflic.ru/lms/internal/domain/permission/resource"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAllows(t *testing.T) {
 	organization := NewAsOrganization()
 
-	if organization.Allows(resource.ResourceCourse, action.ActionRead) {
-		t.Errorf("expected not allows")
-	}
+	assert.False(t, organization.Allows(resource.ResourceCourse, action.ActionRead), "expected organization to not allow read on course")
+	assert.False(t, organization.Allows(resource.ResourceCourse, action.ActionWrite), "expected organization to not allow write on course")
 
-	if organization.Allows(resource.ResourceCourse, action.ActionWrite) {
-		t.Errorf("expected not allows")
-	}
-
-	if !organization.Allows(resource.ResourceUser, action.ActionRead) {
-		t.Errorf("expected allows")
-	}
+	assert.True(t, organization.Allows(resource.ResourceUser, action.ActionRead), "expected organization to allow read on user")
 }
+
