@@ -1,35 +1,43 @@
 package organization
 
 import (
-	"fmt"
 	"time"
 
+	"gitflic.ru/lms/internal/domain/utils"
 	"github.com/google/uuid"
 )
 
 type Organization struct {
 	id        uuid.UUID
+	inn       string
 	name      string
 	createdAt time.Time
 	updatedAt time.Time
+	deletedAt time.Time
 }
 
-func New(name string) (*Organization, error) {
-	if name == "" {
-		return nil, ErrEmptyName
+func New(name, inn string) (*Organization, error) {
+	if err := validateName(name); err != nil {
+		return nil, err
 	}
 
-	id, err := uuid.NewV7()
+	if err := validateInn(inn); err != nil {
+		return nil, err
+	}
+
+	id, err := utils.GenerateID()
 
 	if err != nil {
-		return nil, fmt.Errorf("generate organization id: %w", err)
+		return nil, err
 	}
 
+	now := time.Now()
 	return &Organization{
 		id:        id,
 		name:      name,
-		createdAt: time.Now(),
-		updatedAt: time.Now(),
+		inn:       inn,
+		createdAt: now,
+		updatedAt: now,
 	}, nil
 }
 
@@ -41,6 +49,10 @@ func (o *Organization) Name() string {
 	return o.name
 }
 
+func (o *Organization) Inn() string {
+	return o.inn
+}
+
 func (o *Organization) CreatedAt() time.Time {
 	return o.createdAt
 }
@@ -49,14 +61,42 @@ func (o *Organization) UpdatedAt() time.Time {
 	return o.updatedAt
 }
 
-func (o *Organization) Rename(newName string) error {
-	if newName == "" {
-		return ErrEmptyName
+func (o *Organization) DeletedAt() time.Time {
+	return o.deletedAt
+}
+
+func (o *Organization) Rename(name string) error {
+	if err := validateName(name); err != nil {
+		return err
 	}
 
-	o.name = newName
+	o.name = name
 	o.updatedAt = time.Now()
 	return nil
+}
+
+func (o *Organization) ChangeInn(inn string) error {
+	if err := validateInn(inn); err != nil {
+		return err
+	}
+
+	o.inn = inn
+	o.updatedAt = time.Now()
+	return nil
+}
+
+func (o *Organization) IsDeleted() bool {
+	return !o.deletedAt.IsZero()
+}
+
+func (o *Organization) Delete() {
+	if o.IsDeleted() {
+		return
+	}
+
+	now := time.Now()
+	o.deletedAt = now
+	o.updatedAt = now
 }
 
 func (o *Organization) Equal(other *Organization) bool {

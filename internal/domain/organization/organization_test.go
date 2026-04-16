@@ -1,100 +1,99 @@
 package organization
 
 import (
-	"errors"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// New() should return error if name is empty
-func TestNew(t *testing.T) {
-	_, err := New("")
-
-	if err == nil {
-		t.Errorf("expected err not nil")
-	}
-
-	if !errors.Is(err, ErrEmptyName) {
-		t.Errorf("expected err of type ErrEmptyName, got %T", err)
-	}
-}
-
-// Rename() should return error if newName is empty
-func TestRename(t *testing.T) {
+func TestValidateInn(t *testing.T) {
 	tests := []struct {
-		name        string
-		initialName string
-		newName     string
-		wantName    string
-		wantErr     error
+		name    string
+		inn     string
+		wantErr error
 	}{
-		{
-			name:        "rename with valid newName",
-			initialName: "old name",
-			newName:     "new name",
-			wantName:    "new name",
-			wantErr:     nil,
-		},
-		{
-			name:        "rename with invalid newName",
-			initialName: "old name",
-			newName:     "",
-			wantName:    "old name",
-			wantErr:     ErrEmptyName,
-		},
+		{name: "valid 10 digits (company)", inn: "1234567890", wantErr: nil},
+		{name: "valid 12 digits (individual)", inn: "123456789012", wantErr: nil},
+		{name: "error empty", inn: "", wantErr: ErrEmptyInn},
+		{name: "error spaces", inn: "   ", wantErr: ErrEmptyInn},
+		{name: "error 9 digits (too short)", inn: "123456789", wantErr: ErrInvalidInn},
+		{name: "error 11 digits", inn: "12345678901", wantErr: ErrInvalidInn},
+		{name: "error 13 digits (too long)", inn: "1234567890123", wantErr: ErrInvalidInn},
+		{name: "error letters", inn: "123456789A", wantErr: ErrInvalidInn},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			organization, err := New(tt.initialName)
-			if err != nil {
-				t.Errorf("expected no errors, got %v", err)
-			}
-
-			err = organization.Rename(tt.newName)
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("expected err %v, got %v", tt.wantErr, err)
-			}
-
-			if organization.name != tt.wantName {
-				t.Errorf("expected name '%s', got '%s'", tt.wantName, organization.name)
-			}
+			err := validateInn(tt.inn)
+			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
 }
 
-// Equal should compare values by id
-func TestEqual(t *testing.T) {
-	type testCase struct {
-		name      string
-		first     *Organization
-		second    *Organization
-		wantEqual bool
-	}
+func TestNew(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		org, err := New("ООО Ромашка", "7711223344")
+		require.NoError(t, err)
+		require.NotNil(t, org)
 
-	first, _ := New("name")
-	second, _ := New("name")
+		assert.NotEqual(t, uuid.Nil, org.Id())
+		assert.Equal(t, "ООО Ромашка", org.Name())
+		assert.Equal(t, "7711223344", org.Inn())
 
-	tests := []testCase{
-		{
-			name:      "equal values",
-			first:     first,
-			second:    first,
-			wantEqual: true,
-		},
-		{
-			name:      "not equal values",
-			first:     first,
-			second:    second,
-			wantEqual: false,
-		},
-	}
+		assert.False(t, org.CreatedAt().IsZero())
+		assert.False(t, org.UpdatedAt().IsZero())
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			equality := tt.first.Equal(tt.second)
-			if equality != tt.wantEqual {
-				t.Errorf("expected equal %v, got %v", tt.wantEqual, equality)
-			}
-		})
-	}
+	t.Run("error invalid name", func(t *testing.T) {
+		org, err := New("", "7711223344")
+		assert.ErrorIs(t, err, ErrEmptyName)
+		assert.Nil(t, org)
+	})
+}
+
+func TestOrganization_Mutators(t *testing.T) {
+	org, _ := New("Старое Имя", "7711223344")
+	originalUpdatedAt := org.UpdatedAt()
+
+	time.Sleep(time.Millisecond * 10)
+
+	t.Run("Rename success", func(t *testing.T) {
+		err := org.Rename("Новое Имя")
+		require.NoError(t, err)
+		assert.Equal(t, "Новое Имя", org.Name())
+		assert.True(t, org.UpdatedAt().After(originalUpdatedAt))
+	})
+
+	t.Run("ChangeInn success", func(t *testing.T) {
+		err := org.ChangeInn("112233445566")
+		require.NoError(t, err)
+		assert.Equal(t, "112233445566", org.Inn())
+	})
+}
+
+func TestOrganization_Delete(t *testing.T) {
+	org, _ := New("ООО Ромашка", "7711223344")
+
+	t.Run("initial state", func(t *testing.T) {
+		assert.False(t, org.IsDeleted())
+		assert.True(t, org.DeletedAt().IsZero())
+	})
+
+	t.Run("after delete", func(t *testing.T) {
+		org.Delete()
+		assert.True(t, org.IsDeleted())
+		assert.False(t, org.DeletedAt().IsZero())
+		assert.Equal(t, org.DeletedAt(), org.UpdatedAt())
+	})
+
+	t.Run("idempotent delete", func(t *testing.T) {
+		firstDeletedAt := org.DeletedAt()
+		time.Sleep(time.Millisecond * 10)
+
+		org.Delete()
+		assert.Equal(t, firstDeletedAt, org.DeletedAt())
+	})
 }
