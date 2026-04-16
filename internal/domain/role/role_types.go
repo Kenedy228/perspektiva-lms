@@ -1,13 +1,13 @@
-package roletype
+package role
 
 type RoleType int
 
 const (
 	unknown RoleType = iota
-	TypeAdmin
-	TypeCreator
-	TypeStudent
-	TypeOrganization
+	RoleTypeAdmin
+	RoleTypeCreator
+	RoleTypeStudent
+	RoleTypeOrganization
 	count
 )
 

@@ -1,4 +1,4 @@
-package roletype
+package role
 
 import "testing"
 
@@ -7,7 +7,7 @@ func TestIsValid(t *testing.T) {
 		rt := RoleType(2)
 
 		if !rt.IsValid() {
-			t.Errorf("expected valid action")
+			t.Errorf("expected valid role type")
 		}
 	})
 
@@ -16,7 +16,7 @@ func TestIsValid(t *testing.T) {
 
 		for i := range rts {
 			if rts[i].IsValid() {
-				t.Errorf("expected invalid action")
+				t.Errorf("expected invalid role type")
 			}
 		}
 	})
