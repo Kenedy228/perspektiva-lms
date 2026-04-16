@@ -2,9 +2,10 @@ package quiz
 
 import (
 	"errors"
-	"slices"
 	"testing"
 
+	"gitflic.ru/lms/internal/domain/quiz/criteria/random"
+	"gitflic.ru/lms/internal/domain/quiz/source"
 	"github.com/google/uuid"
 )
 
@@ -12,7 +13,7 @@ func TestNewQuiz(t *testing.T) {
 	tests := []struct {
 		name         string
 		title        string
-		sources      []uuid.UUID
+		sourceCount  int
 		attemptLimit int
 		timeLimit    int
 		err          error
@@ -20,7 +21,7 @@ func TestNewQuiz(t *testing.T) {
 		{
 			name:         "empty title",
 			title:        "",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    0,
 			err:          ErrEmptyTitle,
@@ -28,7 +29,7 @@ func TestNewQuiz(t *testing.T) {
 		{
 			name:         "whitespaces title",
 			title:        " ",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    0,
 			err:          ErrEmptyTitle,
@@ -36,23 +37,15 @@ func TestNewQuiz(t *testing.T) {
 		{
 			name:         "empty sources",
 			title:        "title",
-			sources:      nil,
+			sourceCount:  0,
 			attemptLimit: 0,
 			timeLimit:    0,
 			err:          ErrEmptySources,
 		},
 		{
-			name:         "empty sources",
-			title:        "title",
-			sources:      []uuid.UUID{uuid.Nil},
-			attemptLimit: 0,
-			timeLimit:    0,
-			err:          ErrNilSource,
-		},
-		{
 			name:         "negative attempts",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: -1,
 			timeLimit:    0,
 			err:          ErrNegativeAttempts,
@@ -60,7 +53,7 @@ func TestNewQuiz(t *testing.T) {
 		{
 			name:         "negative time",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    -1,
 			err:          ErrNegativeTime,
@@ -68,7 +61,7 @@ func TestNewQuiz(t *testing.T) {
 		{
 			name:         "valid",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    0,
 			err:          nil,
@@ -77,7 +70,12 @@ func TestNewQuiz(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := NewQuiz(tt.title, tt.sources, tt.attemptLimit, tt.timeLimit)
+			params, err := createParams(tt.title, tt.sourceCount, tt.attemptLimit, tt.timeLimit)
+			if err != nil {
+				t.Errorf("expected no err, got %v", err)
+			}
+
+			q, err := NewQuiz(params)
 
 			if !errors.Is(err, tt.err) {
 				t.Errorf("expected err %v, got %v", tt.err, err)
@@ -88,8 +86,8 @@ func TestNewQuiz(t *testing.T) {
 					t.Errorf("expected title %v, got %v", tt.title, q.Title())
 				}
 
-				if len(q.SourceIDs()) != len(tt.sources) {
-					t.Errorf("expected len of sources %v, got %v", len(tt.sources), len(q.SourceIDs()))
+				if len(q.Sources()) != tt.sourceCount {
+					t.Errorf("expected len of sources %v, got %v", tt.sourceCount, len(q.Sources()))
 				}
 
 				if q.AttemptLimit() != tt.attemptLimit {
@@ -100,8 +98,8 @@ func TestNewQuiz(t *testing.T) {
 					t.Errorf("expected time %v, got %v", tt.timeLimit, q.TimeLimit())
 				}
 
-				if len(q.SourceIDs()) != 0 {
-					if &q.SourceIDs()[0] == &tt.sources[0] {
+				if len(q.Sources()) != 0 {
+					if &q.Sources()[0] == &params.Sources[0] {
 						t.Errorf("expected different slices, got equal")
 					}
 				}
@@ -114,7 +112,7 @@ func TestIsFiniteAttempts(t *testing.T) {
 	tests := []struct {
 		name         string
 		title        string
-		sources      []uuid.UUID
+		sourceCount  int
 		attemptLimit int
 		timeLimit    int
 		isFinite     bool
@@ -122,7 +120,7 @@ func TestIsFiniteAttempts(t *testing.T) {
 		{
 			name:         "infinite",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    0,
 			isFinite:     true,
@@ -130,7 +128,7 @@ func TestIsFiniteAttempts(t *testing.T) {
 		{
 			name:         "finite",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 10,
 			timeLimit:    0,
 			isFinite:     false,
@@ -139,8 +137,12 @@ func TestIsFiniteAttempts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := NewQuiz(tt.title, tt.sources, tt.attemptLimit, tt.timeLimit)
+			params, err := createParams(tt.title, tt.sourceCount, tt.attemptLimit, tt.timeLimit)
+			if err != nil {
+				t.Errorf("expected no err, got %v", err)
+			}
 
+			q, err := NewQuiz(params)
 			if err != nil {
 				t.Errorf("expected no err, got %v", err)
 			}
@@ -156,7 +158,7 @@ func TestIsFinitTime(t *testing.T) {
 	tests := []struct {
 		name         string
 		title        string
-		sources      []uuid.UUID
+		sourceCount  int
 		attemptLimit int
 		timeLimit    int
 		isFinite     bool
@@ -164,7 +166,7 @@ func TestIsFinitTime(t *testing.T) {
 		{
 			name:         "infinite",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    0,
 			isFinite:     true,
@@ -172,7 +174,7 @@ func TestIsFinitTime(t *testing.T) {
 		{
 			name:         "finite",
 			title:        "title",
-			sources:      []uuid.UUID{uuid.New()},
+			sourceCount:  1,
 			attemptLimit: 0,
 			timeLimit:    10,
 			isFinite:     false,
@@ -181,7 +183,12 @@ func TestIsFinitTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := NewQuiz(tt.title, tt.sources, tt.attemptLimit, tt.timeLimit)
+			params, err := createParams(tt.title, tt.sourceCount, tt.attemptLimit, tt.timeLimit)
+			if err != nil {
+				t.Errorf("expected no err, got %v", err)
+			}
+
+			q, err := NewQuiz(params)
 
 			if err != nil {
 				t.Errorf("expected no err, got %v", err)
@@ -196,31 +203,47 @@ func TestIsFinitTime(t *testing.T) {
 
 func TestRename(t *testing.T) {
 	tests := []struct {
-		name  string
-		title string
-		err   error
+		name         string
+		title        string
+		sourceCount  int
+		attemptLimit int
+		timeLimit    int
+		err          error
 	}{
 		{
-			name:  "empty title",
-			title: "",
-			err:   ErrEmptyTitle,
+			name:         "empty title",
+			title:        "",
+			sourceCount:  1,
+			attemptLimit: 1,
+			timeLimit:    1,
+			err:          ErrEmptyTitle,
 		},
 		{
-			name:  "whitespaces title",
-			title: " ",
-			err:   ErrEmptyTitle,
+			name:         "whitespaces title",
+			title:        " ",
+			sourceCount:  1,
+			attemptLimit: 1,
+			timeLimit:    1,
+			err:          ErrEmptyTitle,
 		},
 		{
-			name:  "valid title",
-			title: "new title",
-			err:   nil,
+			name:         "valid title",
+			title:        "new title",
+			sourceCount:  1,
+			attemptLimit: 1,
+			timeLimit:    1,
+			err:          nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := NewQuiz("title", []uuid.UUID{uuid.New()}, 0, 0)
+			params, err := createParams("title", tt.sourceCount, tt.attemptLimit, tt.timeLimit)
+			if err != nil {
+				t.Errorf("expected no err, got %v", err)
+			}
 
+			q, err := NewQuiz(params)
 			if err != nil {
 				t.Errorf("expected err nil, got %v", err)
 			}
@@ -241,107 +264,229 @@ func TestRename(t *testing.T) {
 }
 
 func TestAddSource(t *testing.T) {
-	tests := []struct {
-		name   string
-		source uuid.UUID
-		err    error
-	}{
-		{
-			name:   "nil source",
-			source: uuid.Nil,
-			err:    ErrNilSource,
-		},
-		{
-			name:   "valid source",
-			source: uuid.New(),
-			err:    nil,
-		},
-	}
+	t.Run("successive add", func(t *testing.T) {
+		params, err := createParams("title", 10, 1, 1)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q, err := NewQuiz("title", []uuid.UUID{uuid.New()}, 0, 0)
+		q, err := NewQuiz(params)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
 
-			if err != nil {
-				t.Errorf("expected err nil, got %v", err)
-			}
+		toAdd, err := createSource(uuid.Nil)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
 
-			length := len(q.SourceIDs())
-			err = q.AddSource(tt.source)
+		err = q.AddSource(toAdd)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
 
-			if !errors.Is(err, tt.err) {
-				t.Errorf("expected err %v, got %v", tt.err, err)
-			}
+		if len(q.Sources()) != 11 {
+			t.Errorf("expected len of source %d, got %d", 11, q.Sources())
+		}
+	})
 
-			if err == nil {
-				if len(q.SourceIDs()) != length+1 {
-					t.Errorf("expected length %d, got %d", length+1, len(q.SourceIDs()))
-				}
-			}
-		})
-	}
+	t.Run("duplicated source", func(t *testing.T) {
+		params, err := createParams("title", 10, 1, 1)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		q, err := NewQuiz(params)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		toAdd, err := createSource(uuid.Nil)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.AddSource(toAdd)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.AddSource(toAdd)
+		if err != ErrDuplicatedSource {
+			t.Errorf("expected err %v, got %v", ErrDuplicatedSource, err)
+		}
+	})
+
+	t.Run("duplicated duplicated bank", func(t *testing.T) {
+		params, err := createParams("title", 10, 1, 1)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		q, err := NewQuiz(params)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		toAdd, err := createSource(uuid.Nil)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.AddSource(toAdd)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		dupl, err := createSource(toAdd.BankID())
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.AddSource(dupl)
+		if err != ErrDuplicatedBank {
+			t.Errorf("expected err %v, got %v", ErrDuplicatedBank, err)
+		}
+	})
 }
 
 func TestRemove(t *testing.T) {
-	tests := []struct {
-		name     string
-		source   uuid.UUID
-		toRemove bool
-	}{
-		{
-			name:     "nil source",
-			source:   uuid.Nil,
-			toRemove: false,
-		},
-		{
-			name:     "valid source",
-			source:   uuid.New(),
-			toRemove: false,
-		},
-		{
-			name:     "valid source",
-			source:   uuid.New(),
-			toRemove: true,
-		},
+	t.Run("remove unexisting elem", func(t *testing.T) {
+		params, err := createParams("title", 10, 1, 1)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		q, err := NewQuiz(params)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		toRemove, err := createSource(uuid.Nil)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.RemoveSource(toRemove)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+	})
+
+	t.Run("remove existing elem", func(t *testing.T) {
+		params, err := createParams("title", 10, 1, 1)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		q, err := NewQuiz(params)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		toAdd, err := createSource(uuid.Nil)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.AddSource(toAdd)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.RemoveSource(toAdd)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+	})
+
+	t.Run("remove last elem", func(t *testing.T) {
+		params, err := createParams("title", 1, 1, 1)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		q, err := NewQuiz(params)
+		if err != nil {
+			t.Errorf("expected no err, got %v", err)
+		}
+
+		err = q.RemoveSource(params.Sources[0])
+		if err != ErrCannotRemoveLastSource {
+			t.Errorf("expected err %v, got %v", ErrCannotRemoveLastSource, err)
+		}
+	})
+}
+
+func TestDelete(t *testing.T) {
+	params, err := createParams("title", 1, 1, 1)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q, err := NewQuiz("title", []uuid.UUID{uuid.New()}, 0, 0)
+	q, err := NewQuiz(params)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
 
-			if err != nil {
-				t.Errorf("expected err nil, got %v", err)
-			}
+	if q.IsDeleted() != false {
+		t.Errorf("expected quiz be not deleted, got true")
+	}
 
-			if tt.toRemove {
-				err := q.AddSource(tt.source)
+	q.Delete()
 
-				if err != nil {
-					t.Errorf("expected err nil, got %v", err)
-				}
-			}
-
-			err = q.RemoveSource(tt.source)
-			if err != nil {
-				t.Errorf("expected err nil, got %v", err)
-			}
-
-			if slices.Contains(q.SourceIDs(), tt.source) {
-				t.Errorf("expected to remove element")
-			}
-		})
+	if q.IsDeleted() != true {
+		t.Errorf("expected quiz be deleted, got false")
 	}
 }
 
-func TestRemoveWithLastSource(t *testing.T) {
-	toRemove := uuid.New()
-	q, err := NewQuiz("title", []uuid.UUID{toRemove}, 0, 0)
-	if err != nil {
-		t.Errorf("expected err nil, got %v", err)
+func createParams(title string, sourceCount, attemptLimit, timeLimit int) (Params, error) {
+	sources := make([]source.Source, 0, 5)
+	for range sourceCount {
+		s, err := createSource(uuid.Nil)
+		if err != nil {
+			return Params{}, err
+		}
+
+		sources = append(sources, s)
 	}
 
-	err = q.RemoveSource(toRemove)
-	if !errors.Is(err, ErrCannotRemoveLastSource) {
-		t.Errorf("expected err %v, got %v", ErrCannotRemoveLastSource, err)
+	return Params{
+		Title:        title,
+		Sources:      sources,
+		AttemptLimit: attemptLimit,
+		TimeLimit:    timeLimit,
+	}, nil
+}
+
+func createSource(bankID uuid.UUID) (source.Source, error) {
+	cParams := random.Params{
+		Count: 10,
 	}
+
+	r, err := random.NewRandomCriteria(cParams)
+	if err != nil {
+		return source.Source{}, err
+	}
+
+	var params source.Params
+
+	if bankID != uuid.Nil {
+		params = source.Params{
+			BankID:   bankID,
+			Criteria: r,
+		}
+	} else {
+		params = source.Params{
+			BankID:   uuid.New(),
+			Criteria: r,
+		}
+	}
+
+	s, err := source.NewSource(params)
+	if err != nil {
+		return source.Source{}, err
+	}
+
+	return s, nil
 }

@@ -16,6 +16,7 @@ var (
 	ErrNilSource              = errors.New("nil source")
 	ErrCannotRemoveLastSource = errors.New("cannot remove the last source")
 	ErrDuplicatedBank         = errors.New("duplicated bank")
+	ErrDuplicatedSource       = errors.New("duplicated source")
 )
 
 func validateTitle(title string) error {
@@ -31,15 +32,36 @@ func validateSources(sources []source.Source) error {
 		return ErrEmptySources
 	}
 
+	seenSources := make(map[uuid.UUID]struct{}, len(sources))
 	seenBanks := make(map[uuid.UUID]struct{}, len(sources))
 
 	for i := range sources {
-		bank := sources[i].BankID()
+		source := sources[i]
+		if _, ok := seenSources[source.ID()]; ok {
+			return ErrDuplicatedSource
+		}
+
+		bank := source.BankID()
 		if _, ok := seenBanks[bank]; ok {
 			return ErrDuplicatedBank
 		}
 
+		seenSources[source.ID()] = struct{}{}
 		seenBanks[bank] = struct{}{}
+	}
+
+	return nil
+}
+
+func validateSourceToAdd(sources []source.Source, s source.Source) error {
+	for i := range sources {
+		if sources[i] == s {
+			return ErrDuplicatedSource
+		}
+
+		if sources[i].BankID() == s.BankID() {
+			return ErrDuplicatedBank
+		}
 	}
 
 	return nil

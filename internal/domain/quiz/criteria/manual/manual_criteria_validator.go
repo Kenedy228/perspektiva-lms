@@ -10,7 +10,6 @@ import (
 var (
 	ErrEmptyQuestions = errors.New("empty questions")
 	ErrNilQuestion    = errors.New("nil question found")
-	ErrInvalidCount   = errors.New("invalid criteria count")
 )
 
 func validateQuestionIDs(questionIDs []uuid.UUID) error {

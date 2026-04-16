@@ -64,7 +64,7 @@ func (q *Quiz) Title() string {
 	return q.title
 }
 
-func (q *Quiz) Sources() []Source {
+func (q *Quiz) Sources() []source.Source {
 	return slices.Clone(q.sources)
 }
 
@@ -88,6 +88,12 @@ func (q *Quiz) DeletedAt() time.Time {
 	return q.deletedAt
 }
 
+func (q *Quiz) Delete() {
+	now := time.Now()
+	q.deletedAt = now
+	q.updatedAt = now
+}
+
 func (q *Quiz) IsInfiniteAttempts() bool {
 	return q.attemptLimit == 0
 }
@@ -106,23 +112,24 @@ func (q *Quiz) Rename(title string) error {
 	return nil
 }
 
-func (q *Quiz) AddSource(source source.Source) error {
-		
-
-	q.sources = append(q.sources, source)
+func (q *Quiz) AddSource(s source.Source) error {
+	if err := validateSourceToAdd(q.sources, s); err != nil {
+		return err
+	}
+	q.sources = append(q.sources, s)
 	q.updatedAt = time.Now()
 	return nil
 }
 
-func (q *Quiz) RemoveSource(id uuid.UUID) error {
-	idx := slices.Index(q.sourceIDs, id)
+func (q *Quiz) RemoveSource(s source.Source) error {
+	idx := slices.Index(q.sources, s)
 
 	if idx != -1 {
-		if len(q.sourceIDs) == 1 {
+		if len(q.sources) == 1 {
 			return ErrCannotRemoveLastSource
 		}
 
-		q.sourceIDs = slices.Delete(q.sourceIDs, idx, idx+1)
+		q.sources = slices.Delete(q.sources, idx, idx+1)
 		q.updatedAt = time.Now()
 	}
 
@@ -130,5 +137,5 @@ func (q *Quiz) RemoveSource(id uuid.UUID) error {
 }
 
 func (q *Quiz) IsDeleted() bool {
-	return q.deletedAt.IsZero()
+	return !q.deletedAt.IsZero()
 }
