@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"gitflic.ru/lms/internal/domain/quiz/source"
 	"github.com/google/uuid"
 )
 
@@ -17,10 +18,6 @@ var (
 	ErrDuplicatedBank         = errors.New("duplicated bank")
 )
 
-func validateParams() error {
-
-}
-
 func validateTitle(title string) error {
 	if strings.TrimSpace(title) == "" {
 		return ErrEmptyTitle
@@ -29,7 +26,7 @@ func validateTitle(title string) error {
 	return nil
 }
 
-func validateSources(sources []Source) error {
+func validateSources(sources []source.Source) error {
 	if len(sources) == 0 {
 		return ErrEmptySources
 	}

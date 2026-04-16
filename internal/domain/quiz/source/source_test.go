@@ -71,3 +71,58 @@ func TestNewSourceWithNilCriteria(t *testing.T) {
 		t.Errorf("expected err %v, got %v", ErrNilCriteria, err)
 	}
 }
+
+func TestEqualityOfSourcesWhenEqual(t *testing.T) {
+	rParams := random.Params{
+		Count: 10,
+	}
+
+	c, err := random.NewRandomCriteria(rParams)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
+
+	sParams := Params{
+		BankID:   uuid.New(),
+		Criteria: c,
+	}
+
+	s, err := NewSource(sParams)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
+	
+	if s != s {
+		t.Errorf("expected s equal")
+	}
+}
+
+func TestEqualityOfSourcesWhenNotEqual(t *testing.T) {
+	rParams := random.Params{
+		Count: 10,
+	}
+
+	c, err := random.NewRandomCriteria(rParams)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
+
+	sParams := Params{
+		BankID:   uuid.New(),
+		Criteria: c,
+	}
+
+	s, err := NewSource(sParams)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
+
+	s2, err := NewSource(sParams)
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
+	
+	if s == s2 {
+		t.Errorf("expected s not equal s2")
+	}
+}

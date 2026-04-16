@@ -44,3 +44,7 @@ func (s Source) BankID() uuid.UUID {
 func (s Source) Criteria() criteria.Criteria {
 	return s.criteria
 }
+
+func (s Source) Equal(other Source) bool {
+	return s.id == other.ID()
+}

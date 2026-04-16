@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/lms/internal/domain/quiz/source"
 	"gitflic.ru/lms/internal/domain/utils"
 	"github.com/google/uuid"
 )
@@ -12,28 +13,29 @@ import (
 type Quiz struct {
 	id           uuid.UUID
 	title        string
-	sources      []Source
+	sources      []source.Source
 	attemptLimit int
 	timeLimit    int
 	createdAt    time.Time
 	updatedAt    time.Time
+	deletedAt    time.Time
 }
 
-func NewQuiz(title string, sources []Source, attemptLimit, timeLimit int) (*Quiz, error) {
-	if err := validateTitle(title); err != nil {
+func NewQuiz(params Params) (*Quiz, error) {
+	if err := validateTitle(params.Title); err != nil {
 		return nil, err
 	}
-	if err := validateSources(sources); err != nil {
+	if err := validateSources(params.Sources); err != nil {
 		return nil, err
 	}
-	if err := validateAttemptLimit(attemptLimit); err != nil {
+	if err := validateAttemptLimit(params.AttemptLimit); err != nil {
 		return nil, err
 	}
-	if err := validateTimeLimit(timeLimit); err != nil {
+	if err := validateTimeLimit(params.TimeLimit); err != nil {
 		return nil, err
 	}
 
-	sCopy := slices.Clone(sources)
+	sCopy := slices.Clone(params.Sources)
 
 	id, err := utils.GenerateID()
 
@@ -45,10 +47,10 @@ func NewQuiz(title string, sources []Source, attemptLimit, timeLimit int) (*Quiz
 
 	return &Quiz{
 		id:           id,
-		title:        title,
+		title:        params.Title,
 		sources:      sCopy,
-		attemptLimit: attemptLimit,
-		timeLimit:    timeLimit,
+		attemptLimit: params.AttemptLimit,
+		timeLimit:    params.TimeLimit,
 		createdAt:    now,
 		updatedAt:    now,
 	}, nil
@@ -82,6 +84,10 @@ func (q *Quiz) UpdatedAt() time.Time {
 	return q.updatedAt
 }
 
+func (q *Quiz) DeletedAt() time.Time {
+	return q.deletedAt
+}
+
 func (q *Quiz) IsInfiniteAttempts() bool {
 	return q.attemptLimit == 0
 }
@@ -100,11 +106,8 @@ func (q *Quiz) Rename(title string) error {
 	return nil
 }
 
-func (q *Quiz) AddSource(source Source) error {
-
-	if id == uuid.Nil {
-		return ErrNilSource
-	}
+func (q *Quiz) AddSource(source source.Source) error {
+		
 
 	q.sources = append(q.sources, source)
 	q.updatedAt = time.Now()
@@ -124,4 +127,8 @@ func (q *Quiz) RemoveSource(id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (q *Quiz) IsDeleted() bool {
+	return q.deletedAt.IsZero()
 }
