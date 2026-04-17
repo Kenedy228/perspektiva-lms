@@ -8,7 +8,8 @@ import (
 type QDescription string
 
 const (
-	QDescriptionMatching QDescription = QDescription("сопоставьте элементы из левого списка с элементами из правого")
+	QDescriptionMatching   QDescription = QDescription("сопоставьте элементы из левого списка с элементами из правого")
+	QDescriptionSelectable QDescription = QDescription("выберите один или несколько правильных вариантов ответа")
 )
 
 var (

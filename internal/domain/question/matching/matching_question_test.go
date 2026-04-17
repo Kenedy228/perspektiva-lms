@@ -11,7 +11,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	tooManyPairs := make([]PairParam, maxPairs+1)
+	tooManyPairs := make([]PairParams, maxPairs+1)
 	for i := 0; i <= maxPairs; i++ {
 		tooManyPairs = append(tooManyPairs, makePairParam(fmt.Sprintf("prompt-%d", i), fmt.Sprintf("%d", i)))
 	}
@@ -25,7 +25,7 @@ func TestNew(t *testing.T) {
 			name: "success",
 			params: Params{
 				Text: createText("Сопоставьте страны и столицы"),
-				Pairs: []PairParam{
+				Pairs: []PairParams{
 					makePairParam("Россия", "1"),
 					makePairParam("Франция", "2"),
 				},
@@ -36,7 +36,7 @@ func TestNew(t *testing.T) {
 			name: "empty pairs",
 			params: Params{
 				Text:  createText("text"),
-				Pairs: []PairParam{},
+				Pairs: []PairParams{},
 			},
 			err: ErrEmptyPairs,
 		},
@@ -44,7 +44,7 @@ func TestNew(t *testing.T) {
 			name: "not enough pairs",
 			params: Params{
 				Text: createText("text"),
-				Pairs: []PairParam{
+				Pairs: []PairParams{
 					makePairParam("Россия", "1"),
 				},
 			},
@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 			name: "duplicate option",
 			params: Params{
 				Text: createText("text"),
-				Pairs: []PairParam{
+				Pairs: []PairParams{
 					makePairParam("Россия", "1"),
 					makePairParam("Франция", "1"),
 				},
@@ -73,7 +73,7 @@ func TestNew(t *testing.T) {
 			name: "prompt duplicate detected by count",
 			params: Params{
 				Text: createText("text"),
-				Pairs: []PairParam{
+				Pairs: []PairParams{
 					makePairParam("Россия", "1"),
 					makePairParam("Россия", "5"),
 					makePairParam("Франция", "2"),
@@ -85,7 +85,7 @@ func TestNew(t *testing.T) {
 			name: "empty prompt in pair",
 			params: Params{
 				Text: "text",
-				Pairs: []PairParam{
+				Pairs: []PairParams{
 					makePairParam("", "1"),
 					makePairParam("Франция", "2"),
 				},
@@ -122,7 +122,7 @@ func TestNew(t *testing.T) {
 func TestMatchingQuestion_UpdatePairs(t *testing.T) {
 	q, err := New(Params{
 		Text: createText("Сопоставьте страны и столицы"),
-		Pairs: []PairParam{
+		Pairs: []PairParams{
 			makePairParam("Россия", "1"),
 			makePairParam("Франция", "2"),
 		},
@@ -134,7 +134,7 @@ func TestMatchingQuestion_UpdatePairs(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		oldUpdatedAt := mq.UpdatedAt()
-		err := mq.UpdatePairs([]PairParam{
+		err := mq.UpdatePairs([]PairParams{
 			makePairParam("Германия", "1"),
 			makePairParam("Италия", "2"),
 			makePairParam("Испания", "3"),
@@ -148,7 +148,7 @@ func TestMatchingQuestion_UpdatePairs(t *testing.T) {
 	t.Run("error keeps old state", func(t *testing.T) {
 		oldPairs := mq.Pairs()
 
-		err := mq.UpdatePairs([]PairParam{
+		err := mq.UpdatePairs([]PairParams{
 			makePairParam("Только один", "10"),
 		})
 
@@ -160,7 +160,7 @@ func TestMatchingQuestion_UpdatePairs(t *testing.T) {
 func TestHasPair(t *testing.T) {
 	q, err := New(Params{
 		Text: createText("Сопоставьте страны и столицы"),
-		Pairs: []PairParam{
+		Pairs: []PairParams{
 			makePairParam("Россия", "1"),
 			makePairParam("Франция", "2"),
 		},
@@ -194,19 +194,22 @@ func makeOption(s string) option.ContentOption {
 
 func makePair(prompt, s string) Pair {
 	opt := makeOption(s)
-	pair, _ := NewPair(prompt, opt)
+	pair, _ := NewPair(PairParams{
+		Prompt:        prompt,
+		ContentOption: opt,
+	})
 	return pair
 }
 
-func makePairParam(prompt, s string) PairParam {
+func makePairParam(prompt, s string) PairParams {
 	opt := makeOption(s)
-	return PairParam{
+	return PairParams{
 		Prompt:        prompt,
 		ContentOption: opt,
 	}
 }
 
-func convertParamsToPairs(params []PairParam) []Pair {
+func convertParamsToPairs(params []PairParams) []Pair {
 	pairs := make([]Pair, 0, len(params))
 
 	for i := range params {

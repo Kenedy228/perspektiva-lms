@@ -5,122 +5,81 @@ import (
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/question"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// === ТЕСТЫ ДЛЯ OPTION ===
-
-func TestNewOption(t *testing.T) {
-	tests := []struct {
-		name      string
-		text      string
-		isCorrect bool
-		wantErr   error
-	}{
-		{
-			name:      "valid option",
-			text:      "Правильный ответ",
-			isCorrect: true,
-			wantErr:   nil,
-		},
-		{
-			name:      "error empty text",
-			text:      "   ",
-			isCorrect: false,
-			wantErr:   ErrEmptyOptionText,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			opt, err := NewOption(tt.text, tt.isCorrect)
-
-			assert.ErrorIs(t, err, tt.wantErr)
-
-			if tt.wantErr == nil {
-				assert.NotEqual(t, uuid.Nil, opt.ID())
-				assert.Equal(t, tt.text, opt.Text())
-				assert.Equal(t, tt.isCorrect, opt.IsCorrect())
-			}
-		})
-	}
-}
-
-// === ТЕСТЫ ДЛЯ SELECTABLE QUESTION ===
-
 func TestNewSelectableQuestion(t *testing.T) {
-	// Генерируем мапу с 21 элементом для проверки лимита (maxOptions = 20)
-	tooManyOptions := make(map[string]bool, maxOptions+1)
-	for i := 0; i <= maxOptions; i++ {
-		tooManyOptions[fmt.Sprintf("option %d", i)] = true
+	tooManyItems := make([]ItemParams, 0, maxItems+1)
+	for i := 0; i <= maxItems; i++ {
+		p := makeItemParam(fmt.Sprintf("option %d", i), true)
+		tooManyItems = append(tooManyItems, p)
 	}
 
 	tests := []struct {
-		name    string
-		params  *Params
-		wantErr error
+		name   string
+		params Params
+		err    error
 	}{
 		{
 			name: "success valid question",
-			params: &Params{
-				Text: "Выберите цвета светофора",
-				Options: map[string]bool{
-					"Красный": true,
-					"Зеленый": true,
-					"Фиолетовый": false,
+			params: Params{
+				Text: makeText("Выберите цвета светофора"),
+				Items: []ItemParams{
+					makeItemParam("Красный", true),
+					makeItemParam("Зеленый", true),
+					makeItemParam("Фиолетовый", false),
 				},
 			},
-			wantErr: nil,
+			err: nil,
 		},
 		{
-			name: "error empty options",
-			params: &Params{
-				Text: "Вопрос без вариантов",
-				Options: map[string]bool{},
+			name: "error empty items",
+			params: Params{
+				Text:  makeText("Вопрос без вариантов"),
+				Items: []ItemParams{},
 			},
-			wantErr: ErrEmptyOptions,
+			err: ErrEmptyItems,
 		},
 		{
-			name: "error not enough options",
-			params: &Params{
-				Text: "Один вариант ответа",
-				Options: map[string]bool{
-					"Одинокий ответ": true,
+			name: "error not enough items",
+			params: Params{
+				Text: makeText("Один вариант ответа"),
+				Items: []ItemParams{
+					makeItemParam("Одинокий ответ", true),
 				},
 			},
-			wantErr: ErrNotEnoughOptions, // minOptions = 2
+			err: ErrNotEnoughItems,
 		},
 		{
-			name: "error too many options",
-			params: &Params{
-				Text: "Слишком много вариантов",
-				Options: tooManyOptions,
+			name: "error too many items",
+			params: Params{
+				Text:  makeText("Слишком много вариантов"),
+				Items: tooManyItems,
 			},
-			wantErr: ErrTooManyOptions,
+			err: ErrTooManyItems,
 		},
 		{
-			name: "error no correct options",
-			params: &Params{
-				Text: "Где правильный?",
-				Options: map[string]bool{
-					"Неправильно": false,
-					"Тоже нет": false,
+			name: "error no correct items",
+			params: Params{
+				Text: makeText("Где правильный?"),
+				Items: []ItemParams{
+					makeItemParam("Неправильно", false),
+					makeItemParam("Тоже нет", false),
 				},
 			},
-			wantErr: ErrNoCorrectOption,
+			err: ErrNoCorrectItem,
 		},
 		{
-			name: "error empty option text",
-			params: &Params{
-				Text: "Пустой текст в мапе",
-				Options: map[string]bool{
-					"Нормальный": true,
-					"   ": false, // вызовет ошибку валидации в NewOption
+			name: "error duplicated content",
+			params: Params{
+				Text: makeText("Дубликат контента?"),
+				Items: []ItemParams{
+					makeItemParam("Неправильно", false),
+					makeItemParam("Неправильно", true),
 				},
 			},
-			wantErr: ErrEmptyOptionText,
+			err: ErrDuplicateItem,
 		},
 	}
 
@@ -128,26 +87,29 @@ func TestNewSelectableQuestion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			q, err := NewSelectableQuestion(tt.params)
 
-			assert.ErrorIs(t, err, tt.wantErr)
+			assert.ErrorIs(t, err, tt.err)
 
-			if tt.wantErr == nil {
+			if tt.err == nil {
 				require.NotNil(t, q)
 				selectableQ, ok := q.(*SelectableQuestion)
 				require.True(t, ok)
 
 				assert.Equal(t, question.TypeSelectable, selectableQ.Type())
-				assert.Len(t, selectableQ.Options(), len(tt.params.Options))
+				assert.Len(t, selectableQ.Items(), len(tt.params.Items))
+				for i := range selectableQ.Items() {
+					assert.True(t, selectableQ.Items()[i].Equal(mapItems(tt.params.Items)[i]))
+				}
 			}
 		})
 	}
 }
 
-func TestSelectableQuestion_UpdateOptions(t *testing.T) {
-	params := &Params{
-		Text: "Изначальный текст",
-		Options: map[string]bool{
-			"Вариант 1": true,
-			"Вариант 2": false,
+func TestSelectableQuestion_UpdateItems(t *testing.T) {
+	params := Params{
+		Text: makeText("Изначальный текст"),
+		Items: []ItemParams{
+			makeItemParam("Вариант 1", true),
+			makeItemParam("Вариант 2", false),
 		},
 	}
 	q, err := NewSelectableQuestion(params)
@@ -156,57 +118,67 @@ func TestSelectableQuestion_UpdateOptions(t *testing.T) {
 	selectableQ, ok := q.(*SelectableQuestion)
 	require.True(t, ok)
 
-	t.Run("success update options", func(t *testing.T) {
-		newOptions := map[string]bool{
-			"Новый 1": true,
-			"Новый 2": true,
-			"Новый 3": false,
+	t.Run("success update items", func(t *testing.T) {
+		newItems := []ItemParams{
+			makeItemParam("Новый 1", true),
+			makeItemParam("Новый 2", true),
+			makeItemParam("Новый 3", false),
 		}
 
-		err := selectableQ.UpdateOptions(newOptions)
-		
+		err := selectableQ.UpdateItems(newItems)
+
 		assert.NoError(t, err)
-		assert.Len(t, selectableQ.Options(), 3)
+		assert.Len(t, selectableQ.Items(), 3)
+		for i := range selectableQ.Items() {
+			assert.True(t, selectableQ.Items()[i].Equal(mapItems(newItems)[i]))
+		}
 	})
 
 	t.Run("error update leaves state untouched", func(t *testing.T) {
-		oldOptions := selectableQ.Options()
+		oldItems := selectableQ.Items()
 
-		// Пытаемся обновить невалидными данными (отсутствует правильный ответ)
-		invalidOptions := map[string]bool{
-			"Ошибка 1": false,
-			"Ошибка 2": false,
+		invalidItems := []ItemParams{
+			makeItemParam("Ошибка 1", false),
+			makeItemParam("Ошибка 2", false),
 		}
-		err := selectableQ.UpdateOptions(invalidOptions)
+		err := selectableQ.UpdateItems(invalidItems)
 
-		assert.ErrorIs(t, err, ErrNoCorrectOption)
-		
-		// Убеждаемся, что старые варианты не затерлись
-		assert.Equal(t, oldOptions, selectableQ.Options())
+		assert.ErrorIs(t, err, ErrNoCorrectItem)
+
+		for i := range selectableQ.Items() {
+			assert.True(t, selectableQ.Items()[i].Equal(oldItems[i]))
+		}
 	})
 }
 
-func TestSelectableQuestion_Encapsulation(t *testing.T) {
-	params := &Params{
-		Text: "Текст",
-		Options: map[string]bool{
-			"Опция 1": true,
-			"Опция 2": false,
+func TestHasItem(t *testing.T) {
+	params := Params{
+		Text: makeText("Изначальный текст"),
+		Items: []ItemParams{
+			makeItemParam("Вариант 1", true),
+			makeItemParam("Вариант 2", false),
 		},
 	}
-
 	q, err := NewSelectableQuestion(params)
 	require.NoError(t, err)
-	selectableQ := q.(*SelectableQuestion)
 
-	t.Run("getter clone", func(t *testing.T) {
-		gotOptions := selectableQ.Options()
-		require.Len(t, gotOptions, 2)
+	selectableQ, ok := q.(*SelectableQuestion)
+	require.True(t, ok)
 
-		// Пытаемся затереть первый элемент в полученном срезе
-		gotOptions[0] = Option{}
+	t.Run("has item", func(t *testing.T) {
+		item := NewItem(makeItemParam("Вариант 1", false))
 
-		// Проверяем, что внутреннее состояние не изменилось (оригинал не пострадал)
-		assert.NotEqual(t, uuid.Nil, selectableQ.Options()[0].ID())
+		assert.True(t, selectableQ.HasItem(item))
 	})
+
+	t.Run("has not item", func(t *testing.T) {
+		item := NewItem(makeItemParam("Вариант 3", false))
+
+		assert.False(t, selectableQ.HasItem(item))
+	})
+}
+
+func makeText(s string) question.QText {
+	text, _ := question.NewQText(s)
+	return text
 }

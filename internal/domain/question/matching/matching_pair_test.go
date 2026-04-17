@@ -36,7 +36,10 @@ func TestNewPair(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pair, err := NewPair(tt.prompt, baseOption)
+			pair, err := NewPair(PairParams{
+				Prompt:        tt.prompt,
+				ContentOption: baseOption,
+			})
 
 			assert.ErrorIs(t, err, tt.err)
 
@@ -51,7 +54,10 @@ func TestNewPair(t *testing.T) {
 func TestEqualPair(t *testing.T) {
 	baseOption, err := option.NewContentOption(option.ContentTypeText, "text")
 	require.Nil(t, err)
-	basePair, err := NewPair("prompt", baseOption)
+	basePair, err := NewPair(PairParams{
+		Prompt:        "prompt",
+		ContentOption: baseOption,
+	})
 	require.Nil(t, err)
 
 	tests := []struct {
@@ -88,7 +94,10 @@ func TestEqualPair(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opt, err := option.NewContentOption(tt.optionCType, tt.optionVal)
 			require.Nil(t, err)
-			pair, err := NewPair(tt.prompt, opt)
+			pair, err := NewPair(PairParams{
+				Prompt:        tt.prompt,
+				ContentOption: opt,
+			})
 			require.Nil(t, err)
 
 			if tt.equal {

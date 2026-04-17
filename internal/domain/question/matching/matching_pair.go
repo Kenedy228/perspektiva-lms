@@ -9,14 +9,14 @@ type Pair struct {
 	option option.ContentOption
 }
 
-func NewPair(prompt string, option option.ContentOption) (Pair, error) {
-	if err := validatePrompt(prompt); err != nil {
+func NewPair(params PairParams) (Pair, error) {
+	if err := validatePrompt(params.Prompt); err != nil {
 		return Pair{}, err
 	}
 
 	return Pair{
-		prompt: prompt,
-		option: option,
+		prompt: params.Prompt,
+		option: params.ContentOption,
 	}, nil
 }
 

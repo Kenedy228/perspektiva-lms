@@ -10,7 +10,7 @@ import (
 type Params struct {
 	Text  question.QText
 	Image uuid.UUID
-	Pairs []PairParam
+	Pairs []PairParams
 }
 
 func (p Params) baseParams() base.Params {
@@ -21,7 +21,7 @@ func (p Params) baseParams() base.Params {
 	}
 }
 
-type PairParam struct {
+type PairParams struct {
 	Prompt        string
 	ContentOption option.ContentOption
 }

@@ -16,7 +16,7 @@ var (
 	ErrEmptyPrompt     = errors.New("prompt cannot be empty")
 )
 
-func validatePairs(pairs []PairParam) error {
+func validatePairs(pairs []PairParams) error {
 	if len(pairs) == 0 {
 		return ErrEmptyPairs
 	}

@@ -41,7 +41,7 @@ func (q *MatchingQuestion) Pairs() []Pair {
 	return slices.Clone(q.pairs)
 }
 
-func (q *MatchingQuestion) UpdatePairs(rawPairs []PairParam) error {
+func (q *MatchingQuestion) UpdatePairs(rawPairs []PairParams) error {
 	if err := validatePairs(rawPairs); err != nil {
 		return err
 	}

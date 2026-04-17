@@ -2,52 +2,52 @@ package selectable
 
 import (
 	"errors"
-	"strings"
+
+	"gitflic.ru/lms/internal/domain/question/option"
 )
 
 var (
-	ErrEmptyOptionText         = errors.New("empty option text")
-	ErrEmptyOptions            = errors.New("empty options")
-	ErrNotEnoughOptions        = errors.New("not enough options")
-	ErrNoCorrectOption         = errors.New("no correct option provided")
-	ErrNotEnoughCorrectOptions = errors.New("not enough correct options")
-	ErrTooManyOptions          = errors.New("too many options")
+	ErrEmptyItems            = errors.New("empty items")
+	ErrNotEnoughItems        = errors.New("not enough items")
+	ErrTooManyItems          = errors.New("too many items")
+	ErrNoCorrectItem         = errors.New("no correct item provided")
+	ErrNotEnoughCorrectItems = errors.New("not enough correct items provided")
+	ErrDuplicateItem         = errors.New("duplicated item")
 )
 
-func validateOptionText(text string) error {
-	if strings.TrimSpace(text) == "" {
-		return ErrEmptyOptionText
+func validateItems(items []ItemParams) error {
+	if len(items) == 0 {
+		return ErrEmptyItems
 	}
 
-	return nil
-}
-
-func validateOptions(options map[string]bool) error {
-	if len(options) == 0 {
-		return ErrEmptyOptions
+	if len(items) < minItems {
+		return ErrNotEnoughItems
 	}
 
-	if len(options) < minOptions {
-		return ErrNotEnoughOptions
-	}
-
-	if len(options) > maxOptions {
-		return ErrTooManyOptions
+	if len(items) > maxItems {
+		return ErrTooManyItems
 	}
 
 	correctCount := 0
-	for _, isCorrect := range options {
-		if isCorrect {
+	visitedContent := make(map[option.ContentOption]struct{}, len(items))
+	for i := range items {
+		if _, ok := visitedContent[items[i].Content]; ok {
+			return ErrDuplicateItem
+		}
+
+		visitedContent[items[i].Content] = struct{}{}
+
+		if items[i].IsCorrect {
 			correctCount++
 		}
 	}
 
 	if correctCount == 0 {
-		return ErrNoCorrectOption
+		return ErrNoCorrectItem
 	}
 
-	if correctCount < minCorrectOptions {
-		return ErrNotEnoughCorrectOptions
+	if correctCount < minCorrectItems {
+		return ErrNotEnoughCorrectItems
 	}
 
 	return nil

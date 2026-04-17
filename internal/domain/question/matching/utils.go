@@ -1,10 +1,10 @@
 package matching
 
-func mapPairs(rawPairs []PairParam) ([]Pair, error) {
+func mapPairs(rawPairs []PairParams) ([]Pair, error) {
 	pairs := make([]Pair, 0, len(rawPairs))
 
 	for i := range rawPairs {
-		p, err := NewPair(rawPairs[i].Prompt, rawPairs[i].ContentOption)
+		p, err := NewPair(rawPairs[i])
 		if err != nil {
 			return nil, err
 		}
