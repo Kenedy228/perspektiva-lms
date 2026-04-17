@@ -21,7 +21,7 @@ func NewSelectableQuestion(params *Params) (question.Question, error) {
 	base, err := base.New(&base.Params{
 		Text:        params.Text,
 		Description: description,
-		Image:       params.Image,
+		ImageID:       params.Image,
 	})
 
 	if err != nil {

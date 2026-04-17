@@ -11,15 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func contentValue(id int) content.RichContent {
-	p := content.Params{
-		Type: content.ContentTypeImage,
-		Value: fmt.Sprintf("%d", id),
-	}
-	rc, _ := content.New(p)
-	return rc
-}
-
 func TestNewOption(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		c := contentValue(1)
@@ -308,4 +299,16 @@ func assertPairsBoundToOptions(t *testing.T, pairs []Pair, options []Option) {
 		_, ok := optionIDs[pair.Option()]
 		assert.True(t, ok, "pair option id %s not found in options", pair.Option())
 	}
+}
+
+func contentValue(id int) content.RichContent {
+	p := content.Params{
+		Type:  content.ContentTypeImage,
+		Value: fmt.Sprintf("%d", id),
+	}
+	rc, err := content.New(p)
+	if err != nil {
+		panic(err)
+	}
+	return rc
 }

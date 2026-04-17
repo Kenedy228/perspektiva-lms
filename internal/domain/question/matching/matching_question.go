@@ -8,7 +8,6 @@ import (
 	"gitflic.ru/lms/internal/domain/question/base"
 )
 
-const description = "сопоставьте элементы из левого списка с элементами из правого"
 const minPairs = 2
 const maxPairs = 20
 
@@ -18,13 +17,8 @@ type MatchingQuestion struct {
 	options []Option
 }
 
-func New(params *Params) (question.Question, error) {
-	base, err := base.New(&base.Params{
-		Text:        params.Text,
-		Description: description,
-		Image:       params.Image,
-	})
-
+func New(params Params) (question.Question, error) {
+	base, err := base.New(params.baseParams())
 	if err != nil {
 		return nil, err
 	}
@@ -33,23 +27,9 @@ func New(params *Params) (question.Question, error) {
 		return nil, err
 	}
 
-	pairs := make([]Pair, 0, len(params.Pairs))
-	options := make([]Option, 0, len(params.Pairs))
-
-	for prompt, content := range params.Pairs {
-		option, err := NewOption(content)
-		if err != nil {
-			return nil, err
-		}
-
-		options = append(options, option)
-
-		pair, err := NewPair(prompt, option.id)
-		if err != nil {
-			return nil, err
-		}
-
-		pairs = append(pairs, pair)
+	pairs, options, err := mapPairs(params.Pairs)
+	if err != nil {
+		return nil, err
 	}
 
 	return &MatchingQuestion{
@@ -68,23 +48,9 @@ func (q *MatchingQuestion) UpdatePairs(rawPairs map[string]content.RichContent, 
 		return err
 	}
 
-	pairs := make([]Pair, 0, len(rawPairs))
-	options := make([]Option, 0, len(rawPairs))
-
-	for prompt, content := range rawPairs {
-		option, err := NewOption(content)
-		if err != nil {
-			return err
-		}
-
-		options = append(options, option)
-
-		pair, err := NewPair(prompt, option.id)
-		if err != nil {
-			return err
-		}
-
-		pairs = append(pairs, pair)
+	pairs, options, err := mapPairs(rawPairs)
+	if err != nil {
+		return err
 	}
 
 	q.pairs = pairs

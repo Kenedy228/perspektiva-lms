@@ -7,10 +7,9 @@ var (
 )
 
 func validateContentType(cType ContentType) error {
-	switch cType {
-	case ContentTypeText, ContentTypeImage:
-		return nil
-	default:
+	if !cType.IsValid() {
 		return ErrInvalidContentType
 	}
+
+	return nil
 }

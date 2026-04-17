@@ -1,6 +1,7 @@
 package matching
 
 import (
+	"gitflic.ru/lms/internal/domain/question/option"
 	"gitflic.ru/lms/internal/domain/utils"
 	"github.com/google/uuid"
 )
@@ -8,7 +9,7 @@ import (
 type Pair struct {
 	id     uuid.UUID
 	prompt string
-	option uuid.UUID
+	option option.ContentOption
 }
 
 func NewPair(prompt string, optionID uuid.UUID) (Pair, error) {

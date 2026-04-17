@@ -1,8 +1,8 @@
 package content
 
 type RichContent struct {
-	contentType ContentType
-	value       string
+	cType ContentType
+	value string
 }
 
 func New(params Params) (RichContent, error) {
@@ -11,13 +11,13 @@ func New(params Params) (RichContent, error) {
 	}
 
 	return RichContent{
-		contentType: params.Type,
-		value:       params.Value,
+		cType: params.Type,
+		value: params.Value,
 	}, nil
 }
 
 func (c RichContent) ContentType() ContentType {
-	return c.contentType
+	return c.cType
 }
 
 func (c RichContent) Value() string {
@@ -25,5 +25,5 @@ func (c RichContent) Value() string {
 }
 
 func (c RichContent) Equal(other RichContent) bool {
-	return c.contentType == other.contentType && c.value == other.value
+	return c.cType == other.cType && c.value == other.value
 }

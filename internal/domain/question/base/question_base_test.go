@@ -3,297 +3,201 @@ package base
 import (
 	"testing"
 
+	"gitflic.ru/lms/internal/domain/question"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	type when struct {
-		text        string
-		description string
-		image       uuid.UUID
-	}
-
-	type want struct {
-		err error
-	}
-
 	tests := []struct {
-		name string
-		when
-		want
+		name        string
+		text        question.QText
+		description question.QDescription
+		imageID     uuid.UUID
 	}{
 		{
-			name: "empty text",
-			when: when{
-				text:        "",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			want: want{
-				err: ErrEmptyText,
-			},
+			name:        "nil image",
+			text:        createText("text"),
+			description: createDescription("description"),
+			imageID:     uuid.Nil,
 		},
 		{
-			name: "whitespaces text",
-			when: when{
-				text:        "    ",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			want: want{
-				err: ErrEmptyText,
-			},
-		},
-		{
-			name: "empty description",
-			when: when{
-				text:        "text",
-				description: "",
-				image:       uuid.Nil,
-			},
-			want: want{
-				err: ErrEmptyDescription,
-			},
-		},
-		{
-			name: "whitespaces description",
-			when: when{
-				text:        "text",
-				description: "    ",
-				image:       uuid.Nil,
-			},
-			want: want{
-				err: ErrEmptyDescription,
-			},
-		},
-		{
-			name: "nil image",
-			when: when{
-				text:        "text",
-				description: "description",
-				image:       uuid.Nil,
-			},
-			want: want{
-				err: nil,
-			},
-		},
-		{
-			name: "non-nil image",
-			when: when{
-				text:        "text",
-				description: "description",
-				image:       uuid.New(),
-			},
-			want: want{
-				err: nil,
-			},
+			name:        "non-nil image",
+			text:        createText("text"),
+			description: createDescription("description"),
+			imageID:     uuid.New(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := &Params{
-				Text:        tt.when.text,
-				Description: tt.when.description,
-				Image:       tt.when.image,
-			}
-
+			params := createParams(tt.text, tt.description, tt.imageID)
 			baseObj, err := New(params)
 
-			assert.ErrorIs(t, err, tt.want.err)
+			require.Nil(t, err)
+			assert.NotEqual(t, uuid.Nil, baseObj.ID())
+			assert.Equal(t, tt.text, baseObj.Text())
+			assert.Equal(t, tt.description, baseObj.Description())
 
-			// Если ошибки не ожидалось, дополнительно проверяем, что объект создался корректно
-			if tt.want.err == nil {
-				require.NotNil(t, baseObj)
-				assert.NotEqual(t, uuid.Nil, baseObj.ID())
-				assert.Equal(t, tt.when.text, baseObj.Text())
-				assert.Equal(t, tt.when.description, baseObj.Description())
-
-				if tt.when.image != uuid.Nil {
-					assert.True(t, baseObj.HasImage())
-					assert.Equal(t, tt.when.image, baseObj.Image())
-				} else {
-					assert.False(t, baseObj.HasImage())
-				}
+			if tt.imageID != uuid.Nil {
+				assert.True(t, baseObj.HasImage())
+				assert.Equal(t, tt.imageID, baseObj.ImageID())
+			} else {
+				assert.False(t, baseObj.HasImage())
+				assert.Equal(t, tt.imageID, uuid.Nil)
 			}
 		})
 	}
 }
 
 func TestUpdateText(t *testing.T) {
-	type given struct {
-		text        string
-		description string
-		image       uuid.UUID
-	}
-
-	type when struct {
-		text string
-	}
-
-	type want struct {
-		text string
-		err  error
-	}
-
 	tests := []struct {
-		name string
-		given
-		when
-		want
+		name         string
+		old          question.QText
+		new          question.QText
+		shouldUpdate bool
 	}{
 		{
-			name: "empty text",
-			given: given{
-				text:        "old text",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			when: when{
-				text: "",
-			},
-			want: want{
-				text: "old text",
-				err:  ErrEmptyText,
-			},
+			name:         "different text",
+			old:          createText("old"),
+			new:          createText("new"),
+			shouldUpdate: true,
 		},
 		{
-			name: "whitespaces text",
-			given: given{
-				text:        "old text",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			when: when{
-				text: "    ",
-			},
-			want: want{
-				text: "old text",
-				err:  ErrEmptyText,
-			},
-		},
-		{
-			name: "valid text",
-			given: given{
-				text:        "old text",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			when: when{
-				text: "new text",
-			},
-			want: want{
-				text: "new text",
-				err:  nil,
-			},
+			name:         "same text",
+			old:          createText("old"),
+			new:          createText("old"),
+			shouldUpdate: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := &Params{
-				Text:        tt.given.text,
-				Description: tt.given.description,
-				Image:       tt.given.image,
-			}
+			params := createParams(tt.old, createDescription("description"), uuid.Nil)
 
 			baseObj, err := New(params)
 			require.NoError(t, err, "expected no errors on setup")
 
-			err = baseObj.UpdateText(tt.when.text)
+			oldUpdatedAt := baseObj.UpdatedAt()
+			baseObj.UpdateText(tt.new)
 
-			assert.ErrorIs(t, err, tt.want.err)
-			assert.Equal(t, tt.want.text, baseObj.Text())
+			assert.Equal(t, tt.new, baseObj.Text())
+
+			if tt.shouldUpdate {
+				assert.True(t, oldUpdatedAt.Before(baseObj.UpdatedAt()))
+			} else {
+				assert.Equal(t, oldUpdatedAt, baseObj.UpdatedAt())
+			}
 		})
 	}
 }
 
 func TestUpdateImage(t *testing.T) {
-	type given struct {
-		text        string
-		description string
-		image       uuid.UUID
-	}
-
-	type when struct {
-		image uuid.UUID
-	}
-
-	type want struct {
-		hasImage bool
-	}
-
 	tests := []struct {
-		name string
-		given
-		when
-		want
+		name         string
+		old          uuid.UUID
+		new          uuid.UUID
+		hasImage     bool
+		shouldUpdate bool
 	}{
 		{
-			name: "nil image",
-			given: given{
-				text:        "old text",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			when: when{
-				image: uuid.Nil,
-			},
-			want: want{
-				hasImage: false,
-			},
+			name:         "same image nil",
+			old:          uuid.Nil,
+			new:          uuid.Nil,
+			hasImage:     false,
+			shouldUpdate: false,
 		},
 		{
-			name: "non-nil image",
-			given: given{
-				text:        "old text",
-				description: "desc",
-				image:       uuid.Nil,
-			},
-			when: when{
-				image: uuid.New(),
-			},
-			want: want{
-				hasImage: true,
-			},
-		},
-		{
-			name: "non-nil image with existing image",
-			given: given{
-				text:        "old text",
-				description: "desc",
-				image:       uuid.New(),
-			},
-			when: when{
-				image: uuid.New(),
-			},
-			want: want{
-				hasImage: true,
-			},
+			name:         "different image not nil",
+			old:          uuid.Nil,
+			new:          uuid.New(),
+			hasImage:     true,
+			shouldUpdate: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := &Params{
-				Text:        tt.given.text,
-				Description: tt.given.description,
-				Image:       tt.given.image,
-			}
+			params := createParams(createText("text"), createDescription("description"), tt.old)
 
 			baseObj, err := New(params)
 			require.NoError(t, err, "expected no errors on setup")
 
-			baseObj.UpdateImage(tt.when.image)
+			oldUpdatedAt := baseObj.UpdatedAt()
+			baseObj.UpdateImage(tt.new)
 
-			assert.Equal(t, tt.want.hasImage, baseObj.HasImage())
+			assert.Equal(t, tt.new, baseObj.ImageID())
 
-			// Дополнительно проверяем, что сама картинка установилась (или сбросилась)
-			if tt.want.hasImage {
-				assert.Equal(t, tt.when.image, baseObj.Image())
+			if tt.shouldUpdate {
+				assert.True(t, oldUpdatedAt.Before(baseObj.UpdatedAt()))
+			} else {
+				assert.Equal(t, oldUpdatedAt, baseObj.UpdatedAt())
 			}
 		})
 	}
+}
+
+func TestRemoveImage(t *testing.T) {
+	tests := []struct {
+		name         string
+		imageID      uuid.UUID
+		shouldRemove bool
+	}{
+		{
+			name:         "image is set",
+			imageID:      uuid.New(),
+			shouldRemove: true,
+		},
+		{
+			name:         "image is not set",
+			imageID:      uuid.Nil,
+			shouldRemove: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := createParams(createText("text"), createDescription("description"), tt.imageID)
+
+			baseObj, err := New(params)
+			require.NoError(t, err, "expected no errors on setup")
+
+			oldUpdatedAt := baseObj.UpdatedAt()
+			baseObj.RemoveImage()
+
+			if tt.shouldRemove {
+				assert.Equal(t, uuid.Nil, baseObj.ImageID())
+				assert.True(t, oldUpdatedAt.Before(baseObj.UpdatedAt()))
+			} else {
+				assert.Equal(t, oldUpdatedAt, baseObj.UpdatedAt())
+			}
+		})
+	}
+}
+
+func createParams(text question.QText, desc question.QDescription, imageID uuid.UUID) Params {
+	return Params{
+		Text:        text,
+		Description: desc,
+		ImageID:     imageID,
+	}
+}
+
+func createText(s string) question.QText {
+	text, err := question.NewQText(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return text
+}
+
+func createDescription(s string) question.QDescription {
+	desc, err := question.NewQDescription(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return desc
 }

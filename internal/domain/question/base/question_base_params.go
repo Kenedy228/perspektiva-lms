@@ -1,9 +1,12 @@
 package base
 
-import "github.com/google/uuid"
+import (
+	"gitflic.ru/lms/internal/domain/question"
+	"github.com/google/uuid"
+)
 
 type Params struct {
-	Text        string
-	Description string
-	Image       uuid.UUID
+	Text        question.QText
+	Description question.QDescription
+	ImageID     uuid.UUID
 }
