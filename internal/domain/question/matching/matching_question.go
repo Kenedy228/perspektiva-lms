@@ -1,9 +1,9 @@
 package matching
 
 import (
+	"math/rand/v2"
 	"slices"
 
-	"gitflic.ru/lms/internal/domain/content"
 	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/question/base"
 )
@@ -13,8 +13,7 @@ const maxPairs = 20
 
 type MatchingQuestion struct {
 	base.Base
-	pairs   []Pair
-	options []Option
+	pairs []Pair
 }
 
 func New(params Params) (question.Question, error) {
@@ -23,19 +22,18 @@ func New(params Params) (question.Question, error) {
 		return nil, err
 	}
 
-	if err := validatePairs(params.Pairs, params.PairsCount); err != nil {
+	if err := validatePairs(params.Pairs); err != nil {
 		return nil, err
 	}
 
-	pairs, options, err := mapPairs(params.Pairs)
+	pairs, err := mapPairs(params.Pairs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &MatchingQuestion{
-		Base:    base,
-		pairs:   pairs,
-		options: options,
+		Base:  base,
+		pairs: pairs,
 	}, nil
 }
 
@@ -43,26 +41,34 @@ func (q *MatchingQuestion) Pairs() []Pair {
 	return slices.Clone(q.pairs)
 }
 
-func (q *MatchingQuestion) UpdatePairs(rawPairs map[string]content.RichContent, pairsCount int) error {
-	if err := validatePairs(rawPairs, pairsCount); err != nil {
+func (q *MatchingQuestion) UpdatePairs(rawPairs []PairParam) error {
+	if err := validatePairs(rawPairs); err != nil {
 		return err
 	}
 
-	pairs, options, err := mapPairs(rawPairs)
+	pairs, err := mapPairs(rawPairs)
 	if err != nil {
 		return err
 	}
 
 	q.pairs = pairs
-	q.options = options
 	q.Touch()
 	return nil
 }
 
-func (q *MatchingQuestion) Options() []Option {
-	return slices.Clone(q.options)
-}
-
 func (q *MatchingQuestion) Type() question.Type {
 	return question.TypeMatching
+}
+
+func (q *MatchingQuestion) HasPair(pair Pair) bool {
+	return slices.Contains(q.pairs, pair)
+}
+
+func (q *MatchingQuestion) ShuffledPairs() []Pair {
+	cPairs := slices.Clone(q.pairs)
+	rand.Shuffle(len(cPairs), func(i, j int) {
+		cPairs[i], cPairs[j] = cPairs[j], cPairs[i]
+	})
+
+	return cPairs
 }

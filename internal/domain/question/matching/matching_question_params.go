@@ -8,10 +8,9 @@ import (
 )
 
 type Params struct {
-	Text       question.QText
-	Image      uuid.UUID
-	Pairs      map[string]option.ContentOption
-	PairsCount int
+	Text  question.QText
+	Image uuid.UUID
+	Pairs []PairParam
 }
 
 func (p Params) baseParams() base.Params {
@@ -20,4 +19,9 @@ func (p Params) baseParams() base.Params {
 		Description: question.QDescriptionMatching,
 		ImageID:     p.Image,
 	}
+}
+
+type PairParam struct {
+	Prompt        string
+	ContentOption option.ContentOption
 }

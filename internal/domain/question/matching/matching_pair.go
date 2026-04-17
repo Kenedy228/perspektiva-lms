@@ -2,45 +2,32 @@ package matching
 
 import (
 	"gitflic.ru/lms/internal/domain/question/option"
-	"gitflic.ru/lms/internal/domain/utils"
-	"github.com/google/uuid"
 )
 
 type Pair struct {
-	id     uuid.UUID
 	prompt string
 	option option.ContentOption
 }
 
-func NewPair(prompt string, optionID uuid.UUID) (Pair, error) {
-	if err := validatePairPrompt(prompt); err != nil {
-		return Pair{}, err
-	}
-
-	if err := validatePairOption(optionID); err != nil {
-		return Pair{}, err
-	}
-
-	id, err := utils.GenerateID()
-	if err != nil {
+func NewPair(prompt string, option option.ContentOption) (Pair, error) {
+	if err := validatePrompt(prompt); err != nil {
 		return Pair{}, err
 	}
 
 	return Pair{
-		id:     id,
 		prompt: prompt,
-		option: optionID,
+		option: option,
 	}, nil
-}
-
-func (p Pair) ID() uuid.UUID {
-	return p.id
 }
 
 func (p Pair) Prompt() string {
 	return p.prompt
 }
 
-func (p Pair) Option() uuid.UUID {
+func (p Pair) Option() option.ContentOption {
 	return p.option
+}
+
+func (p Pair) Equal(other Pair) bool {
+	return p.prompt == other.prompt && p.option == other.option
 }
