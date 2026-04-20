@@ -2,7 +2,8 @@ package sequence
 
 import (
 	"errors"
-	"gitflic.ru/lms/internal/domain/content"
+
+	"gitflic.ru/lms/internal/domain/question/option"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 	ErrItemDuplicate  = errors.New("duplicate item found")
 )
 
-func validateItems(items []content.RichContent) error {
+func validateItems(items []option.ContentOption) error {
 	if len(items) == 0 {
 		return ErrEmptyItems
 	}
@@ -25,14 +26,13 @@ func validateItems(items []content.RichContent) error {
 		return ErrTooManyItems
 	}
 
-	visited := make(map[content.RichContent]struct{}, len(items))
-
+	visitedOptions := make(map[option.ContentOption]struct{}, len(items))
 	for i := range items {
-		if _, ok := visited[items[i]]; ok {
+		if _, ok := visitedOptions[items[i]]; ok {
 			return ErrItemDuplicate
 		}
 
-		visited[items[i]] = struct{}{}
+		visitedOptions[items[i]] = struct{}{}
 	}
 
 	return nil

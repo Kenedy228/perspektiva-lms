@@ -1,10 +1,22 @@
 package short
 
-import "github.com/google/uuid"
+import (
+	"gitflic.ru/lms/internal/domain/question"
+	"gitflic.ru/lms/internal/domain/question/base"
+	"gitflic.ru/lms/internal/domain/question/option"
+	"github.com/google/uuid"
+)
 
 type Params struct {
-	Text           string
-	Image          uuid.UUID
-	Answers        []string
-	AllowDuplicate bool
+	Text    question.QText
+	ImageID uuid.UUID
+	Answers []option.ContentOption
+}
+
+func (p Params) baseParams() base.Params {
+	return base.Params{
+		Text:        p.Text,
+		Description: question.QDescriptionShort,
+		ImageID:     p.ImageID,
+	}
 }

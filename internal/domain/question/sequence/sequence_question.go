@@ -1,29 +1,24 @@
 package sequence
 
 import (
+	"math/rand/v2"
 	"slices"
 
-	"gitflic.ru/lms/internal/domain/content"
 	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/question/base"
+	"gitflic.ru/lms/internal/domain/question/option"
 )
 
-const description = "расставьте события в хронологическом порядке"
 const minItems = 2
 const maxItems = 20
 
 type SequenceQuestion struct {
 	base.Base
-	items []Item
+	items []option.ContentOption
 }
 
-func New(params *Params) (question.Question, error) {
-	base, err := base.New(&base.Params{
-		Text:        params.Text,
-		Description: description,
-		ImageID:       params.Image,
-	})
-
+func New(params Params) (question.Question, error) {
+	base, err := base.New(params.baseParams())
 	if err != nil {
 		return nil, err
 	}
@@ -32,46 +27,43 @@ func New(params *Params) (question.Question, error) {
 		return nil, err
 	}
 
-	items := make([]Item, 0, len(params.Items))
-	for i := range params.Items {
-		item, err := NewItem(params.Items[i])
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, item)
-	}
+	cItems := slices.Clone(params.Items)
 
 	return &SequenceQuestion{
 		Base:  base,
-		items: items,
+		items: cItems,
 	}, nil
 }
 
-func (q *SequenceQuestion) Items() []Item {
+func (q *SequenceQuestion) Items() []option.ContentOption {
 	return slices.Clone(q.items)
 }
 
-func (q *SequenceQuestion) UpdateItems(rawItems []content.RichContent) error {
-	if err := validateItems(rawItems); err != nil {
-		return err
-	}
+func (q *SequenceQuestion) ShuffledItems() []option.ContentOption {
+	cItems := slices.Clone(q.items)
+	rand.Shuffle(len(cItems), func(i, j int) {
+		cItems[i], cItems[j] = cItems[j], cItems[i]
+	})
 
-	items := make([]Item, 0, len(rawItems))
-
-	for i := range rawItems {
-		item, err := NewItem(rawItems[i])
-		if err != nil {
-			return err
-		}
-		items = append(items, item)
-	}
-
-	q.items = items
-	q.Touch()
-	return nil
+	return cItems
 }
 
 func (q *SequenceQuestion) Type() question.Type {
 	return question.TypeSequence
+}
+
+func (q *SequenceQuestion) UpdateItems(rawItems []option.ContentOption) error {
+	if err := validateItems(rawItems); err != nil {
+		return err
+	}
+
+	cItems := slices.Clone(rawItems)
+
+	q.items = cItems
+	q.Touch()
+	return nil
+}
+
+func (q *SequenceQuestion) HasItem(item option.ContentOption) bool {
+	return slices.Contains(q.items, item)
 }

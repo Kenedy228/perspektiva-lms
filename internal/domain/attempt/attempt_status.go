@@ -3,8 +3,10 @@ package attempt
 type Status string
 
 const (
-	StatusSubmitted  Status = "submitted"
-	StatusExpired    Status = "expired"
+	// NOTE: успешно выполнен
+	StatusSubmitted Status = "submitted"
+	// NOTE: не успел пройти вовремя
+	StatusExpired Status = "expired"
+	// NOTE: проходит
 	StatusInProgress Status = "in_progress"
-	StatusFailed     Status = "failed"
 )

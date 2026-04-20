@@ -5,75 +5,68 @@ import (
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/question"
+	"gitflic.ru/lms/internal/domain/question/option"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	// Генерируем массив из 21 элемента для проверки лимита
-	tooManyAnswers := make([]string, maxAnswers+1)
-	for i := range tooManyAnswers {
-		tooManyAnswers[i] = fmt.Sprintf("answer %d", i)
+	tooManyAnswers := make([]option.ContentOption, 0, maxAnswers+1)
+	for i := range maxAnswers + 1 {
+		tooManyAnswers = append(tooManyAnswers, makeAnswer(fmt.Sprintf("%d", i)))
 	}
+	invalidFormat, _ := option.NewContentOption(option.ContentTypeAudio, "audio")
 
 	tests := []struct {
-		name    string
-		params  *Params
-		wantErr error
+		name   string
+		params Params
+		err    error
 	}{
 		{
 			name: "success valid short question",
-			params: &Params{
-				Text:           "Назовите столицу Франции",
-				Answers:        []string{"Париж", "париж"},
-				AllowDuplicate: false,
+			params: Params{
+				Text: makeText("Назовите столицу Франции"),
+				Answers: []option.ContentOption{
+					makeAnswer("Париж"),
+					makeAnswer("париж"),
+				},
 			},
-			wantErr: nil,
+			err: nil,
 		},
 		{
 			name: "success with duplicates allowed",
-			params: &Params{
-				Text:           "Тест дубликатов",
-				Answers:        []string{"Да", "Да"},
-				AllowDuplicate: true,
+			params: Params{
+				Text: makeText("Тест дубликатов"),
+				Answers: []option.ContentOption{
+					makeAnswer("Да"),
+					makeAnswer("Да"),
+				},
 			},
-			wantErr: nil,
-		},
-		{
-			name: "error duplicate answers not allowed",
-			params: &Params{
-				Text:           "Тест дубликатов",
-				Answers:        []string{"Нет", "Нет"},
-				AllowDuplicate: false,
-			},
-			wantErr: ErrDuplicateAnswer,
+			err: ErrDuplicateAnswer,
 		},
 		{
 			name: "error no answers",
-			params: &Params{
-				Text:           "Вопрос без ответа",
-				Answers:        []string{},
-				AllowDuplicate: false,
+			params: Params{
+				Text:    makeText("Вопрос без ответа"),
+				Answers: []option.ContentOption{},
 			},
-			wantErr: ErrNoAnswers,
-		},
-		{
-			name: "error empty answer string",
-			params: &Params{
-				Text:           "Пустой ответ",
-				Answers:        []string{"Норм ответ", "   "},
-				AllowDuplicate: false,
-			},
-			wantErr: ErrEmptyAnswer,
+			err: ErrNoAnswers,
 		},
 		{
 			name: "error too many answers",
-			params: &Params{
-				Text:           "Слишком много вариантов",
-				Answers:        tooManyAnswers,
-				AllowDuplicate: true,
+			params: Params{
+				Text:    makeText("Слишком много вариантов"),
+				Answers: tooManyAnswers,
 			},
-			wantErr: ErrTooManyAnswers,
+			err: ErrTooManyAnswers,
+		},
+		{
+			name: "error invalid answer format",
+			params: Params{
+				Text:    makeText("Недопустимый вариант ответа"),
+				Answers: []option.ContentOption{invalidFormat},
+			},
+			err: ErrInvalidAnswerFormat,
 		},
 	}
 
@@ -81,14 +74,14 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			q, err := New(tt.params)
 
-			assert.ErrorIs(t, err, tt.wantErr)
+			assert.ErrorIs(t, err, tt.err)
 
-			if tt.wantErr == nil {
+			if tt.err == nil {
 				require.NotNil(t, q)
 				shortQ, ok := q.(*ShortQuestion)
 				require.True(t, ok)
 
-				assert.Equal(t, tt.params.Answers, shortQ.Answers())
+				assert.Equal(t, shortQ.Answers(), tt.params.Answers)
 				assert.Equal(t, question.TypeShort, shortQ.Type())
 			}
 		})
@@ -96,10 +89,11 @@ func TestNew(t *testing.T) {
 }
 
 func TestShortQuestion_UpdateAnswers(t *testing.T) {
-	params := &Params{
-		Text:           "Базовый текст",
-		Answers:        []string{"Ответ 1"},
-		AllowDuplicate: false,
+	params := Params{
+		Text: "Базовый текст",
+		Answers: []option.ContentOption{
+			makeAnswer("Ответ 1"),
+		},
 	}
 	q, err := New(params)
 	require.NoError(t, err)
@@ -108,87 +102,64 @@ func TestShortQuestion_UpdateAnswers(t *testing.T) {
 	require.True(t, ok)
 
 	t.Run("success update answers", func(t *testing.T) {
-		newAnswers := []string{"Новый 1", "Новый 2"}
-		
-		err := shortQ.UpdateAnswers(newAnswers, false)
-		
+		newAnswers := []option.ContentOption{
+			makeAnswer("Новый 1"),
+			makeAnswer("Новый 2"),
+		}
+
+		err := shortQ.UpdateAnswers(newAnswers)
+
 		assert.NoError(t, err)
 		assert.Equal(t, newAnswers, shortQ.Answers())
-		// q.Touch() вызывается внутри, но т.к. base.Base за рамками этого пакета,
-		// мы полагаемся на то, что метод отработал без паники.
 	})
 
 	t.Run("error update leaves state untouched", func(t *testing.T) {
 		oldAnswers := shortQ.Answers()
 
-		// Пытаемся обновить невалидными данными (пустой ответ)
-		invalidAnswers := []string{"Норм", ""}
-		err := shortQ.UpdateAnswers(invalidAnswers, false)
+		invalidAnswers := []option.ContentOption{
+			makeAnswer("Норм"),
+			makeAnswer("Норм"),
+		}
+		err := shortQ.UpdateAnswers(invalidAnswers)
 
-		assert.ErrorIs(t, err, ErrEmptyAnswer)
-		// Убеждаемся, что старые ответы не затерлись
+		assert.ErrorIs(t, err, ErrDuplicateAnswer)
 		assert.Equal(t, oldAnswers, shortQ.Answers())
 	})
 }
 
-func TestShortQuestion_Encapsulation(t *testing.T) {
-	t.Run("input params clone", func(t *testing.T) {
-		inputAnswers := []string{"Оригинал"}
-		params := &Params{
-			Text:           "Текст",
-			Answers:        inputAnswers,
-			AllowDuplicate: false,
-		}
+func TestHasAnswer(t *testing.T) {
+	params := Params{
+		Text: "Базовый текст",
+		Answers: []option.ContentOption{
+			makeAnswer("Ответ 1"),
+		},
+	}
+	q, err := New(params)
+	require.NoError(t, err)
 
-		q, err := New(params)
-		require.NoError(t, err)
-		shortQ := q.(*ShortQuestion)
+	shortQ, ok := q.(*ShortQuestion)
+	require.True(t, ok)
 
-		// Меняем исходный массив, переданный в Params
-		inputAnswers[0] = "Мутация"
-
-		// Проверяем, что внутри структуры остался оригинал
-		assert.Equal(t, "Оригинал", shortQ.Answers()[0])
+	t.Run("has answer", func(t *testing.T) {
+		assert.True(t, shortQ.HasAnswer(makeAnswer("Ответ 1")))
 	})
 
-	t.Run("getter clone", func(t *testing.T) {
-		params := &Params{
-			Text:           "Текст",
-			Answers:        []string{"Оригинал"},
-			AllowDuplicate: false,
-		}
-
-		q, err := New(params)
-		require.NoError(t, err)
-		shortQ := q.(*ShortQuestion)
-
-		// Получаем ответы и пытаемся их изменить
-		gotAnswers := shortQ.Answers()
-		gotAnswers[0] = "Взлом"
-
-		// Проверяем, что внутреннее состояние не изменилось
-		assert.Equal(t, "Оригинал", shortQ.Answers()[0])
+	t.Run("has answer with different case", func(t *testing.T) {
+		assert.True(t, shortQ.HasAnswer(makeAnswer("ответ 1")))
+		assert.True(t, shortQ.HasAnswer(makeAnswer("ОТВЕТ 1")))
 	})
 
-	t.Run("update clone", func(t *testing.T) {
-		params := &Params{
-			Text:           "Текст",
-			Answers:        []string{"Оригинал"},
-			AllowDuplicate: false,
-		}
-
-		q, err := New(params)
-		require.NoError(t, err)
-		shortQ := q.(*ShortQuestion)
-
-		newAnswers := []string{"Обновление"}
-		err = shortQ.UpdateAnswers(newAnswers, false)
-		require.NoError(t, err)
-
-		// Изменяем массив после передачи его в UpdateAnswers
-		newAnswers[0] = "Взлом 2"
-
-		// Проверяем, что слайс был скопирован при апдейте
-		assert.Equal(t, "Обновление", shortQ.Answers()[0])
+	t.Run("has not answer", func(t *testing.T) {
+		assert.False(t, shortQ.HasAnswer(makeAnswer("Ответ 2")))
 	})
+}
+
+func makeText(s string) question.QText {
+	text, _ := question.NewQText(s)
+	return text
+}
+
+func makeAnswer(s string) option.ContentOption {
+	answer, _ := option.NewContentOption(option.ContentTypeText, s)
+	return answer
 }

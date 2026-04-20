@@ -2,64 +2,94 @@ package typed
 
 import (
 	"errors"
-	"fmt"
-	"strings"
+	"regexp"
+
+	"gitflic.ru/lms/internal/domain/question/option"
+	"gitflic.ru/lms/internal/domain/shared/duplicate"
 )
 
 var (
-	ErrEmptyMark                = errors.New("empty mark")
-	ErrMarkDuplicate            = errors.New("duplicate mark in text")
-	ErrEmptyBlankAnswer         = errors.New("empty blank answer")
-	ErrNoBlankAnswers           = errors.New("no answers for blank")
-	ErrNoPlaceholders           = errors.New("no placeholders in text")
-	ErrPlaceholderCountMismatch = errors.New("text and blanks contains different count of placeholders")
-	ErrPlaceholderMissing       = errors.New("placeholder missing")
-	ErrTooManyPlaceholders      = errors.New("too many placeholders")
+	placeholderRegexp = regexp.MustCompile(`\{\{\S+?\}\}`)
 )
 
-func validateBlank(mark string, answers []string) error {
-	if strings.TrimSpace(mark) == "" {
-		return ErrEmptyMark
+// NOTE: placeholder errors
+var (
+	ErrDuplicatePlaceholder  = errors.New("duplicate placeholder")
+	ErrTooManyPlaceholders   = errors.New("too many placeholders")
+	ErrNotEnoughPlaceholders = errors.New("not enough placeholders")
+	ErrCountMismatch         = errors.New("count mismatch")
+	ErrInvalidBlanks         = errors.New("blanks doesn't contain placeholder")
+)
+
+// NOTE: blank errors
+var (
+	ErrInvalidPlaceholder  = errors.New("invalid placeholder")
+	ErrEmptyAnswers        = errors.New("empty answers")
+	ErrTooManyAnswers      = errors.New("too many answers")
+	ErrInvalidAnswerFormat = errors.New("invalid answer format")
+)
+
+func validatePlaceholders(text string, blanks []BlankParams) error {
+	tPlaceholders := placeholderRegexp.FindAllString(text, -1)
+
+	if dupl := duplicate.FindAllComparable(tPlaceholders); len(dupl) != 0 {
+		return ErrDuplicatePlaceholder
 	}
 
-	if len(answers) == 0 {
-		return ErrNoBlankAnswers
+	if len(tPlaceholders) > maxPlaceholders {
+		return ErrTooManyPlaceholders
 	}
 
-	for i := range answers {
-		if strings.TrimSpace(answers[i]) == "" {
-			return ErrEmptyBlankAnswer
+	if len(tPlaceholders) < minPlaceholders {
+		return ErrNotEnoughPlaceholders
+	}
+
+	if len(tPlaceholders) != len(blanks) {
+		return ErrCountMismatch
+	}
+
+	for i := range tPlaceholders {
+		if c := countPlaceholderEntries(tPlaceholders[i], blanks); c != 1 {
+			return ErrInvalidBlanks
 		}
 	}
 
 	return nil
 }
 
-func validatePlaceholders(text string, placeholdersCount int, blanks map[string][]string) error {
-	if placeholdersCount == 0 {
-		return ErrNoPlaceholders
+func validatePlaceholder(placeholder string) error {
+	if !placeholderRegexp.MatchString(placeholder) {
+		return ErrInvalidPlaceholder
 	}
 
-	if placeholdersCount > maxPlaceholders {
-		return ErrTooManyPlaceholders
+	return nil
+}
+
+func validateAnswers(answers []option.ContentOption) error {
+	if len(answers) == 0 {
+		return ErrEmptyAnswers
 	}
 
-	if len(blanks) != placeholdersCount {
-		return ErrPlaceholderCountMismatch
+	if len(answers) > maxAnswersPerPlaceholder {
+		return ErrTooManyAnswers
 	}
 
-	for mark := range blanks {
-		placeholder := fmt.Sprintf("[%s]", mark)
-		entriesCount := strings.Count(text, placeholder)
-
-		if entriesCount == 0 {
-			return ErrPlaceholderMissing
-		}
-
-		if entriesCount > 1 {
-			return ErrMarkDuplicate
+	for i := range answers {
+		if !answers[i].IsText() {
+			return ErrInvalidAnswerFormat
 		}
 	}
 
 	return nil
+}
+
+func countPlaceholderEntries(target string, blanks []BlankParams) int {
+	count := 0
+	for i := range blanks {
+		if blanks[i].Placeholder == target {
+			count++
+		}
+	}
+
+	return count
 }

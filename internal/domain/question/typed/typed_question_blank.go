@@ -3,43 +3,35 @@ package typed
 import (
 	"slices"
 
-	"gitflic.ru/lms/internal/domain/utils"
-	"github.com/google/uuid"
+	"gitflic.ru/lms/internal/domain/question/option"
 )
 
 type Blank struct {
-	id      uuid.UUID
-	mark    string
-	answers []string
+	placeholder string
+	answers     []option.ContentOption
 }
 
-func NewBlank(mark string, answers []string) (Blank, error) {
-	if err := validateBlank(mark, answers); err != nil {
+func NewBlank(params BlankParams) (Blank, error) {
+	if err := validatePlaceholder(params.Placeholder); err != nil {
 		return Blank{}, err
 	}
 
-	answersCopy := slices.Clone(answers)
-
-	id, err := utils.GenerateID()
-	if err != nil {
+	if err := validateAnswers(params.Answers); err != nil {
 		return Blank{}, err
 	}
+
+	cAnswers := slices.Clone(params.Answers)
 
 	return Blank{
-		id:      id,
-		mark:    mark,
-		answers: answersCopy,
+		placeholder: params.Placeholder,
+		answers:     cAnswers,
 	}, nil
 }
 
-func (b Blank) ID() uuid.UUID {
-	return b.id
+func (b Blank) Placeholder() string {
+	return b.placeholder
 }
 
-func (b Blank) Mark() string {
-	return b.mark
-}
-
-func (b Blank) Answers() []string {
+func (b Blank) Answers() []option.ContentOption {
 	return slices.Clone(b.answers)
 }

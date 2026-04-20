@@ -10,10 +10,10 @@ import (
 
 type Item struct {
 	id            uuid.UUID
-	questionType  string
+	questionType  question.Type
 	snapshot      []byte
 	studentAnswer []byte
-	score         *int
+	isCorrect     *bool
 }
 
 func NewItem(questionType question.Type, snapshot []byte) (Item, error) {
@@ -34,7 +34,7 @@ func NewItem(questionType question.Type, snapshot []byte) (Item, error) {
 
 	return Item{
 		id:           id,
-		questionType: questionType.String(),
+		questionType: questionType,
 		snapshot:     cSnapshot,
 	}, nil
 }
@@ -43,7 +43,7 @@ func (i Item) ID() uuid.UUID {
 	return i.id
 }
 
-func (i Item) QuestionType() string {
+func (i Item) QuestionType() question.Type {
 	return i.questionType
 }
 
@@ -55,13 +55,22 @@ func (i Item) StudentAnswer() []byte {
 	return slices.Clone(i.studentAnswer)
 }
 
-func (i Item) Score() *int {
-	if i.score == nil {
+func (i Item) IsCorrect() *bool {
+	if i.isCorrect == nil {
 		return nil
 	}
 
-	v := *i.score
+	v := *i.isCorrect
 	return &v
+}
+
+func (i Item) SetAnswer(answer []byte) error {
+	if err := validateAnswer(answer); err != nil {
+		return err
+	}
+
+	i.studentAnswer = answer
+	return nil
 }
 
 func (i Item) IsAnswered() bool {

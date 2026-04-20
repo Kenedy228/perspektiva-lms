@@ -2,17 +2,18 @@ package short
 
 import (
 	"errors"
-	"strings"
+
+	"gitflic.ru/lms/internal/domain/question/option"
 )
 
 var (
-	ErrNoAnswers       = errors.New("no answers provided")
-	ErrEmptyAnswer     = errors.New("answer is empty")
-	ErrTooManyAnswers  = errors.New("too many answers")
-	ErrDuplicateAnswer = errors.New("duplicate answer found")
+	ErrNoAnswers           = errors.New("no answers provided")
+	ErrTooManyAnswers      = errors.New("too many answers")
+	ErrDuplicateAnswer     = errors.New("duplicate answer found")
+	ErrInvalidAnswerFormat = errors.New("invalid answer format")
 )
 
-func validateAnswers(answers []string, allowDuplicates bool) error {
+func validateAnswers(answers []option.ContentOption) error {
 	if len(answers) == 0 {
 		return ErrNoAnswers
 	}
@@ -21,14 +22,14 @@ func validateAnswers(answers []string, allowDuplicates bool) error {
 		return ErrTooManyAnswers
 	}
 
-	visited := make(map[string]struct{}, len(answers))
+	visited := make(map[option.ContentOption]struct{}, len(answers))
 
 	for i := range answers {
-		if strings.TrimSpace(answers[i]) == "" {
-			return ErrEmptyAnswer
+		if answers[i].ContentType() != option.ContentTypeText {
+			return ErrInvalidAnswerFormat
 		}
 
-		if _, ok := visited[answers[i]]; ok && !allowDuplicates {
+		if _, ok := visited[answers[i]]; ok {
 			return ErrDuplicateAnswer
 		}
 

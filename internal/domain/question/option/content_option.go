@@ -28,6 +28,10 @@ func (o ContentOption) Value() string {
 	return o.value
 }
 
+func (o ContentOption) IsText() bool {
+	return o.cType == ContentTypeText
+}
+
 func (o ContentOption) Equal(other ContentOption) bool {
 	return o.cType == other.cType && o.value == other.value
 }
