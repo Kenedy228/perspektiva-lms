@@ -1,10 +1,10 @@
-package element_test
+package content_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/element"
+	"gitflic.ru/lms/internal/domain/element/content"
 	"gitflic.ru/lms/internal/domain/shared/s3validator"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,7 +39,7 @@ func TestNewSlidesContent_Success(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			got, err := element.NewSlidesContent(tt.key, tt.sizeBytes)
+			got, err := content.NewSlidesContent(tt.key, tt.sizeBytes)
 
 			//Assert
 			assert.NoError(t, err)
@@ -90,44 +90,44 @@ func TestNewSlidesContent_Fail(t *testing.T) {
 			name:      "ошибка если расширение не pptx",
 			key:       "slides/course-1/intro.pdf",
 			sizeBytes: 1024,
-			wantErr:   element.ErrInvalid,
+			wantErr:   content.ErrInvalidFormat,
 		},
 		{
 			name:      "ошибка если расширение отсутствует",
 			key:       "slides/course-1/intro",
 			sizeBytes: 1024,
-			wantErr:   element.ErrInvalid,
+			wantErr:   content.ErrInvalidFormat,
 		},
 		{
 			name:      "ошибка если имя файла пустое",
 			key:       "slides/course-1/.pptx",
 			sizeBytes: 1024,
-			wantErr:   element.ErrInvalid,
+			wantErr:   content.ErrInvalidFormat,
 		},
 		{
 			name:      "ошибка если размер файла нулевой",
 			key:       "slides/course-1/intro.pptx",
 			sizeBytes: 0,
-			wantErr:   element.ErrInvalid,
+			wantErr:   content.ErrEmptyFileSize,
 		},
 		{
 			name:      "ошибка если размер файла отрицательный",
 			key:       "slides/course-1/intro.pptx",
 			sizeBytes: -1,
-			wantErr:   element.ErrInvalid,
+			wantErr:   content.ErrEmptyFileSize,
 		},
 		{
 			name:      "ошибка если размер больше 100 мб",
 			key:       "slides/course-1/intro.pptx",
 			sizeBytes: 100*1024*1024 + 1,
-			wantErr:   element.ErrInvalid,
+			wantErr:   content.ErrTooLargeFile,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			_, err := element.NewSlidesContent(tt.key, tt.sizeBytes)
+			_, err := content.NewSlidesContent(tt.key, tt.sizeBytes)
 
 			//Assert
 			assert.ErrorIs(t, err, tt.wantErr)

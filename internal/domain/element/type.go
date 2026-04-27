@@ -3,11 +3,11 @@ package element
 type Type string
 
 const (
-	TypeText     Type = "text"
-	TypeSlides   Type = "slides"
-	TypeDocument Type = "document"
-	TypeVideo    Type = "video"
-	TypeQuiz     Type = "quiz"
+	TypeText       Type = "text"
+	TypeSlides     Type = "slides"
+	TypeAttachment Type = "document"
+	TypeVideo      Type = "video"
+	TypeQuiz       Type = "quiz"
 )
 
 func (t Type) Title() string {
@@ -16,8 +16,8 @@ func (t Type) Title() string {
 		return "текст"
 	case TypeSlides:
 		return "слайды"
-	case TypeDocument:
-		return "документ"
+	case TypeAttachment:
+		return "вложение"
 	case TypeVideo:
 		return "видео"
 	case TypeQuiz:
