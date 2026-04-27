@@ -2,7 +2,7 @@ package sequence
 
 import (
 	"gitflic.ru/lms/internal/domain/question"
-	"gitflic.ru/lms/internal/domain/utils"
+	"gitflic.ru/lms/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
 
@@ -12,7 +12,7 @@ type Element struct {
 }
 
 func NewElement(params ElementParams) (Element, error) {
-	id, err := utils.GenerateID()
+	id, err := uid.New()
 	if err != nil {
 		return Element{}, err
 	}

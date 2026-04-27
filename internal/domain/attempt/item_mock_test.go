@@ -26,11 +26,11 @@ func (m *mockQuestion) CheckAnswer(answer question.Answer) bool {
 	return args.Bool(0)
 }
 
-func (m *mockQuestion) Text() question.QText {
+func (m *mockQuestion) Text() string {
 	panic("")
 }
 
-func (m *mockQuestion) Description() question.Description {
+func (m *mockQuestion) Instruction() string {
 	panic("")
 }
 
