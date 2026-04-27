@@ -10,7 +10,7 @@ import (
 
 type blockBuilder struct {
 	title    string
-	elements []*element.Element
+	elements []*element.Block
 }
 
 func newBlockBuilder() *blockBuilder {

@@ -18,7 +18,7 @@ func (f *contentFixture) Clone() element.Content {
 	return f
 }
 
-func newElement() *element.Element {
+func newElement() *element.Block {
 	params := element.Params{
 		Title:   "title",
 		Content: &contentFixture{},
