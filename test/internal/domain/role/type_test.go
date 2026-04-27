@@ -7,88 +7,73 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTitle(t *testing.T) {
-	t.Run("for existing types should return non-empty title", func(t *testing.T) {
-		//Arrange
-		admin := role.TypeAdmin
-		organization := role.TypeOrganization
-		student := role.TypeStudent
-		creator := role.TypeCreator
-
+func TestTypeTitle(t *testing.T) {
+	t.Run("для фиксированных значений возвращает непустую строку", func(t *testing.T) {
 		//Assert
-		assert.NotEmpty(t, admin.Title())
-		assert.NotEmpty(t, organization.Title())
-		assert.NotEmpty(t, student.Title())
-		assert.NotEmpty(t, creator.Title())
+		assert.NotEmpty(t, role.TypeAdmin.Title())
+		assert.NotEmpty(t, role.TypeOrganization.Title())
+		assert.NotEmpty(t, role.TypeStudent.Title())
+		assert.NotEmpty(t, role.TypeCreator.Title())
 	})
 
-	t.Run("for non-existing types should return empty", func(t *testing.T) {
-		//Arrange
-		nonExisting := role.Type("non-existing")
-
+	t.Run("для нефиксированных значений возвращает пустую строку", func(t *testing.T) {
 		//Assert
-		assert.Empty(t, nonExisting.Title())
+		assert.Empty(t, role.Type("unexisting").Title())
 	})
 }
 
-func TestAllows(t *testing.T) {
-	t.Run("existing resource, existing action, correct type", func(t *testing.T) {
-		//Arrange
-		rType := role.TypeAdmin
-		res := role.ResourceUser
-		action := role.ActionWrite
+func TestTypeAllows(t *testing.T) {
+	tc := []struct {
+		name    string
+		rType   role.Type
+		res     role.Resource
+		action  role.Action
+		allowed bool
+	}{
+		{
+			name:    "администратор разрешает доступ к существующему ресурсу и действию",
+			rType:   role.TypeAdmin,
+			res:     role.ResourceUser,
+			action:  role.ActionWrite,
+			allowed: true,
+		},
+		{
+			name:    "администратор запрещает доступ к несуществующему ресурсу с существующим действием",
+			rType:   role.TypeAdmin,
+			res:     role.Resource("unexisting"),
+			action:  role.ActionWrite,
+			allowed: false,
+		},
+		{
+			name:    "администратор запрещает несуществующее действие с существующим ресурсом",
+			rType:   role.TypeAdmin,
+			res:     role.ResourceUser,
+			action:  role.Action("unexisting"),
+			allowed: false,
+		},
+		{
+			name:    "несуществующий тип запрещает доступ к существующему ресурс и действию",
+			rType:   role.Type("incorrect"),
+			res:     role.ResourceUser,
+			action:  role.ActionRead,
+			allowed: false,
+		},
+		{
+			name:    "студент запрещает доступ к ресурсу, который не привязан к нему",
+			rType:   role.TypeStudent,
+			res:     role.ResourceUser,
+			action:  role.ActionWrite,
+			allowed: false,
+		},
+	}
 
-		//Assert
-		assert.True(t, rType.Allows(res, action))
-	})
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Act
+			allowed := tt.rType.Allows(tt.res, tt.action)
 
-	t.Run("non-existing resource, existing action, correct type", func(t *testing.T) {
-		//Arrange
-		rType := role.TypeAdmin
-		res := role.Resource("non-existing")
-		action := role.ActionWrite
-
-		//Assert
-		assert.False(t, rType.Allows(res, action))
-	})
-
-	t.Run("existing resource, non-existing action, correct type", func(t *testing.T) {
-		//Arrange
-		rType := role.TypeAdmin
-		res := role.Resource("non-existing")
-		action := role.ActionWrite
-
-		//Assert
-		assert.False(t, rType.Allows(res, action))
-	})
-
-	t.Run("existing resource, non-existing action, correct type", func(t *testing.T) {
-		//Arrange
-		rType := role.TypeAdmin
-		res := role.ResourceUser
-		action := role.Action("non-existing")
-
-		//Assert
-		assert.False(t, rType.Allows(res, action))
-	})
-
-	t.Run("existing resource, existing action, incorrect type", func(t *testing.T) {
-		//Arrange
-		rType := role.Type("incorrect")
-		res := role.ResourceUser
-		action := role.ActionRead
-
-		//Assert
-		assert.False(t, rType.Allows(res, action))
-	})
-
-	t.Run("existing resource, existing action, type without resource", func(t *testing.T) {
-		//Arrange
-		rType := role.TypeStudent
-		res := role.ResourceUser
-		action := role.ActionWrite
-
-		//Assert
-		assert.False(t, rType.Allows(res, action))
-	})
+			//Assert
+			assert.Equal(t, allowed, tt.allowed)
+		})
+	}
 }

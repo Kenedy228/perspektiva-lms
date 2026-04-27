@@ -7,54 +7,54 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAllowsRole(t *testing.T) {
-	t.Run("existing resource, existing action, correct type", func(t *testing.T) {
+func TestNew(t *testing.T) {
+	t.Run("должен создать через специальный конструктор роль с соответствующим типом", func(t *testing.T) {
 		//Arrange
-		r := role.NewAdmin()
-		res := role.ResourceUser
-		action := role.ActionWrite
+		admin := role.NewAdmin()
 
 		//Assert
-		assert.True(t, r.Allows(res, action))
+		assert.Equal(t, admin.Kind(), role.TypeAdmin)
 	})
+}
 
-	t.Run("non-existing resource, existing action, correct type", func(t *testing.T) {
-		//Arrange
-		r := role.NewAdmin()
-		res := role.Resource("non-existing")
-		action := role.ActionWrite
+func TestRoleAllows_Admin(t *testing.T) {
+	tc := []struct {
+		name    string
+		rType   role.Type
+		res     role.Resource
+		action  role.Action
+		allowed bool
+	}{
+		{
+			name:    "администратор разрешает доступ к существующему ресурсу и действию",
+			res:     role.ResourceUser,
+			action:  role.ActionWrite,
+			allowed: true,
+		},
+		{
+			name:    "администратор запрещает доступ к несуществующему ресурсу с существующим действием",
+			res:     role.Resource("unexisting"),
+			action:  role.ActionWrite,
+			allowed: false,
+		},
+		{
+			name:    "администратор запрещает несуществующее действие с существующим ресурсом",
+			res:     role.ResourceUser,
+			action:  role.Action("unexisting"),
+			allowed: false,
+		},
+	}
 
-		//Assert
-		assert.False(t, r.Allows(res, action))
-	})
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Arrange
+			admin := role.NewAdmin()
 
-	t.Run("existing resource, non-existing action, correct type", func(t *testing.T) {
-		//Arrange
-		r := role.NewAdmin()
-		res := role.Resource("non-existing")
-		action := role.ActionWrite
+			//Act
+			allowed := admin.Allows(tt.res, tt.action)
 
-		//Assert
-		assert.False(t, r.Allows(res, action))
-	})
-
-	t.Run("existing resource, non-existing action, correct type", func(t *testing.T) {
-		//Arrange
-		r := role.NewAdmin()
-		res := role.ResourceUser
-		action := role.Action("non-existing")
-
-		//Assert
-		assert.False(t, r.Allows(res, action))
-	})
-
-	t.Run("existing resource, existing action, type without resource", func(t *testing.T) {
-		//Arrange
-		r := role.NewStudent()
-		res := role.ResourceUser
-		action := role.ActionWrite
-
-		//Assert
-		assert.False(t, r.Allows(res, action))
-	})
+			//Assert
+			assert.Equal(t, allowed, tt.allowed)
+		})
+	}
 }
