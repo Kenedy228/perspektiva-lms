@@ -1,50 +1,37 @@
 package role
 
-import (
-	"gitflic.ru/lms/internal/domain/permission"
-	"gitflic.ru/lms/internal/domain/permission/action"
-	"gitflic.ru/lms/internal/domain/permission/resource"
-)
-
 type Role struct {
-	roleType    RoleType
-	permissions []permission.Permission
+	kind Type
 }
 
-func NewAsAdmin() Role {
+func NewAdmin() Role {
 	return Role{
-		roleType:    RoleTypeAdmin,
-		permissions: getAdminPermissions(),
+		kind: TypeAdmin,
 	}
 }
 
-func NewAsCreator() Role {
+func NewCreator() Role {
 	return Role{
-		roleType:    RoleTypeCreator,
-		permissions: getCreatorPermissions(),
+		kind: TypeCreator,
 	}
 }
 
-func NewAsStudent() Role {
+func NewStudent() Role {
 	return Role{
-		roleType:    RoleTypeStudent,
-		permissions: getStudentPermissions(),
+		kind: TypeStudent,
 	}
 }
 
-func NewAsOrganization() Role {
+func NewOrganization() Role {
 	return Role{
-		roleType:    RoleTypeOrganization,
-		permissions: getOrganizationPermissions(),
+		kind: TypeOrganization,
 	}
 }
 
-func (r Role) Allows(resource resource.Resource, action action.Action) bool {
-	for i := range r.permissions {
-		if r.permissions[i].Resource() == resource {
-			return r.permissions[i].HasAction(action)
-		}
-	}
+func (r Role) Kind() Type {
+	return r.kind
+}
 
-	return false
+func (r Role) Allows(resource Resource, action Action) bool {
+	return r.kind.Allows(resource, action)
 }

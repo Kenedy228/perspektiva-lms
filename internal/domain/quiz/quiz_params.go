@@ -1,10 +1,10 @@
 package quiz
 
-import "gitflic.ru/lms/internal/domain/quiz/source"
+import "gitflic.ru/lms/internal/domain/shared/limit"
 
 type Params struct {
-	Title        string
-	Sources      []source.Source
-	AttemptLimit int
-	TimeLimit    int
+	Title       string
+	Sources     []Source
+	MaxAttempts int
+	TimeLimit   limit.Limit
 }

@@ -6,14 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// NOTE: interface for Question polymorphism
 type Question interface {
 	ID() uuid.UUID
-	Text() QText
-	Description() QDescription
+	Text() string
+	Instruction() string
 	ImageID() uuid.UUID
+	Type() Type
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
-	Type() Type
 	HasImage() bool
+	Clone() Question
+	CheckAnswer(Answer) bool
 }

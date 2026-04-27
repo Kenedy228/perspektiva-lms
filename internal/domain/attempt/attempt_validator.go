@@ -1,42 +1,15 @@
 package attempt
 
 import (
-	"errors"
-	"strings"
+	"fmt"
 
 	"gitflic.ru/lms/internal/domain/question"
 	"github.com/google/uuid"
 )
 
-var (
-	ErrInvalidQuestionType = errors.New("invalid question type")
-	ErrEmptySnapshot       = errors.New("empty snapshot")
-	ErrNilEnrollmentID     = errors.New("nil enrollment id")
-	ErrNilQuizID           = errors.New("nil quiz id")
-	ErrNilCourseID         = errors.New("nil course id")
-	ErrEmptyCourseTitle    = errors.New("empty course title")
-	ErrEmptyQuizTitle      = errors.New("empty quiz title")
-)
-
-func validateQuestionType(questionType question.Type) error {
-	if !questionType.IsValid() {
-		return ErrInvalidQuestionType
-	}
-
-	return nil
-}
-
-func validateSnapshot(snapshot []byte) error {
-	if len(snapshot) == 0 {
-		return ErrEmptySnapshot
-	}
-
-	return nil
-}
-
 func validateEnrollmentID(id uuid.UUID) error {
 	if id == uuid.Nil {
-		return ErrNilEnrollmentID
+		return fmt.Errorf("%w, детали: зачисление не существует (nil)", ErrInvalidAttempt)
 	}
 
 	return nil
@@ -44,31 +17,21 @@ func validateEnrollmentID(id uuid.UUID) error {
 
 func validateQuizID(id uuid.UUID) error {
 	if id == uuid.Nil {
-		return ErrNilQuizID
+		return fmt.Errorf("%w, детали: тест не существует (nil)", ErrInvalidAttempt)
 	}
 
 	return nil
 }
 
-func validateCourseID(id uuid.UUID) error {
-	if id == uuid.Nil {
-		return ErrNilCourseID
+func validateQuestions(questions []question.Question) error {
+	if len(questions) == 0 {
+		return fmt.Errorf("%w", ErrInvalidAttempt)
 	}
 
-	return nil
-}
-
-func validateQuizTitle(title string) error {
-	if strings.TrimSpace(title) == "" {
-		return ErrEmptyQuizTitle
-	}
-
-	return nil
-}
-
-func validateCourseTitle(title string) error {
-	if strings.TrimSpace(title) == "" {
-		return ErrEmptyCourseTitle
+	for i := range questions {
+		if questions[i] == nil {
+			return fmt.Errorf("%w", ErrInvalidAttempt)
+		}
 	}
 
 	return nil

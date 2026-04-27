@@ -1,12 +1,13 @@
 package selectable
 
-func mapItems(rawItems []ItemParams) []Item {
-	items := make([]Item, 0, len(rawItems))
+func countCorrect(options []Option) int {
+	count := 0
 
-	for i := range rawItems {
-		item := NewItem(rawItems[i])
-		items = append(items, item)
+	for i := range options {
+		if options[i].IsCorrect() {
+			count++
+		}
 	}
 
-	return items
+	return count
 }

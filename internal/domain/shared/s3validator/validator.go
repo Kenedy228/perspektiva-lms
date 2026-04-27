@@ -4,21 +4,50 @@ import (
 	"errors"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 var (
-	ErrEmptyS3Key   = errors.New("empty s3 key")
-	ErrInvalidS3Key = errors.New("invalid s3 key")
+	ErrEmptyS3Key      = errors.New("пустой s3 ключ")
+	ErrInvalidS3Key    = errors.New("некорректный s3 ключ")
+	ErrTooLongS3Key    = errors.New("слишком длинный s3 ключ")
+	ErrUnsafeS3KeyPath = errors.New("подозрительный s3 ключ")
 )
 
+const maxS3KeyBytes = 1024
+
 func ValidateS3Key(key string) error {
-	if strings.TrimSpace(key) == "" {
+	key = strings.TrimSpace(key)
+	if key == "" {
 		return ErrEmptyS3Key
 	}
 
-	for _, r := range key {
-		if unicode.IsSpace(r) || unicode.IsControl(r) {
-			return ErrInvalidS3Key
+	if len(key) > maxS3KeyBytes {
+		return ErrTooLongS3Key
+	}
+
+	if !utf8.ValidString(key) {
+		return ErrInvalidS3Key
+	}
+
+	if strings.Contains(key, "//") || strings.Contains(key, "\\") {
+		return ErrInvalidS3Key
+	}
+
+	if strings.HasPrefix(key, "/") || strings.HasSuffix(key, "/") {
+		return ErrInvalidS3Key
+	}
+
+	parts := strings.Split(key, "/")
+	for i := range parts {
+		if parts[i] == "" || parts[i] == "." || parts[i] == ".." {
+			return ErrUnsafeS3KeyPath
+		}
+
+		for _, r := range parts[i] {
+			if unicode.IsSpace(r) || unicode.IsControl(r) {
+				return ErrInvalidS3Key
+			}
 		}
 	}
 

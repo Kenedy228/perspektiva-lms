@@ -1,6 +1,6 @@
 package organization
 
 type Params struct {
-	Inn  string
+	INN  string
 	Name string
 }

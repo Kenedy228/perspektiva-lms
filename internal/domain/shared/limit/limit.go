@@ -1,21 +1,29 @@
 package limit
 
-import "errors"
+import "time"
 
-type Limit int
+type Limit struct {
+	value int
+}
 
-var (
-	ErrInvalidLimit = errors.New("invalid limit")
-)
-
-func (l Limit) Validate() error {
-	if l < 0 {
-		return ErrInvalidLimit
+func New(value int) (Limit, error) {
+	if err := validateValue(value); err != nil {
+		return Limit{}, err
 	}
 
-	return nil
+	return Limit{
+		value: value,
+	}, nil
 }
 
 func (l Limit) IsInfinite() bool {
-	return l == 0
+	return l.value == 0
+}
+
+func (l Limit) Value() int {
+	return l.value
+}
+
+func (l Limit) Duration() time.Duration {
+	return time.Second * time.Duration(l.value)
 }

@@ -1,83 +1,61 @@
 package quiz
 
 import (
-	"errors"
+	"fmt"
+	"slices"
 	"strings"
 
-	"gitflic.ru/lms/internal/domain/quiz/source"
-	"github.com/google/uuid"
-)
-
-var (
-	ErrEmptyTitle             = errors.New("empty title")
-	ErrEmptySources           = errors.New("empty sources")
-	ErrNegativeAttempts       = errors.New("negative attempt limit")
-	ErrNegativeTime           = errors.New("negative time limit")
-	ErrNilSource              = errors.New("nil source")
-	ErrCannotRemoveLastSource = errors.New("cannot remove the last source")
-	ErrDuplicatedBank         = errors.New("duplicated bank")
-	ErrDuplicatedSource       = errors.New("duplicated source")
+	"gitflic.ru/lms/internal/domain/shared/duplicate"
 )
 
 func validateTitle(title string) error {
 	if strings.TrimSpace(title) == "" {
-		return ErrEmptyTitle
+		return fmt.Errorf("%w, детали: заголовок должен содержать хотя бы один непробельный символ", ErrInvalid)
 	}
 
 	return nil
 }
 
-func validateSources(sources []source.Source) error {
+func validateSources(sources []Source) error {
 	if len(sources) == 0 {
-		return ErrEmptySources
+		return fmt.Errorf("%w, детали: квиз должен иметь хотя бы один источник вопросов", ErrInvalid)
 	}
 
-	seenSources := make(map[uuid.UUID]struct{}, len(sources))
-	seenBanks := make(map[uuid.UUID]struct{}, len(sources))
+	if len(sources) > maxSources {
+		return fmt.Errorf("%w, детали: квиз должен содержать не более %d источников", ErrInvalid, maxSources)
+	}
 
-	for i := range sources {
-		source := sources[i]
-		if _, ok := seenSources[source.ID()]; ok {
-			return ErrDuplicatedSource
-		}
-
-		bank := source.BankID()
-		if _, ok := seenBanks[bank]; ok {
-			return ErrDuplicatedBank
-		}
-
-		seenSources[source.ID()] = struct{}{}
-		seenBanks[bank] = struct{}{}
+	bankIDs := getBankIDs(sources)
+	if has := duplicate.FindUUID(bankIDs); has {
+		return fmt.Errorf("%w, детали: квиз не может содержать источники с одинаковым банком вопросов", ErrInvalid)
 	}
 
 	return nil
 }
 
-func validateSourceToAdd(sources []source.Source, s source.Source) error {
-	for i := range sources {
-		if sources[i] == s {
-			return ErrDuplicatedSource
-		}
+func validateMaxAttempts(maxAttempts int) error {
+	if maxAttempts < 0 {
+		return fmt.Errorf("%w, детали: максимальное число попыток должно быть неотрицательным", ErrInvalid)
+	}
 
-		if sources[i].BankID() == s.BankID() {
-			return ErrDuplicatedBank
-		}
+	if maxAttempts > maxAttemptsCount {
+		return fmt.Errorf("%w, детали: максимальное число попыток должно быть менее %d", ErrInvalid, maxAttemptsCount)
 	}
 
 	return nil
 }
 
-func validateAttemptLimit(attemptLimit int) error {
-	if attemptLimit < 0 {
-		return ErrNegativeAttempts
+func validateSourceToAdd(sources []Source, s Source) error {
+	if len(sources)+1 > maxSources {
+		return ErrSourceSizeExceeded
 	}
 
-	return nil
-}
+	cSources := slices.Clone(sources)
+	cSources = append(cSources, s)
+	bankIDs := getBankIDs(cSources)
 
-func validateTimeLimit(timeLimit int) error {
-	if timeLimit < 0 {
-		return ErrNegativeTime
+	if has := duplicate.FindUUID(bankIDs); has {
+		return fmt.Errorf("%w, детали: источник с таким банком уже указан в квизе", ErrDuplicateBankID)
 	}
 
 	return nil

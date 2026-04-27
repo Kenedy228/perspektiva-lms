@@ -1,37 +1,21 @@
 package organization
 
 import (
-	"errors"
-	"regexp"
+	"fmt"
 	"strings"
-)
-
-var (
-	individualRegexp = regexp.MustCompile(`^\d{12}$`)
-	companyRegexp    = regexp.MustCompile(`^\d{10}$`)
-)
-
-var (
-	ErrEmptyName  = errors.New("empty name")
-	ErrEmptyInn   = errors.New("empty inn")
-	ErrInvalidInn = errors.New("invalid inn")
 )
 
 func validateName(name string) error {
 	if strings.TrimSpace(name) == "" {
-		return ErrEmptyName
+		return fmt.Errorf("%w, детали: наименование организации должно содержать хотя бы один непробельный символ", ErrInvalid)
 	}
 
 	return nil
 }
 
 func validateInn(inn string) error {
-	if strings.TrimSpace(inn) == "" {
-		return ErrEmptyInn
-	}
-
 	if !individualRegexp.MatchString(inn) && !companyRegexp.MatchString(inn) {
-		return ErrInvalidInn
+		return fmt.Errorf("%w, детали: предоставленный формат ИНН не является корректным", ErrInvalid)
 	}
 
 	return nil

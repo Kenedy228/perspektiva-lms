@@ -1,6 +1,6 @@
 package criteria
 
 type Criteria interface {
-	Type() CriteriaType
+	Type() Type
 	QuestionCount() int
 }
