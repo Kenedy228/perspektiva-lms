@@ -70,6 +70,16 @@ func (c *OrderedClonable[T]) Move(from, to int) error {
 	return nil
 }
 
+func (c *OrderedClonable[T]) Contains(item T) bool {
+	return slices.ContainsFunc(c.items, func(current T) bool {
+		return current.ID() == item.ID()
+	})
+}
+
 func (c *OrderedClonable[T]) Items() []T {
 	return c.items
+}
+
+func (c *OrderedClonable[T]) Count() int {
+	return len(c.items)
 }

@@ -2,9 +2,9 @@ package version
 
 import (
 	"fmt"
-	"slices"
 
 	"gitflic.ru/lms/internal/domain/block"
+	"gitflic.ru/lms/internal/domain/shared/collection"
 	"gitflic.ru/lms/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
@@ -12,7 +12,7 @@ import (
 type Version struct {
 	id     uuid.UUID
 	title  string
-	blocks []*block.Block
+	blocks *collection.OrderedClonable[*block.Block]
 	status Status
 }
 
@@ -32,10 +32,12 @@ func New(params Params) (*Version, error) {
 		return nil, err
 	}
 
+	blocks := collection.NewOrderedClonable(params.Blocks)
+
 	return &Version{
 		id:     id,
 		title:  title,
-		blocks: cloneBlocks(params.Blocks),
+		blocks: blocks,
 		status: StatusDraft,
 	}, nil
 }
@@ -49,7 +51,8 @@ func (v *Version) Title() string {
 }
 
 func (v *Version) Blocks() []*block.Block {
-	return cloneBlocks(v.blocks)
+	blocks := v.blocks.Items()
+	return cloneBlocks(blocks)
 }
 
 func (v *Version) Status() Status {
@@ -57,6 +60,12 @@ func (v *Version) Status() Status {
 }
 
 func (v *Version) ChangeTitle(title string) error {
+	if !v.IsEditable() {
+		return ErrNotEditable
+	}
+
+	title = normalizeTitle(title)
+
 	if err := validateTitle(title); err != nil {
 		return err
 	}
@@ -65,68 +74,74 @@ func (v *Version) ChangeTitle(title string) error {
 	return nil
 }
 
-func (v *Version) InsertBlockAt(pos int, block *block.Block) error {
-	if pos < 0 || pos > len(v.blocks) {
-		return fmt.Errorf("%w, детали: неверная позиция вставки", ErrInvalid)
+func (v *Version) InsertBlockAt(block *block.Block, pos int) error {
+	if !v.IsEditable() {
+		return ErrNotEditable
 	}
 
 	if block == nil {
 		return fmt.Errorf("%w, детали: блок для вставки должен существовать", ErrInvalid)
 	}
 
-	blocks := slices.Insert(v.blocks, pos, block.Clone())
-	if err := validateBlocksDuplication(blocks); err != nil {
-		return err
+	if v.blocks.Count()+1 > blocksLimit {
+		return fmt.Errorf("%w, детали: количество блоков в версии не должно превышать %d штук", ErrInvalid, blocksLimit)
 	}
 
-	if err := validateBlocksLimit(blocks, blockLimit); err != nil {
-		return err
+	if v.blocks.Contains(block) {
+		return fmt.Errorf("%w, детали: версия не должна содержать дубликаты блоков (разрешаются копии)", ErrInvalid)
 	}
 
-	v.blocks = blocks
+	err := v.blocks.InsertAt(block, pos)
+	if err != nil {
+		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
+	}
+
 	return nil
 }
 
-func (v *Version) RemoveBlockAt(pos int) error {
-	if pos < 0 || pos >= len(v.blocks) {
-		return fmt.Errorf("%w, детали: неверная позиция удаления", ErrInvalid)
+func (v *Version) RemoveBlock(block *block.Block) error {
+	if !v.IsEditable() {
+		return ErrNotEditable
 	}
 
-	v.blocks = slices.Delete(v.blocks, pos, pos+1)
+	if block == nil {
+		return nil
+	}
+
+	err := v.blocks.Remove(block)
+	if err != nil {
+		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
+	}
+
 	return nil
 }
 
 func (v *Version) UpdateBlock(block *block.Block) error {
-	for i := range v.blocks {
-		if v.blocks[i].ID() == block.ID() {
-			v.blocks[i] = block.Clone()
-			return nil
-		}
+	if !v.IsEditable() {
+		return ErrNotEditable
 	}
 
-	return fmt.Errorf("%w, детали: версия не содержит обновляемый блок", ErrInvalid)
+	if block == nil {
+		return fmt.Errorf("%w, детали: блок для обновления должен существовать", ErrInvalid)
+	}
+
+	err := v.blocks.Update(block)
+	if err != nil {
+		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
+	}
+
+	return nil
 }
 
 func (v *Version) MoveBlock(from, to int) error {
-	if v.IsPublished() {
-		return fmt.Errorf("%w, детали: вносить изменения в опубликованную версию запрещено", ErrInvalid)
+	if !v.IsEditable() {
+		return ErrNotEditable
 	}
 
-	if from < 0 || from >= len(v.blocks) {
-		return fmt.Errorf("%w, детали: неверная начальная позиция перемещаемого элемента", ErrInvalid)
+	err := v.blocks.Move(from, to)
+	if err != nil {
+		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
 	}
-
-	if to < 0 || to >= len(v.blocks) {
-		return fmt.Errorf("%w, детали: неверная конечная позиция перемещаемого элемента", ErrInvalid)
-	}
-
-	if from == to {
-		return nil
-	}
-
-	block := v.blocks[from]
-	v.blocks = slices.Delete(v.blocks, from, from+1)
-	v.blocks = slices.Insert(v.blocks, to, block)
 
 	return nil
 }
@@ -145,10 +160,12 @@ func (v *Version) DraftCopy() (*Version, error) {
 		return nil, err
 	}
 
+	blocks := v.blocks.Items()
+
 	return &Version{
 		id:     id,
 		title:  v.title,
-		blocks: cloneBlocks(v.blocks),
+		blocks: collection.NewOrderedClonable(blocks),
 		status: StatusDraft,
 	}, nil
 }

@@ -1,3 +1,4 @@
+// Пакет s3validator предоставляет функционал по валидации s3 ключей.
 package s3validator
 
 import (
@@ -14,8 +15,10 @@ var (
 	ErrUnsafeS3KeyPath = errors.New("подозрительный s3 ключ")
 )
 
+// Максимальный размер ключа в байтах.
 const maxS3KeyBytes = 1024
 
+// Функция валидации s3 ключа, реализована в соответствии с документаций amazon s3.
 func ValidateS3Key(key string) error {
 	key = strings.TrimSpace(key)
 	if key == "" {

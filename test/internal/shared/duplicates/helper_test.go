@@ -1,4 +1,4 @@
-package duplicate_test
+package duplicates_test
 
 import "github.com/google/uuid"
 

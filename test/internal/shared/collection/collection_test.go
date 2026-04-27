@@ -612,3 +612,81 @@ func TestItems(t *testing.T) {
 		})
 	})
 }
+
+func TestCount(t *testing.T) {
+	t.Run("на пустой коллекции должен вернуть 0", func(t *testing.T) {
+		//Arrange
+		fixtures := []fixture{}
+		c := collection.NewOrderedClonable(fixtures)
+
+		//Act
+		count := c.Count()
+
+		//Assert
+		assert.Equal(t, count, 0)
+	})
+
+	t.Run("на непустой коллекции должен вернуть количество элементов в срезе коллекции", func(t *testing.T) {
+		//Arrange
+		fixtures := []fixture{
+			fixture{id: uuid.New(), title: "first"},
+			fixture{id: uuid.New(), title: "second"},
+		}
+		c := collection.NewOrderedClonable(fixtures)
+
+		//Act
+		count := c.Count()
+
+		//Assert
+		assert.Equal(t, count, 2)
+	})
+}
+
+func TestContains(t *testing.T) {
+	t.Run("на пустой коллекции должен вернуть false", func(t *testing.T) {
+		//Arrange
+		fixtures := []fixture{}
+		c := collection.NewOrderedClonable(fixtures)
+
+		//Act
+		item := fixture{id: uuid.New(), title: "contains"}
+		has := c.Contains(item)
+
+		//Assert
+		assert.False(t, has)
+	})
+
+	t.Run("непустая коллекция", func(t *testing.T) {
+		t.Run("элемент содержится в коллекции, должен вернуть true", func(t *testing.T) {
+			//Arrange
+			containsID := uuid.New()
+			fixtures := []fixture{
+				fixture{id: containsID, title: "contains"},
+				fixture{id: uuid.New(), title: "item"},
+			}
+			c := collection.NewOrderedClonable(fixtures)
+
+			//Act
+			item := fixture{id: containsID, title: "different title, but id the same"}
+			has := c.Contains(item)
+
+			//Assert
+			assert.True(t, has)
+		})
+
+		t.Run("элемент не содержится в коллекции, должен вернуть false", func(t *testing.T) {
+			//Arrange
+			fixtures := []fixture{
+				fixture{id: uuid.New(), title: "item"},
+			}
+			c := collection.NewOrderedClonable(fixtures)
+
+			//Act
+			item := fixture{id: uuid.New(), title: "not contains"}
+			has := c.Contains(item)
+
+			//Assert
+			assert.False(t, has)
+		})
+	})
+}
