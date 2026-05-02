@@ -1,4 +1,6 @@
 package matching
 
-const minPairs = 2
-const maxPairs = 20
+const (
+	minPairs int = 2
+	maxPairs int = 20
+)

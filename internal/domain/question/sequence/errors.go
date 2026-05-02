@@ -3,5 +3,5 @@ package sequence
 import "errors"
 
 var (
-	ErrInvalidElements = errors.New("неверные элементы последовательности")
+	ErrInvalid = errors.New("ошибка вопроса последовательности")
 )

@@ -3,5 +3,5 @@ package selectable
 import "errors"
 
 var (
-	ErrInvalidOptions = errors.New("неправильные варианты ответов")
+	ErrInvalid = errors.New("ошибка вопроса на множественный выбор")
 )

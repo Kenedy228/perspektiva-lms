@@ -1,5 +1,7 @@
 package selectable
 
-const minOptions = 2
-const maxOptions = 20
-const minCorrect = 1
+const (
+	minOptionsCount        int = 2
+	maxOptionsCount        int = 20
+	minCorrectOptionsCount int = 1
+)

@@ -2,43 +2,31 @@ package version
 
 import (
 	"fmt"
+	"slices"
 
-	"gitflic.ru/lms/internal/domain/block"
-	"gitflic.ru/lms/internal/domain/shared/collection"
+	"gitflic.ru/lms/internal/domain/course/version/title"
 	"gitflic.ru/lms/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
 
 type Version struct {
-	id     uuid.UUID
-	title  string
-	blocks *collection.OrderedClonable[*block.Block]
-	status Status
+	id       uuid.UUID
+	t        title.Title
+	status   Status
+	blockIDs []uuid.UUID
 }
 
-func New(params Params) (*Version, error) {
-	title := normalizeTitle(params.Title)
-
-	if err := validateTitle(title); err != nil {
-		return nil, err
-	}
-
-	if err := validateBlocks(params.Blocks); err != nil {
-		return nil, err
-	}
-
+func New(t title.Title) (*Version, error) {
 	id, err := uid.New()
 	if err != nil {
 		return nil, err
 	}
 
-	blocks := collection.NewOrderedClonable(params.Blocks)
-
 	return &Version{
-		id:     id,
-		title:  title,
-		blocks: blocks,
-		status: StatusDraft,
+		id:       id,
+		t:        t,
+		blockIDs: make([]uuid.UUID, 0),
+		status:   StatusDraft,
 	}, nil
 }
 
@@ -46,126 +34,113 @@ func (v *Version) ID() uuid.UUID {
 	return v.id
 }
 
-func (v *Version) Title() string {
-	return v.title
+func (v *Version) Title() title.Title {
+	return v.t
 }
 
-func (v *Version) Blocks() []*block.Block {
-	blocks := v.blocks.Items()
-	return cloneBlocks(blocks)
+func (v *Version) BlockIDs() []uuid.UUID {
+	return slices.Clone(v.blockIDs)
 }
 
 func (v *Version) Status() Status {
 	return v.status
 }
 
-func (v *Version) ChangeTitle(title string) error {
-	if !v.IsEditable() {
-		return ErrNotEditable
-	}
+func (v *Version) ChangeTitle(t title.Title) {
+	v.t = t
+}
 
-	title = normalizeTitle(title)
-
-	if err := validateTitle(title); err != nil {
+func (v *Version) AddBlockID(id uuid.UUID) error {
+	if err := validateRequiredBlockID(id); err != nil {
 		return err
 	}
 
-	v.title = title
+	if err := validateBlockIDsLimit(v.blockIDs); err != nil {
+		return err
+	}
+
+	if err := validateBlockIDsDuplication(id, v.blockIDs); err != nil {
+		return err
+	}
+
+	v.blockIDs = append(v.blockIDs, id)
 	return nil
 }
 
-func (v *Version) InsertBlockAt(block *block.Block, pos int) error {
-	if !v.IsEditable() {
-		return ErrNotEditable
-	}
-
-	if block == nil {
-		return fmt.Errorf("%w, детали: блок для вставки должен существовать", ErrInvalid)
-	}
-
-	if v.blocks.Count()+1 > blocksLimit {
-		return fmt.Errorf("%w, детали: количество блоков в версии не должно превышать %d штук", ErrInvalid, blocksLimit)
-	}
-
-	if v.blocks.Contains(block) {
-		return fmt.Errorf("%w, детали: версия не должна содержать дубликаты блоков (разрешаются копии)", ErrInvalid)
-	}
-
-	err := v.blocks.InsertAt(block, pos)
-	if err != nil {
-		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
-	}
-
-	return nil
+func (v *Version) TryRemoveBlockID(id uuid.UUID) {
+	v.blockIDs = slices.DeleteFunc(v.blockIDs, func(current uuid.UUID) bool {
+		return current == id
+	})
 }
 
-func (v *Version) RemoveBlock(block *block.Block) error {
-	if !v.IsEditable() {
-		return ErrNotEditable
+func (v *Version) MoveFromTo(from, to int) error {
+	if from < 0 || from >= len(v.blockIDs) {
+		return fmt.Errorf("%w, детали: неверная начальная позиция перемещаемого блока", ErrInvalid)
 	}
 
-	if block == nil {
+	if to < 0 || to >= len(v.blockIDs) {
+		return fmt.Errorf("%w, детали: неверная конечная позиция перемещаемого блока", ErrInvalid)
+	}
+
+	if from == to {
 		return nil
 	}
 
-	err := v.blocks.Remove(block)
-	if err != nil {
-		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
-	}
-
+	id := v.blockIDs[from]
+	v.blockIDs = slices.Delete(v.blockIDs, from, from+1)
+	v.blockIDs = slices.Insert(v.blockIDs, to, id)
 	return nil
 }
 
-func (v *Version) UpdateBlock(block *block.Block) error {
-	if !v.IsEditable() {
-		return ErrNotEditable
+func (v *Version) Publish() error {
+	if v.status != StatusDraft {
+		return fmt.Errorf("%w, детали: публиковать можно только черновик", ErrInvalid)
 	}
 
-	if block == nil {
-		return fmt.Errorf("%w, детали: блок для обновления должен существовать", ErrInvalid)
-	}
-
-	err := v.blocks.Update(block)
-	if err != nil {
-		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
-	}
-
+	v.status = StatusPublished
 	return nil
 }
 
-func (v *Version) MoveBlock(from, to int) error {
-	if !v.IsEditable() {
-		return ErrNotEditable
+func (v *Version) MarkAsDeleted() error {
+	if v.status == StatusDeleted {
+		return fmt.Errorf("%w, детали: версия уже помечена на удаление", ErrInvalid)
 	}
 
-	err := v.blocks.Move(from, to)
-	if err != nil {
-		return fmt.Errorf("%w, детали: %w", ErrInvalid, err)
-	}
-
+	v.status = StatusDeleted
 	return nil
+}
+
+func (v *Version) IsDraft() bool {
+	return v.status == StatusDraft
 }
 
 func (v *Version) IsPublished() bool {
 	return v.status == StatusPublished
 }
 
-func (v *Version) IsEditable() bool {
-	return v.status == StatusDraft
+func (v *Version) IsDeleted() bool {
+	return v.status == StatusDeleted
 }
 
-func (v *Version) DraftCopy() (*Version, error) {
+func (v *Version) Clone() *Version {
+	return &Version{
+		id:       v.id,
+		t:        v.t,
+		blockIDs: slices.Clone(v.blockIDs),
+		status:   v.status,
+	}
+}
+
+func (v *Version) Replicate() (*Version, error) {
 	id, err := uid.New()
 	if err != nil {
 		return nil, err
 	}
 
-	blocks := v.blocks.Items()
-
 	return &Version{
-		id:     id,
-		title:  v.title,
-		blocks: collection.NewOrderedClonable(blocks),
-		status: StatusDraft,
+		id:       id,
+		t:        v.t,
+		blockIDs: slices.Clone(v.blockIDs),
+		status:   StatusDraft,
 	}, nil
 }

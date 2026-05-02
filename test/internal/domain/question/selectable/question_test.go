@@ -1,199 +1,198 @@
 package selectable_test
 
 import (
-	"fmt"
 	"testing"
 
+	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/question/selectable"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const maxOptions = 200
+func TestNew_Success(t *testing.T) {
+	tc := []struct {
+		name         string
+		optionsCount int
+		correctCount int
+	}{
+		{
+			name:         "количество опций (также верных опций) удовлетворяет инвариантам",
+			optionsCount: 10,
+			correctCount: 5,
+		},
+	}
 
-func TestNewQuestion(t *testing.T) {
-	t.Run("less than minAnswers", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().withOptionAsText("item", true).
-			build(t, selectable.ErrInvalidOptions)
-	})
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Arrange
+			q, err := selectable.New(
+				mockTitle(),
+				makeOptions(tt.correctCount, tt.optionsCount-tt.correctCount),
+			)
 
-	t.Run("more than maxAnswers", func(t *testing.T) {
-		//Arrange-Assert
-		b := newQuestionBuilder()
-
-		for i := range maxOptions + 1 {
-			b = b.withOptionAsText(fmt.Sprintf("%d", i), true)
-		}
-
-		b.build(t, selectable.ErrInvalidOptions)
-	})
-
-	t.Run("with same content", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().withOptionAsText("same", true).
-			withOptionAsText("same", false).
-			build(t, selectable.ErrInvalidOptions)
-	})
-
-	t.Run("less than minCorrect", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().withOptionAsText("foo", false).
-			withOptionAsText("bar", false).
-			build(t, selectable.ErrInvalidOptions)
-	})
-
-	t.Run("valid", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().withText("text").
-			withImage(uuid.New()).
-			withOptionAsText("foo", true).
-			withOptionAsText("bar", false).
-			build(t, nil))
-
-		//Assert
-		assert.NotEqual(t, q.ID(), uuid.Nil)
-		assert.Equal(t, q.Text(), "text")
-		assert.NotEqual(t, q.ImageID(), uuid.Nil)
-		assert.True(t, q.HasImage())
-		assert.Equal(t, len(q.Options()), 2)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
+			//Assert
+			assert.NoError(t, err)
+			assert.Equal(t, tt.optionsCount, len(q.Options()))
+			assert.Equal(t, tt.correctCount, q.CorrectOptionsCount())
+			assert.Equal(t, question.TypeSelectable.DefaultInstruction(), q.Instruction())
+			assert.Equal(t, question.TypeSelectable, q.Type())
+		})
+	}
 }
 
-func TestUpdateOptions(t *testing.T) {
-	t.Run("update with no err should change items and update updatedAt", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().withOptionAsText("first", true).
-			withOptionAsText("second", false).
-			build(t, nil))
+func TestNew_Fail(t *testing.T) {
+	tc := []struct {
+		name         string
+		optionsCount int
+		correctCount int
+		wantErr      error
+	}{
+		{
+			name:         "количество опций меньше ограничения",
+			optionsCount: 1,
+			correctCount: 1,
+			wantErr:      selectable.ErrInvalid,
+		},
+		{
+			name:         "количество опций больше ограничения",
+			optionsCount: 30,
+			correctCount: 1,
+			wantErr:      selectable.ErrInvalid,
+		},
+		{
+			name:         "количество верных опций меньше ограничения",
+			optionsCount: 10,
+			correctCount: 0,
+			wantErr:      selectable.ErrInvalid,
+		},
+	}
 
-		//Act
-		err := q.UpdateOptions(mockOptions())
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Arrange
+			_, err := selectable.New(
+				mockTitle(),
+				makeOptions(tt.correctCount, tt.optionsCount-tt.correctCount),
+			)
 
-		//Assert
-		assert.Nil(t, err)
-		assert.Equal(t, len(q.Options()), len(mockOptions()))
-		assert.NotSame(t, &q.Options()[0], &mockOptions()[0])
-		assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
-	})
-
-	t.Run("update with err should not change items and not update updatedAt", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().withOptionAsText("first", true).
-			withOptionAsText("second", false).
-			build(t, nil))
-
-		//Act
-		err := q.UpdateOptions([]selectable.Option{newOptionBuilder().withContentAsText("incorrect").
-			withCorrect(false).
-			buildNoTest()})
-
-		//Assert
-		assert.ErrorIs(t, err, selectable.ErrInvalidOptions)
-		assert.NotEqual(t, q.Options(), mockOptions())
-		assert.Equal(t, q.UpdatedAt(), q.CreatedAt())
-	})
+			//Assert
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
 }
 
-func TestCheckAnswers(t *testing.T) {
-	q := castQuestion(t, newQuestionBuilder().withOptionAsText("item1", true).
-		withOptionAsText("item2", false).
-		build(t, nil))
-
-	require.True(t, q.Options()[0].IsCorrect())
-	require.False(t, q.Options()[1].IsCorrect())
-
-	truthy := q.Options()[0].ID()
-	falsy := q.Options()[1].ID()
-
-	t.Run("contains id, that q doesn't have", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withRandomID().
-			withRandomID().
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("answer contains falsy id", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withID(falsy).
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("answer contains falsy id", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withID(falsy).
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("answer contains falsy and truthy id", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withID(falsy).
-			withID(truthy).
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("answer contains duplicate truthy id", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withID(truthy).
-			withID(truthy).
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("answer contains only truthy id", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withID(truthy).
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.True(t, check)
-	})
-}
-
-func TestCloneQuestion(t *testing.T) {
+func TestOptions(t *testing.T) {
 	//Arrange
-	q := castQuestion(t, newQuestionBuilder().withOptionAsText("text", true).
-		withOptionAsText("another", false).
-		build(t, nil))
-	clone := castQuestion(t, q.Clone())
+	q, err := selectable.New(
+		mockTitle(),
+		makeOptions(5, 3),
+	)
+	require.NoError(t, err)
+	opts := q.Options()
 
-	assert.Equal(t, q.ID(), clone.ID())
-	assert.NotSame(t, &q, &clone)
-	assert.NotSame(t, &q.Options()[0], &clone.Options()[0])
-	assert.Equal(t, q.UpdatedAt(), clone.UpdatedAt())
-	assert.Equal(t, q.CreatedAt(), clone.CreatedAt())
+	//Act
+	opts[0] = makeOptions(0, 1)[0]
+
+	//Assert
+	assert.NotEqual(t, opts[0], q.Options()[0])
+}
+
+func TestUpdateOptions_Success(t *testing.T) {
+	tc := []struct {
+		name         string
+		optionsCount int
+		correctCount int
+	}{
+		{
+			name:         "количество опций (также верных опций) удовлетворяет инвариантам",
+			optionsCount: 10,
+			correctCount: 5,
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Arrange
+			q, err := selectable.New(
+				mockTitle(),
+				makeOptions(5, 3),
+			)
+			require.NoError(t, err)
+			newOpts := makeOptions(2, 3)
+
+			//Act
+			err = q.UpdateOptions(newOpts)
+
+			//Assert
+			assert.NoError(t, err)
+			assert.Equal(t, newOpts, q.Options())
+		})
+	}
+}
+
+func TestUpdateOptions_Fail(t *testing.T) {
+	tc := []struct {
+		name         string
+		optionsCount int
+		correctCount int
+		wantErr      error
+	}{
+		{
+			name:         "количество опций меньше ограничения",
+			optionsCount: 1,
+			correctCount: 1,
+			wantErr:      selectable.ErrInvalid,
+		},
+		{
+			name:         "количество опций больше ограничения",
+			optionsCount: 30,
+			correctCount: 1,
+			wantErr:      selectable.ErrInvalid,
+		},
+		{
+			name:         "количество верных опций меньше ограничения",
+			optionsCount: 10,
+			correctCount: 0,
+			wantErr:      selectable.ErrInvalid,
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Arrange
+			oldOpts := makeOptions(5, 3)
+			q, err := selectable.New(
+				mockTitle(),
+				oldOpts,
+			)
+			require.NoError(t, err)
+			newOpts := makeOptions(tt.correctCount, tt.optionsCount-tt.correctCount)
+
+			//Act
+			err = q.UpdateOptions(newOpts)
+
+			//Assert
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, oldOpts, q.Options())
+		})
+	}
+}
+
+func TestClone(t *testing.T) {
+	//Arrange
+	q, err := selectable.New(
+		mockTitle(),
+		makeOptions(5, 3),
+	)
+	require.NoError(t, err)
+	clone, ok := q.Clone().(*selectable.Question)
+	require.True(t, ok)
+
+	//Assert
+	assert.Equal(t, len(clone.Options()), len(q.Options()))
+	assert.Equal(t, clone.CorrectOptionsCount(), q.CorrectOptionsCount())
+	assert.Equal(t, clone.Instruction(), q.Instruction())
+	assert.Equal(t, clone.Type(), q.Type())
 }

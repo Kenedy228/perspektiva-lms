@@ -1,45 +1,40 @@
 package organization_test
 
 import (
-	"testing"
-
 	"gitflic.ru/lms/internal/domain/organization"
-	"github.com/stretchr/testify/assert"
+	"gitflic.ru/lms/internal/domain/organization/inn"
+	"gitflic.ru/lms/internal/domain/organization/orgname"
 )
 
 type organizationBuilder struct {
-	name string
-	inn  string
+	name orgname.Name
+	inn  inn.INN
 }
 
 func newOrganizationBuilder() *organizationBuilder {
-	return &organizationBuilder{
-		name: "",
-		inn:  "",
-	}
+	return &organizationBuilder{}
 }
 
 func (b *organizationBuilder) withName(name string) *organizationBuilder {
-	b.name = name
+	b.name = makeName(name)
 	return b
 }
 
-func (b *organizationBuilder) withInn(inn string) *organizationBuilder {
-	b.inn = inn
+func (b *organizationBuilder) withInn(inn string, t inn.Type) *organizationBuilder {
+	b.inn = makeINN(inn, t)
 	return b
 }
 
-func (b *organizationBuilder) build(t *testing.T, wantErr error) *organization.Organization {
-	t.Helper()
+func (b *organizationBuilder) build() (*organization.Organization, error) {
+	return organization.New(b.inn, b.name)
+}
 
-	params := organization.Params{
-		Name: b.name,
-		INN:  b.inn,
-	}
+func makeName(s string) orgname.Name {
+	name, _ := orgname.New(s)
+	return name
+}
 
-	org, err := organization.New(params)
-
-	assert.ErrorIs(t, err, wantErr)
-
-	return org
+func makeINN(s string, t inn.Type) inn.INN {
+	inn, _ := inn.New(s, t)
+	return inn
 }

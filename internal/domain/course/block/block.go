@@ -1,0 +1,108 @@
+package block
+
+import (
+	"fmt"
+	"slices"
+
+	"gitflic.ru/lms/internal/domain/course/block/title"
+	"gitflic.ru/lms/internal/domain/shared/uid"
+	"github.com/google/uuid"
+)
+
+type Block struct {
+	id         uuid.UUID
+	t          title.Title
+	elementIDs []uuid.UUID
+}
+
+func New(t title.Title) (*Block, error) {
+	id, err := uid.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Block{
+		id:         id,
+		t:          t,
+		elementIDs: make([]uuid.UUID, 0),
+	}, nil
+}
+
+func (b *Block) ID() uuid.UUID {
+	return b.id
+}
+
+func (b *Block) Title() title.Title {
+	return b.t
+}
+
+func (b *Block) ElementIDs() []uuid.UUID {
+	return slices.Clone(b.elementIDs)
+}
+
+func (b *Block) ChangeTitle(t title.Title) {
+	b.t = t
+}
+
+func (b *Block) AddElementID(id uuid.UUID) error {
+	if err := validateRequiredElementID(id); err != nil {
+		return err
+	}
+
+	if err := validateElementIDsLimit(b.elementIDs); err != nil {
+		return err
+	}
+
+	if err := validateElementIDsDuplication(id, b.elementIDs); err != nil {
+		return err
+	}
+
+	b.elementIDs = append(b.elementIDs, id)
+	return nil
+}
+
+func (b *Block) TryRemoveElementID(id uuid.UUID) {
+	b.elementIDs = slices.DeleteFunc(b.elementIDs, func(current uuid.UUID) bool {
+		return current == id
+	})
+}
+
+func (b *Block) MoveFromTo(from, to int) error {
+	if from < 0 || from >= len(b.elementIDs) {
+		return fmt.Errorf("%w, детали: неверная начальная позиция перемещаемого элемента", ErrInvalid)
+	}
+
+	if to < 0 || to >= len(b.elementIDs) {
+		return fmt.Errorf("%w, детали: неверная конечная позиция перемещаемого элемента", ErrInvalid)
+	}
+
+	if from == to {
+		return nil
+	}
+
+	id := b.elementIDs[from]
+	b.elementIDs = slices.Delete(b.elementIDs, from, from+1)
+	b.elementIDs = slices.Insert(b.elementIDs, to, id)
+	return nil
+}
+
+func (b *Block) Clone() *Block {
+	return &Block{
+		id:         b.id,
+		t:          b.t,
+		elementIDs: slices.Clone(b.elementIDs),
+	}
+}
+
+func (b *Block) Replicate() (*Block, error) {
+	id, err := uid.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Block{
+		id:         id,
+		t:          b.t,
+		elementIDs: slices.Clone(b.elementIDs),
+	}, nil
+}

@@ -9,3 +9,24 @@ const (
 	StatusInterrupted Status = "interrupted"
 	StatusCancelled   Status = "cancelled"
 )
+
+func (s Status) Title() string {
+	switch s {
+	case StatusFinished:
+		return "завершен"
+	case StatusExpired:
+		return "просрочен"
+	case StatusInProgress:
+		return "в процессе"
+	case StatusInterrupted:
+		return "прерван"
+	case StatusCancelled:
+		return "отменен"
+	default:
+		return ""
+	}
+}
+
+func (s Status) String() string {
+	return string(s)
+}

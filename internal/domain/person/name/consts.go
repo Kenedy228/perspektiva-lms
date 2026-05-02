@@ -1,5 +1,5 @@
 package name
 
 const (
-	maxPartLen int = 100
+	PartCharsLimit int = 100
 )

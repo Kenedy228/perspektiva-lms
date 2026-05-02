@@ -1,4 +1,6 @@
 package short
 
-const minVariants = 1
-const maxVariants = 20
+const (
+	minVariantsCount int = 1
+	maxVariantsCount int = 20
+)

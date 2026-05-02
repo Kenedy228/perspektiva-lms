@@ -10,15 +10,6 @@ const (
 	TypeShort      Type = "short"
 )
 
-func (t Type) IsValid() bool {
-	switch t {
-	case TypeMatching, TypeSelectable, TypeSequence, TypeShort, TypeTyped:
-		return true
-	default:
-		return false
-	}
-}
-
 func (t Type) Title() string {
 	switch t {
 	case TypeMatching:

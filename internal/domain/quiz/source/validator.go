@@ -1,0 +1,24 @@
+package source
+
+import (
+	"fmt"
+
+	"gitflic.ru/lms/internal/domain/quiz/source/criteria"
+	"github.com/google/uuid"
+)
+
+func validateBankID(bankID uuid.UUID) error {
+	if bankID == uuid.Nil {
+		return fmt.Errorf("%w, детали: указан несуществующий банк вопросов", ErrInvalid)
+	}
+
+	return nil
+}
+
+func validateCriteria(criteria criteria.Criteria) error {
+	if criteria == nil {
+		return fmt.Errorf("%w, детали: не выбран критерий выборки", ErrInvalid)
+	}
+
+	return nil
+}

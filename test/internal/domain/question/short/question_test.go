@@ -1,156 +1,123 @@
 package short_test
 
 import (
-	"fmt"
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/question/short"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const maxVariants = 200
-
-func TestNewQuestion(t *testing.T) {
-	t.Run("zero length", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().build(t, short.ErrInvalidVariants)
-	})
-
-	t.Run("more than maxVariants", func(t *testing.T) {
-		//Arrange-Assert
-		b := newQuestionBuilder()
-
-		for i := range maxVariants + 1 {
-			b = b.withVariant(fmt.Sprintf("%d", i))
-		}
-
-		b.build(t, short.ErrInvalidVariants)
-	})
-
-	t.Run("with same content", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().withVariant("same").
-			withVariant("same").
-			build(t, short.ErrInvalidVariants)
-	})
-
-	t.Run("valid", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().withText("text").
-			withImage(uuid.New()).
-			withVariant("foo").
-			withVariant("bar").
-			build(t, nil))
-
-		//Assert
-		assert.NotEqual(t, q.ID(), uuid.Nil)
-		assert.Equal(t, q.Text(), "text")
-		assert.NotEqual(t, q.ImageID(), uuid.Nil)
-		assert.True(t, q.HasImage())
-		assert.Equal(t, len(q.Variants()), 2)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-}
-
-func TestUpdateItems(t *testing.T) {
-	t.Run("update with no err should change items and update updatedAt", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().withVariant("first").
-			withVariant("second").
-			build(t, nil))
-
-		//Act
-		err := q.UpdateVariants(mockVariants())
-
-		//Assert
-		assert.Nil(t, err)
-		assert.Equal(t, len(q.Variants()), len(mockVariants()))
-		assert.NotSame(t, &q.Variants()[0], &mockVariants()[0])
-		assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
-	})
-
-	t.Run("update with err should not change items and not update updatedAt", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().withVariant("first").
-			withVariant("second").
-			build(t, nil))
-
-		//Act
-		err := q.UpdateVariants([]question.Content{})
-
-		//Assert
-		assert.ErrorIs(t, err, short.ErrInvalidVariants)
-		assert.NotEqual(t, q.Variants(), mockVariants())
-		assert.Equal(t, q.UpdatedAt(), q.CreatedAt())
-	})
-}
-
-func TestCheckAnswers(t *testing.T) {
-	q := castQuestion(t, newQuestionBuilder().withVariant("item1").
-		withVariant("item2").
-		build(t, nil))
-
-	t.Run("q contains answer", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withInput("item1").
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.True(t, check)
-	})
-
-	t.Run("q contains answer in diff case", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withInput("ITEM1").
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.True(t, check)
-	})
-
-	t.Run("q doesn't contain answer", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withInput("item3").
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("answer is empty", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withInput("").
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-}
-
-func TestCloneQuestion(t *testing.T) {
+func TestNew_Success(t *testing.T) {
 	//Arrange
-	q := castQuestion(t, newQuestionBuilder().withVariant("text").
-		withVariant("another").
-		build(t, nil))
-
-	//Act
-	clone := castQuestion(t, q.Clone())
+	q, err := short.New(makeTitle(), makeVariants(10))
 
 	//Assert
-	assert.NotSame(t, &q, &clone)
-	assert.NotSame(t, &q.Variants()[0], &clone.Variants()[0])
+	assert.NoError(t, err)
+	assert.Equal(t, 10, len(q.Variants()))
+	assert.Equal(t, question.TypeShort.DefaultInstruction(), q.Instruction())
+	assert.Equal(t, question.TypeShort, q.Type())
+}
+
+func TestNew_Fail(t *testing.T) {
+	tc := []struct {
+		name          string
+		variantsCount int
+		wantErr       error
+	}{
+		{
+			name:          "количество вариантов меньше необходимого",
+			variantsCount: 0,
+			wantErr:       short.ErrInvalid,
+		},
+		{
+			name:          "количество вариантов больше необходимого",
+			variantsCount: 1e2,
+			wantErr:       short.ErrInvalid,
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Assert
+			_, err := short.New(makeTitle(), makeVariants(tt.variantsCount))
+
+			//Arrange
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestVariants(t *testing.T) {
+	//Arrange
+	q, err := short.New(makeTitle(), makeVariants(10))
+	require.NoError(t, err)
+	variants := q.Variants()
+
+	//Act
+	variants = makeVariants(1)
+
+	//Assert
+	assert.NotEqual(t, variants, q.Variants())
+}
+
+func TestChangeVariants_Success(t *testing.T) {
+	//Arrange
+	q, err := short.New(makeTitle(), makeVariants(10))
+	require.NoError(t, err)
+	newVariants := makeVariants(10)
+
+	//Act
+	err = q.ChangeVariants(newVariants)
+
+	//Assert
+	assert.NoError(t, err)
+	assert.Equal(t, newVariants, q.Variants())
+}
+
+func TestChangeVariants_Fail(t *testing.T) {
+	tc := []struct {
+		name          string
+		variantsCount int
+		wantErr       error
+	}{
+		{
+			name:          "количество вариантов меньше необходимого",
+			variantsCount: 0,
+			wantErr:       short.ErrInvalid,
+		},
+		{
+			name:          "количество вариантов больше необходимого",
+			variantsCount: 1e2,
+			wantErr:       short.ErrInvalid,
+		},
+	}
+
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			//Arrange
+			q, err := short.New(makeTitle(), makeVariants(10))
+			require.NoError(t, err)
+
+			//Act
+			err = q.ChangeVariants(makeVariants(tt.variantsCount))
+
+			//Assert
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestClone(t *testing.T) {
+	//Arrange
+	q, err := short.New(makeTitle(), makeVariants(10))
+	require.NoError(t, err)
+	clone, ok := q.Clone().(*short.Question)
+	require.True(t, ok)
+
+	//Assert
+	assert.Equal(t, q.Variants(), clone.Variants())
 }

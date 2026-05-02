@@ -1,8 +1,6 @@
 package person
 
 import (
-	"time"
-
 	"gitflic.ru/lms/internal/domain/person/name"
 	"gitflic.ru/lms/internal/domain/person/profile"
 	"gitflic.ru/lms/internal/domain/shared/uid"
@@ -10,33 +8,21 @@ import (
 )
 
 type Person struct {
-	id        uuid.UUID
-	name      name.Name
-	profile   *profile.Profile
-	createdAt time.Time
-	updatedAt time.Time
+	id      uuid.UUID
+	name    name.Name
+	profile *profile.Profile
 }
 
-func New(params Params) (*Person, error) {
+func New(n name.Name) (*Person, error) {
 	id, err := uid.New()
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
-
-	var cProfile *profile.Profile
-	if params.Profile != nil {
-		clone := params.Profile.Clone()
-		cProfile = &clone
-	}
-
 	return &Person{
-		id:        id,
-		name:      params.Name,
-		profile:   cProfile,
-		createdAt: now,
-		updatedAt: now,
+		id:      id,
+		name:    n,
+		profile: nil,
 	}, nil
 }
 
@@ -49,19 +35,11 @@ func (p *Person) Name() name.Name {
 }
 
 func (p *Person) Profile() (profile.Profile, bool) {
-	if p.HasProfile() {
-		return p.profile.Clone(), true
+	if !p.HasProfile() {
+		return profile.Profile{}, false
 	}
 
-	return profile.Profile{}, false
-}
-
-func (p *Person) CreatedAt() time.Time {
-	return p.createdAt
-}
-
-func (p *Person) UpdatedAt() time.Time {
-	return p.updatedAt
+	return *p.profile, true
 }
 
 func (p *Person) HasProfile() bool {
@@ -72,14 +50,12 @@ func (p *Person) HasProfile() bool {
 	return true
 }
 
-func (p *Person) AttachProfile(profile *profile.Profile) {
-	if !p.HasProfile() {
+func (p *Person) AttachProfile(prof profile.Profile) {
+	if p.HasProfile() {
 		p.DetachProfile()
 	}
 
-	cProfile := profile.Clone()
-	p.profile = &cProfile
-	p.updatedAt = time.Now()
+	p.profile = &prof
 }
 
 func (p *Person) DetachProfile() {
@@ -88,10 +64,8 @@ func (p *Person) DetachProfile() {
 	}
 
 	p.profile = nil
-	p.updatedAt = time.Now()
 }
 
-func (p *Person) Rename(name name.Name) {
-	p.name = name
-	p.updatedAt = time.Now()
+func (p *Person) Rename(n name.Name) {
+	p.name = n
 }

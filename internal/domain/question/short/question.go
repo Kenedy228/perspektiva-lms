@@ -2,32 +2,31 @@ package short
 
 import (
 	"slices"
-	"strings"
 
 	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/question/base"
+	"gitflic.ru/lms/internal/domain/question/short/variant"
+	"gitflic.ru/lms/internal/domain/question/title"
 )
 
 type Question struct {
 	*base.Base
-	variants []question.Content
+	variants []variant.Variant
 }
 
-func New(params Params) (question.Question, error) {
-	base, err := base.New(params.baseParams())
+func New(t title.Title, variants []variant.Variant) (*Question, error) {
+	base, err := base.New(t)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := validateVariants(params.Variants); err != nil {
+	if err := validateVariants(variants); err != nil {
 		return nil, err
 	}
 
-	cVariants := slices.Clone(params.Variants)
-
 	return &Question{
 		Base:     base,
-		variants: cVariants,
+		variants: slices.Clone(variants),
 	}, nil
 }
 
@@ -35,47 +34,26 @@ func (q *Question) Instruction() string {
 	return q.Type().DefaultInstruction()
 }
 
-func (q *Question) Variants() []question.Content {
+func (q *Question) Variants() []variant.Variant {
 	return slices.Clone(q.variants)
-}
-
-func (q *Question) UpdateVariants(variants []question.Content) error {
-	if err := validateVariants(variants); err != nil {
-		return err
-	}
-
-	cVariants := slices.Clone(variants)
-	q.variants = cVariants
-	q.Touch()
-	return nil
 }
 
 func (q *Question) Type() question.Type {
 	return question.TypeShort
 }
 
-func (q *Question) CheckAnswer(answer question.Answer) bool {
-	cast, ok := answer.(Answer)
-	if !ok {
-		return false
+func (q *Question) ChangeVariants(variants []variant.Variant) error {
+	if err := validateVariants(variants); err != nil {
+		return err
 	}
 
-	if cast.IsEmpty() {
-		return false
-	}
-
-	for i := range q.variants {
-		if strings.EqualFold(q.variants[i].Value(), cast.Input()) {
-			return true
-		}
-	}
-
-	return false
+	q.variants = slices.Clone(variants)
+	return nil
 }
 
 func (q *Question) Clone() question.Question {
 	return &Question{
 		Base:     q.Base.Clone(),
-		variants: q.Variants(),
+		variants: slices.Clone(q.variants),
 	}
 }

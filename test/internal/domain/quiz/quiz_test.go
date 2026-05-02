@@ -2,376 +2,236 @@ package quiz_test
 
 import (
 	"testing"
-	"testing/synctest"
-	"time"
 
 	"gitflic.ru/lms/internal/domain/quiz"
+	"gitflic.ru/lms/internal/domain/quiz/source"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewQuiz(t *testing.T) {
-	t.Run("with empty title returns error", func(t *testing.T) {
-		//Arrange-Assert
-		newQuizBuilder().withSource(mockSource()).
+func TestNew(t *testing.T) {
+	t.Run("ошибка при пустом списке источников", func(t *testing.T) {
+		// Arrange & Act
+		q := newQuizBuilder().
+			withTitle("Тестовый квиз").
+			withSourceList([]source.Source{}). // Пустой список
 			withMaxAttempts(10).
 			withTimeLimit(20).
 			build(t, quiz.ErrInvalid)
 
-		newQuizBuilder().withSource(mockSource()).
-			withTitle(" ").
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, quiz.ErrInvalid)
+		// Assert
+		assert.Nil(t, q)
 	})
 
-	t.Run("with empty sources returns error", func(t *testing.T) {
-		//Arrange-Assert
-		newQuizBuilder().withTitle("title").
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, quiz.ErrInvalid)
-	})
-
-	t.Run("with duplicated bankID returns error", func(t *testing.T) {
-		//Arrange-Assert
+	t.Run("ошибка при дублировании bankID", func(t *testing.T) {
+		// Arrange & Act
 		duplicateID := uuid.New()
 
-		newQuizBuilder().withTitle("title").
+		q := newQuizBuilder().
+			withTitle("Тестовый квиз").
 			withSourceList(mockSourceList(duplicateID, duplicateID, uuid.New())).
-			withMaxAttempts(10).
-			withTimeLimit(20).
 			build(t, quiz.ErrInvalid)
+
+		// Assert
+		assert.Nil(t, q)
 	})
 
-	t.Run("with maxSources sources returns error", func(t *testing.T) {
-		//Arrange-Assert
-		newQuizBuilder().withTitle("title").
-			withSourceList(mockSourcesWithLength(1e4)).
-			withMaxAttempts(10).
-			withTimeLimit(20).
+	t.Run("ошибка при превышении лимита источников", func(t *testing.T) {
+		// Arrange & Act
+		q := newQuizBuilder().
+			withTitle("Тестовый квиз").
+			withSourceList(mockSourcesWithLength(101)). // Лимит 100
 			build(t, quiz.ErrInvalid)
+
+		// Assert
+		assert.Nil(t, q)
 	})
 
-	t.Run("with negative maxAttempts return error", func(t *testing.T) {
-		//Arrange-Assert
-		newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(-1).
-			withTimeLimit(20).
-			build(t, quiz.ErrInvalid)
-	})
-
-	t.Run("with maxAttempts violation return error", func(t *testing.T) {
-		//Arrange-Assert
-		newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(1e5).
-			withTimeLimit(20).
-			build(t, quiz.ErrInvalid)
-	})
-
-	t.Run("valid", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
+	t.Run("успешное создание квиза", func(t *testing.T) {
+		// Arrange & Act
+		q := newQuizBuilder().
+			withTitle("Тестовый квиз").
 			withSource(mockSource()).
 			withMaxAttempts(10).
 			withTimeLimit(20).
 			build(t, nil)
 
-		//Assert
-		assert.NotEqual(t, q.ID(), uuid.Nil)
-		assert.Equal(t, q.Title(), "title")
-		assert.Equal(t, len(q.Sources()), 1)
-		assert.Equal(t, q.MaxAttempts(), 10)
-		assert.Equal(t, q.TimeLimit().Value(), 20)
-		assert.False(t, q.CreatedAt().IsZero())
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
+		// Assert
+		assert.NotEqual(t, uuid.Nil, q.ID())
+		assert.Equal(t, "Тестовый квиз", q.Title().Value())
+		assert.Len(t, q.Sources(), 1)
+		assert.Equal(t, 10, q.Attempts().Count())
+		assert.Equal(t, 20, q.Time().Seconds())
 	})
 }
 
 func TestHasInfiniteAttempts(t *testing.T) {
-	t.Run("infinite", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(0).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Assert
+	t.Run("бесконечные попытки", func(t *testing.T) {
+		q := newQuizBuilder().withMaxAttempts(0).withSource(mockSource()).build(t, nil)
 		assert.True(t, q.HasInfiniteAttempts())
 	})
 
-	t.Run("finite", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Assert
+	t.Run("конечные попытки", func(t *testing.T) {
+		q := newQuizBuilder().withMaxAttempts(10).withSource(mockSource()).build(t, nil)
 		assert.False(t, q.HasInfiniteAttempts())
 	})
 }
 
 func TestHasInfiniteTime(t *testing.T) {
-	t.Run("infinite", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(10).
-			withTimeLimit(0).
-			build(t, nil)
-
-		//Assert
+	t.Run("бесконечное время", func(t *testing.T) {
+		q := newQuizBuilder().withTimeLimit(0).withSource(mockSource()).build(t, nil)
 		assert.True(t, q.HasInfiniteTime())
 	})
 
-	t.Run("finite", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Assert
+	t.Run("конечное время", func(t *testing.T) {
+		q := newQuizBuilder().withTimeLimit(20).withSource(mockSource()).build(t, nil)
 		assert.False(t, q.HasInfiniteTime())
 	})
 }
 
 func TestRename(t *testing.T) {
-	t.Run("invalid title return error", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(10).
-			withTimeLimit(0).
-			build(t, nil)
+	t.Run("успешное переименование", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().withTitle("Старое название").withSource(mockSource()).build(t, nil)
+		newTitle := makeTitle("Новое название")
 
-		//Act
-		err := q.Rename("")
+		// Act
+		q.Rename(newTitle)
 
-		//Assert
-		assert.ErrorIs(t, err, quiz.ErrInvalid)
-		assert.Equal(t, q.Title(), "title")
-		assert.Equal(t, q.UpdatedAt(), q.CreatedAt())
-	})
-
-	t.Run("valid title success", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			q := newQuizBuilder().withTitle("title").
-				withSource(mockSource()).
-				withMaxAttempts(10).
-				withTimeLimit(0).
-				build(t, nil)
-
-			//Act
-			time.Sleep(time.Second * 10)
-			err := q.Rename("new title")
-
-			//Assert
-			assert.NoError(t, err)
-			assert.Equal(t, q.Title(), "new title")
-			assert.True(t, q.UpdatedAt().After(q.CreatedAt()), "title")
-		})
-	})
-}
-
-func TestAddSource(t *testing.T) {
-	t.Run("add source with duplicate bank id return error", func(t *testing.T) {
-		//Arrange
-		duplicateID := uuid.New()
-
-		q := newQuizBuilder().withTitle("title").
-			withSourceList(mockSourceList(duplicateID, uuid.New())).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Act
-		err := q.AddSource(mockSourceList(duplicateID)[0])
-
-		//Assert
-		assert.ErrorIs(t, err, quiz.ErrDuplicateBankID)
-		assert.Equal(t, len(q.Sources()), 2)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-
-	t.Run("add source with sources limit return error", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSourceList(mockSourcesWithLength(100)).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Act
-		err := q.AddSource(mockSource())
-
-		//Assert
-		assert.ErrorIs(t, err, quiz.ErrSourceSizeExceeded)
-		assert.Equal(t, len(q.Sources()), 100)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-
-	t.Run("valid", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			q := newQuizBuilder().withTitle("title").
-				withSourceList(mockSourcesWithLength(20)).
-				withMaxAttempts(10).
-				withTimeLimit(20).
-				build(t, nil)
-
-			//Act
-			time.Sleep(time.Second * 10)
-			err := q.AddSource(mockSource())
-
-			//Assert
-			assert.NoError(t, err)
-			assert.Equal(t, len(q.Sources()), 21)
-			assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
-		})
-	})
-}
-
-func TestRemoveSource(t *testing.T) {
-	t.Run("remove last source return error", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSourceList(mockSourcesWithLength(1)).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Act
-		err := q.RemoveSource(mockSource())
-
-		//Assert
-		assert.ErrorIs(t, err, quiz.ErrCannotRemoveLastSource)
-		assert.Equal(t, len(q.Sources()), 1)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-
-	t.Run("remove source with non-existing resource doesn't return err", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSourceList(mockSourcesWithLength(10)).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Act
-		err := q.RemoveSource(mockSource())
-
-		//Assert
-		assert.NoError(t, err)
-		assert.Equal(t, len(q.Sources()), 10)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-
-	t.Run("success", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			target := mockSourceList(uuid.New())[0]
-
-			q := newQuizBuilder().withTitle("title").
-				withSourceList(mockSourceList(target.BankID(), uuid.New())).
-				withMaxAttempts(10).
-				withTimeLimit(20).
-				build(t, nil)
-
-			//Act
-			time.Sleep(time.Second * 10)
-			err := q.RemoveSource(target)
-
-			//Assert
-			assert.NoError(t, err)
-			assert.Equal(t, len(q.Sources()), 1)
-			assert.NotContains(t, q.Sources(), target)
-			assert.NotEqual(t, q.Sources()[0].BankID(), uuid.Nil)
-			assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
-		})
+		// Assert
+		assert.Equal(t, "Новое название", q.Title().Value())
 	})
 }
 
 func TestChangeMaxAttempts(t *testing.T) {
-	t.Run("with negative maxAttempts return error", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
+	t.Run("успешное изменение лимита попыток", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().withMaxAttempts(10).withSource(mockSource()).build(t, nil)
+		newAttempts := makeAttempts(5)
 
-		//Act
-		err := q.ChangeMaxAttempts(-1)
+		// Act
+		q.ChangeMaxAttempts(newAttempts)
 
-		//Assert
-		assert.ErrorIs(t, err, quiz.ErrInvalid)
-		assert.Equal(t, q.MaxAttempts(), 10)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-
-	t.Run("with maxAttempts violation return error", func(t *testing.T) {
-		//Arrange
-		q := newQuizBuilder().withTitle("title").
-			withSource(mockSource()).
-			withMaxAttempts(10).
-			withTimeLimit(20).
-			build(t, nil)
-
-		//Act
-		err := q.ChangeMaxAttempts(1e5)
-
-		//Assert
-		assert.ErrorIs(t, err, quiz.ErrInvalid)
-		assert.Equal(t, q.MaxAttempts(), 10)
-		assert.Equal(t, q.CreatedAt(), q.UpdatedAt())
-	})
-
-	t.Run("success", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			q := newQuizBuilder().withTitle("title").
-				withSource(mockSource()).
-				withMaxAttempts(10).
-				withTimeLimit(20).
-				build(t, nil)
-
-			//Act
-			time.Sleep(time.Second * 10)
-			err := q.ChangeMaxAttempts(20)
-
-			//Assert
-			assert.NoError(t, err)
-			assert.Equal(t, q.MaxAttempts(), 20)
-			assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
-		})
+		// Assert
+		assert.Equal(t, 5, q.Attempts().Count())
 	})
 }
 
 func TestChangeTimeLimit(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			q := newQuizBuilder().withTitle("title").
-				withSource(mockSource()).
-				withMaxAttempts(10).
-				withTimeLimit(20).
-				build(t, nil)
+	t.Run("успешное изменение лимита времени", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().withTimeLimit(20).withSource(mockSource()).build(t, nil)
+		newTime := makeTime(300)
 
-			//Act
-			time.Sleep(time.Second * 10)
-			q.ChangeTimeLimit(makeLimit(300))
+		// Act
+		q.ChangeTimeLimit(newTime)
 
-			//Assert
-			assert.Equal(t, q.TimeLimit().Value(), 300)
-			assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
-		})
+		// Assert
+		assert.Equal(t, 300, q.Time().Seconds())
+	})
+}
+
+func TestAddSource(t *testing.T) {
+	t.Run("ошибка при добавлении источника с уже существующим банком", func(t *testing.T) {
+		// Arrange
+		duplicateID := uuid.New()
+		q := newQuizBuilder().
+			withSourceList(mockSourceList(duplicateID, uuid.New())).
+			build(t, nil)
+
+		sourceToAdd := mockSourceList(duplicateID)[0]
+
+		// Act
+		err := q.AddSource(sourceToAdd)
+
+		// Assert
+		assert.ErrorIs(t, err, quiz.ErrInvalid)
+		assert.Contains(t, err.Error(), "источник с таким банком уже указан")
+		assert.Len(t, q.Sources(), 2) // Состояние не изменилось
+	})
+
+	t.Run("ошибка при превышении максимального количества источников", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().
+			withSourceList(mockSourcesWithLength(100)).
+			build(t, nil)
+
+		// Act
+		err := q.AddSource(mockSource())
+
+		// Assert
+		assert.ErrorIs(t, err, quiz.ErrInvalid)
+		assert.Contains(t, err.Error(), "максимальное количество")
+		assert.Len(t, q.Sources(), 100)
+	})
+
+	t.Run("успешное добавление источника", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().
+			withSourceList(mockSourcesWithLength(2)).
+			build(t, nil)
+
+		// Act
+		err := q.AddSource(mockSource())
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, q.Sources(), 3)
+	})
+}
+
+func TestRemoveSource(t *testing.T) {
+	t.Run("ошибка при удалении последнего источника", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().
+			withSourceList(mockSourcesWithLength(1)).
+			build(t, nil)
+
+		sourceToRemove := q.Sources()[0]
+
+		// Act
+		err := q.RemoveSource(sourceToRemove)
+
+		// Assert
+		assert.ErrorIs(t, err, quiz.ErrInvalid)
+		assert.Contains(t, err.Error(), "нельзя удалить последний источник")
+		assert.Len(t, q.Sources(), 1)
+	})
+
+	t.Run("успешное выполнение (игнорирование), если источника нет в квизе", func(t *testing.T) {
+		// Arrange
+		q := newQuizBuilder().
+			withSourceList(mockSourcesWithLength(5)).
+			build(t, nil)
+
+		nonExistingSource := mockSource()
+
+		// Act
+		err := q.RemoveSource(nonExistingSource)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, q.Sources(), 5)
+	})
+
+	t.Run("успешное удаление источника", func(t *testing.T) {
+		// Arrange
+		target := mockSourceList(uuid.New())[0]
+
+		q := newQuizBuilder().
+			withSourceList(mockSourceList(target.BankID(), uuid.New(), uuid.New())).
+			build(t, nil)
+
+		// Act
+		err := q.RemoveSource(target)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, q.Sources(), 2)
+
+		// Убеждаемся, что именно нужный источник удален
+		for _, s := range q.Sources() {
+			assert.NotEqual(t, target.BankID(), s.BankID())
+		}
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/bank"
+	"gitflic.ru/lms/internal/domain/bank/title"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,8 +26,13 @@ func (b *bankBuilder) withTitle(s string) *bankBuilder {
 func (builder *bankBuilder) build(t *testing.T, wantErr error) *bank.Bank {
 	t.Helper()
 
-	b, err := bank.New(builder.title)
+	titleVO, err := title.New(builder.title)
+	if err != nil {
+		assert.ErrorIs(t, err, wantErr)
+		return nil
+	}
 
+	b, err := bank.New(titleVO)
 	assert.ErrorIs(t, err, wantErr)
 
 	return b

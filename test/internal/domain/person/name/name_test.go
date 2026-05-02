@@ -6,191 +6,289 @@ import (
 
 	"gitflic.ru/lms/internal/domain/person/name"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
-	var tests = map[string]struct {
-		input      name.Params
-		firstname  string
-		lastname   string
-		middlename string
-		wantErr    error
-	}{
-		"valid without middlename": {
-			input: name.Params{
-				Firstname:  " Иван ",
-				Lastname:   " Петров ",
-				Middlename: " ",
+	t.Run("успех", func(t *testing.T) {
+		tc := []struct {
+			name           string
+			firstname      string
+			lastname       string
+			middlename     string
+			wantFirstname  string
+			wantLastname   string
+			wantMiddlename string
+		}{
+			{
+				name:           "без отчества (пробелы по краям удаляются)",
+				firstname:      " Иван ",
+				lastname:       " Петров ",
+				middlename:     "",
+				wantFirstname:  "Иван",
+				wantLastname:   "Петров",
+				wantMiddlename: "",
 			},
-			firstname:  "Иван",
-			lastname:   "Петров",
-			middlename: "",
-			wantErr:    nil,
-		},
-		"valid full fio": {
-			input: name.Params{
-				Firstname:  "Анна-Мария",
-				Lastname:   "Иванова",
-				Middlename: "Сергеевна",
+			{
+				name:           "полное ФИО",
+				firstname:      "Анна-Мария",
+				lastname:       "Иванова",
+				middlename:     "Сергеевна",
+				wantFirstname:  "Анна-Мария",
+				wantLastname:   "Иванова",
+				wantMiddlename: "Сергеевна",
 			},
-			firstname:  "Анна-Мария",
-			lastname:   "Иванова",
-			middlename: "Сергеевна",
-			wantErr:    nil,
-		},
-		"valid collapses spaces": {
-			input: name.Params{
-				Firstname:  "Иван   Петр",
-				Lastname:   "Сидоров",
-				Middlename: "",
+			{
+				name:           "с пробелами между словами (пробелы удаляются)",
+				firstname:      "Анна   Мария",
+				lastname:       "Иванова",
+				middlename:     "Сергеевна",
+				wantFirstname:  "Анна Мария",
+				wantLastname:   "Иванова",
+				wantMiddlename: "Сергеевна",
 			},
-			firstname:  "Иван Петр",
-			lastname:   "Сидоров",
-			middlename: "",
-			wantErr:    nil,
-		},
-		"empty firstname invalid": {
-			input: name.Params{
-				Firstname:  "",
-				Lastname:   "Петров",
-				Middlename: "",
+			{
+				name:           "при создании объекта регистр нормализуется",
+				firstname:      "анна-мария",
+				lastname:       "иванова",
+				middlename:     "сергеевна",
+				wantFirstname:  "Анна-Мария",
+				wantLastname:   "Иванова",
+				wantMiddlename: "Сергеевна",
 			},
-			wantErr: name.ErrInvalid,
-		},
-		"empty lastname invalid": {
-			input: name.Params{
-				Firstname:  "Иван",
-				Lastname:   "",
-				Middlename: "",
-			},
-			wantErr: name.ErrInvalid,
-		},
-		"firstname too long invalid": {
-			input: name.Params{
-				Firstname:  strings.Repeat("А", 101),
-				Lastname:   "Петров",
-				Middlename: "",
-			},
-			wantErr: name.ErrInvalid,
-		},
-		"lastname digits invalid": {
-			input: name.Params{
-				Firstname:  "Иван",
-				Lastname:   "Петр0в",
-				Middlename: "",
-			},
-			wantErr: name.ErrInvalid,
-		},
-		"middlename invalid": {
-			input: name.Params{
-				Firstname:  "Иван",
-				Lastname:   "Петров",
-				Middlename: "Иваныч123",
-			},
-			wantErr: name.ErrInvalid,
-		},
-	}
+		}
 
-	for ttName, tt := range tests {
-		t.Run(ttName, func(t *testing.T) {
-			//Arrange
-			n := newNameBuilder().withFirstname(tt.input.Firstname).
-				withLastname(tt.input.Lastname).
-				withMiddlename(tt.input.Middlename).
-				build(t, tt.wantErr)
+		for _, tt := range tc {
+			t.Run(tt.name, func(t *testing.T) {
+				// Arrange
+				n, err := name.New(tt.firstname, tt.lastname, tt.middlename)
 
-			//Assert
-			assert.Equal(t, n.Firstname(), tt.firstname)
-			assert.Equal(t, n.Lastname(), tt.lastname)
-			assert.Equal(t, n.Middlename(), tt.middlename)
-		})
-	}
+				// Assert
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantFirstname, n.FirstName())
+				assert.Equal(t, tt.wantLastname, n.LastName())
+				assert.Equal(t, tt.wantMiddlename, n.MiddleName())
+			})
+		}
+	})
+
+	t.Run("ошибка", func(t *testing.T) {
+		tc := []struct {
+			name       string
+			firstname  string
+			lastname   string
+			middlename string
+			wantErr    error
+		}{
+			{
+				name:       "пустой firstname",
+				firstname:  "",
+				lastname:   "Иванова",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "пустой lastname",
+				firstname:  "Мария",
+				lastname:   "",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "firstname из пробелов",
+				firstname:  "   \t\t\t\t\t ",
+				lastname:   "Иванова",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "lastname из пробелов",
+				firstname:  "Мария",
+				lastname:   "\t\t\t\t\t\t    ",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "firstname с цифрами",
+				firstname:  "Мария123",
+				lastname:   "Иванова",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "lastname с цифрами",
+				firstname:  "Мария",
+				lastname:   "Иванова123",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "middlename с цифрами",
+				firstname:  "Мария",
+				lastname:   "Иванова",
+				middlename: "Петро123вна",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "firstname с недопустимыми символами",
+				firstname:  "Мария...",
+				lastname:   "Иванова",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "lastname с недопустимыми символами",
+				firstname:  "Мария",
+				lastname:   "Иванова......[]]",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "middlename с недопустимыми символами",
+				firstname:  "Мария",
+				lastname:   "Иванова",
+				middlename: "Петровна[[[[",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "firstname с превышением лимита по символам",
+				firstname:  strings.Repeat("A", name.PartCharsLimit+1),
+				lastname:   "Иванова",
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "lastname с превышением лимита по символам",
+				firstname:  "Мария",
+				lastname:   strings.Repeat("A", name.PartCharsLimit+1),
+				middlename: "",
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "middlename с превышением лимита по символам",
+				firstname:  "Мария",
+				lastname:   "Иванова",
+				middlename: strings.Repeat("A", name.PartCharsLimit+1),
+				wantErr:    name.ErrInvalid,
+			},
+			{
+				name:       "middlename с разделителем и пробелами вокруг него",
+				firstname:  "Мария",
+				lastname:   "Иванова",
+				middlename: "Иванович - Петрович",
+				wantErr:    name.ErrInvalid,
+			},
+		}
+
+		for _, tt := range tc {
+			t.Run(tt.name, func(t *testing.T) {
+				// Arrange
+				_, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+
+				// Assert
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, tt.wantErr)
+			})
+		}
+	})
 }
 
 func TestFullname(t *testing.T) {
-	var tests = map[string]struct {
-		firstname  string
-		lastname   string
-		middlename string
-		want       string
+	tc := []struct {
+		name         string
+		firstname    string
+		lastname     string
+		middlename   string
+		wantFullname string
 	}{
-		"without middlename": {
-			firstname:  "Иван",
-			lastname:   "Петров",
-			middlename: "",
-			want:       "Петров Иван",
+		{
+			name:         "без отчества",
+			firstname:    "Иван",
+			lastname:     "Петров",
+			middlename:   "",
+			wantFullname: "Петров Иван",
 		},
-		"with middlename": {
-			firstname:  "Иван",
-			lastname:   "Петров",
-			middlename: "Иванович",
-			want:       "Петров Иван Иванович",
+		{
+			name:         "с отчеством",
+			firstname:    "Иван",
+			lastname:     "Петров",
+			middlename:   "Петрович",
+			wantFullname: "Петров Иван Петрович",
+		},
+		{
+			name:         "с отчеством несколько слов",
+			firstname:    "Иван",
+			lastname:     "Петров",
+			middlename:   "Петрович Иванович",
+			wantFullname: "Петров Иван Петрович Иванович",
 		},
 	}
 
-	for ttName, tt := range tests {
-		t.Run(ttName, func(t *testing.T) {
-			//Arrange
-			n := newNameBuilder().withFirstname(tt.firstname).
-				withLastname(tt.lastname).
-				withMiddlename(tt.middlename).
-				build(t, nil)
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			n, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+			require.NoError(t, err)
 
-			//Act
-			fullname := n.Fullname()
-
-			//Assert
-			assert.Equal(t, tt.want, fullname)
+			// Assert
+			assert.Equal(t, tt.wantFullname, n.Fullname())
 		})
 	}
 }
 
 func TestWithInitials(t *testing.T) {
-	var tests = map[string]struct {
-		firstname  string
-		lastname   string
-		middlename string
-		want       string
+	tc := []struct {
+		name             string
+		firstname        string
+		lastname         string
+		middlename       string
+		wantWithInitials string
 	}{
-		"without middlename": {
-			firstname:  "Иван",
-			lastname:   "Петров",
-			middlename: "",
-			want:       "Петров И.",
+		{
+			name:             "без отчества",
+			firstname:        "Иван",
+			lastname:         "Петров",
+			middlename:       "",
+			wantWithInitials: "Петров И.",
 		},
-		"with middlename": {
-			firstname:  "Иван",
-			lastname:   "Петров",
-			middlename: "Иванович",
-			want:       "Петров И.И.",
+		{
+			name:             "с отчеством",
+			firstname:        "Иван",
+			lastname:         "Петров",
+			middlename:       "Петрович",
+			wantWithInitials: "Петров И.П.",
 		},
-		"yo initials": {
-			firstname:  "Ёж",
-			lastname:   "Ёлкин",
-			middlename: "Егорович",
-			want:       "Ёлкин Ё.Е.",
+		{
+			name:             "отчество в несколько слов",
+			firstname:        "Иван",
+			lastname:         "Петров",
+			middlename:       "Петрович Иванович",
+			wantWithInitials: "Петров И.П.И.",
 		},
-		"apostrophe lastname": {
-			firstname:  "Иван",
-			lastname:   "О'Коннор",
-			middlename: "",
-			want:       "О'Коннор И.",
+		{
+			name:             "имя в несколько слов",
+			firstname:        "Иван Сергей",
+			lastname:         "Петров",
+			middlename:       "Петрович",
+			wantWithInitials: "Петров И.С.П.",
+		},
+		{
+			name:             "имя в несколько слов с разделителем",
+			firstname:        "Иван-Сергей",
+			lastname:         "Петров",
+			middlename:       "Петрович",
+			wantWithInitials: "Петров И.-С.П.",
 		},
 	}
 
-	for ttName, tt := range tests {
-		t.Run(ttName, func(t *testing.T) {
-			//Arrange
-			n := newNameBuilder().withFirstname(tt.firstname).
-				withLastname(tt.lastname).
-				withMiddlename(tt.middlename).
-				build(t, nil)
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			n, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+			require.NoError(t, err)
 
-			//Act
-			initials := n.WithInitials()
-
-			//Assert
-			assert.Equal(t, tt.want, initials)
+			// Assert
+			assert.Equal(t, tt.wantWithInitials, n.WithInitials())
 		})
 	}
 }

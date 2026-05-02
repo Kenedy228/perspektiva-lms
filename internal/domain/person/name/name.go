@@ -2,66 +2,62 @@ package name
 
 import (
 	"fmt"
-	"unicode/utf8"
 )
 
 type Name struct {
-	firstname  string
-	lastname   string
-	middlename string
+	firstName  string
+	lastName   string
+	middleName string
 }
 
-func New(params Params) (Name, error) {
-	firstname := normalize(params.Firstname)
-	lastname := normalize(params.Lastname)
-	middlename := normalize(params.Middlename)
+func New(firstName, lastName, middleName string) (Name, error) {
+	firstName = normalize(firstName)
+	lastName = normalize(lastName)
+	middleName = normalize(middleName)
 
-	if err := validateRequiredPart("имя", firstname); err != nil {
+	if err := validateRequiredPart("имя", firstName); err != nil {
 		return Name{}, err
 	}
 
-	if err := validateRequiredPart("фамилия", lastname); err != nil {
+	if err := validateRequiredPart("фамилия", lastName); err != nil {
 		return Name{}, err
 	}
 
-	if err := validateOptionalPart("отчество", middlename); err != nil {
+	if err := validateOptionalPart("отчество", middleName); err != nil {
 		return Name{}, err
 	}
 
 	return Name{
-		firstname:  firstname,
-		lastname:   lastname,
-		middlename: middlename,
+		firstName:  firstName,
+		lastName:   lastName,
+		middleName: middleName,
 	}, nil
 }
 
-func (n Name) Firstname() string {
-	return n.firstname
+func (n Name) FirstName() string {
+	return n.firstName
 }
 
-func (n Name) Lastname() string {
-	return n.lastname
+func (n Name) LastName() string {
+	return n.lastName
 }
 
-func (n Name) Middlename() string {
-	return n.middlename
+func (n Name) MiddleName() string {
+	return n.middleName
 }
 
 func (n Name) Fullname() string {
-	if n.middlename == "" {
-		return fmt.Sprintf("%s %s", n.lastname, n.firstname)
+	if n.middleName == "" {
+		return fmt.Sprintf("%s %s", n.lastName, n.firstName)
 	}
 
-	return fmt.Sprintf("%s %s %s", n.lastname, n.firstname, n.middlename)
+	return fmt.Sprintf("%s %s %s", n.lastName, n.firstName, n.middleName)
 }
 
 func (n Name) WithInitials() string {
-	firstnameInitial, _ := utf8.DecodeRuneInString(n.firstname)
-
-	if n.middlename == "" {
-		return fmt.Sprintf("%s %c.", n.lastname, firstnameInitial)
+	if n.middleName == "" {
+		return fmt.Sprintf("%s %s", n.lastName, getInitial(n.firstName))
 	}
 
-	middlenameInitial, _ := utf8.DecodeRuneInString(n.middlename)
-	return fmt.Sprintf("%s %c.%c.", n.lastname, firstnameInitial, middlenameInitial)
+	return fmt.Sprintf("%s %s%s", n.lastName, getInitial(n.firstName), getInitial(n.middleName))
 }

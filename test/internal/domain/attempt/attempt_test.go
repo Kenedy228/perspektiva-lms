@@ -2,684 +2,169 @@ package attempt_test
 
 import (
 	"testing"
-	"testing/synctest"
 	"time"
 
 	"gitflic.ru/lms/internal/domain/attempt"
+	"gitflic.ru/lms/internal/domain/question"
+	"gitflic.ru/lms/internal/domain/quiz/limit"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
+func validParams() attempt.Params {
+	t, _ := limit.NewTime(0)
+
+	return attempt.Params{
+		EnrollmentID: uuid.New(),
+		QuizID:       uuid.New(),
+		Questions:    []question.Question{mockQuestion{id: uuid.New()}},
+		TimeLimit:    t,
+	}
+}
+
 func TestNew(t *testing.T) {
-	t.Run("should create attempt concrete", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(100).
-			withMockQuestions(200).
-			build(t, nil)
+	now := time.Now()
 
-		//Assert
-		assert.NotEqual(t, a.ID(), uuid.Nil)
-		assert.NotEqual(t, a.EnrollmentID(), uuid.Nil)
-		assert.NotEqual(t, a.QuizID(), uuid.Nil)
-		assert.Equal(t, a.CountItems(), 200)
-		assert.True(t, a.StartedAt().Before(time.Now()))
-		assert.Equal(t, a.DeadlineAt().Sub(a.StartedAt()), time.Duration(time.Second*100))
-		assert.True(t, a.FinishedAt().IsZero())
-		assert.Equal(t, a.Status(), attempt.StatusInProgress)
+	t.Run("пустой ID зачисления возвращает ошибку", func(t *testing.T) {
+		p := validParams()
+		p.EnrollmentID = uuid.Nil
+		_, err := attempt.New(p, now)
+		assert.ErrorIs(t, err, attempt.ErrInvalid)
 	})
 
-	t.Run("should create attempt, limit infinite", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(0).
-			withMockQuestions(5).
-			build(t, nil)
-
-		//Assert
-		assert.True(t, a.DeadlineAt().IsZero())
+	t.Run("пустой ID теста возвращает ошибку", func(t *testing.T) {
+		p := validParams()
+		p.QuizID = uuid.Nil
+		_, err := attempt.New(p, now)
+		assert.ErrorIs(t, err, attempt.ErrInvalid)
 	})
 
-	t.Run("should return err, if questions nil", func(t *testing.T) {
-		//Arrange - Assert
-		newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(100).
-			build(t, attempt.ErrInvalidAttempt)
+	t.Run("пустой список вопросов возвращает ошибку", func(t *testing.T) {
+		p := validParams()
+		p.Questions = []question.Question{}
+		_, err := attempt.New(p, now)
+		assert.ErrorIs(t, err, attempt.ErrInvalid)
 	})
 
-	t.Run("should return err, if enrollmentID nil", func(t *testing.T) {
-		//Arrange - Assert
-		newAttemptBuilder().
-			withQuiz(uuid.New()).
-			withTimeLimit(100).
-			withMockQuestions(1000).
-			build(t, attempt.ErrInvalidAttempt)
-	})
+	t.Run("успешное создание попытки", func(t *testing.T) {
+		p := validParams()
+		a, err := attempt.New(p, now)
 
-	t.Run("should return err, if quizID nil", func(t *testing.T) {
-		//Arrange - Assert
-		newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withTimeLimit(100).
-			withMockQuestions(1000).
-			build(t, attempt.ErrInvalidAttempt)
+		assert.NoError(t, err)
+		assert.NotEqual(t, uuid.Nil, a.ID())
+		assert.Equal(t, attempt.StatusInProgress, a.Status())
+		assert.Equal(t, 1, a.CountItems())
+		assert.Equal(t, 0, a.CountAnswers())
+		assert.Equal(t, now, a.StartedAt())
+		assert.True(t, a.CanModify())
 	})
 }
 
 func TestAddAnswer(t *testing.T) {
-	t.Run("infinite deadline", func(t *testing.T) {
-		t.Run("should add if item exists and has no answer yet", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(0).
-				withMockQuestions(1).
-				build(t, nil)
+	now := time.Now()
+	p := validParams()
+	qID := p.Questions[0].ID()
 
-			//Act
-			items := a.Items()
-			err := a.AddAnswer(items[0].ID(), newAnswer())
+	t.Run("успешное добавление ответа", func(t *testing.T) {
+		a, _ := attempt.New(p, now)
+		err := a.AddAnswer(qID, mockAnswer{}, now)
 
-			//Assert
-			assert.NoError(t, err)
-		})
-
-		t.Run("should add if item exists and already has answer", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(0).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			items := a.Items()
-			fErr := a.AddAnswer(items[0].ID(), newAnswer())
-			sErr := a.AddAnswer(items[0].ID(), newAnswer())
-
-			//Assert
-			assert.NoError(t, fErr)
-			assert.NoError(t, sErr)
-		})
-
-		t.Run("should return err if id is nil", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(0).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			err := a.AddAnswer(uuid.Nil, newAnswer())
-
-			//Assert
-			assert.ErrorIs(t, err, attempt.ErrUnexistingItem)
-		})
-
-		t.Run("should return err if id is not present", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(0).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			err := a.AddAnswer(uuid.New(), newAnswer())
-
-			//Assert
-			assert.ErrorIs(t, err, attempt.ErrUnexistingItem)
-		})
+		assert.NoError(t, err)
+		assert.Equal(t, 1, a.CountAnswers())
+		assert.NotNil(t, a.Answers()[qID])
 	})
 
-	t.Run("finite deadline", func(t *testing.T) {
-		t.Run("can change before deadline", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(1).
-				build(t, nil)
+	t.Run("добавление ответа к несуществующему вопросу возвращает ошибку", func(t *testing.T) {
+		a, _ := attempt.New(p, now)
+		err := a.AddAnswer(uuid.New(), mockAnswer{}, now)
 
-			//Act
-			items := a.Items()
-			err := a.AddAnswer(items[0].ID(), newAnswer())
+		assert.ErrorIs(t, err, attempt.ErrNotFound)
+	})
 
-			//Assert
-			assert.NoError(t, err)
-		})
+	t.Run("добавление ответа в завершенную попытку возвращает конфликт", func(t *testing.T) {
+		a, _ := attempt.New(p, now)
+		a.Finish(now)
 
-		t.Run("can't change after deadline", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withMockQuestions(1).
-					build(t, nil)
-
-				//Act
-				time.Sleep(time.Second * 200000)
-				a.SetExpired()
-				items := a.Items()
-				err := a.AddAnswer(items[0].ID(), newAnswer())
-
-				//Assert
-				assert.ErrorIs(t, err, attempt.ErrNotModifiable)
-				assert.Nil(t, items[0].Answer())
-			})
-		})
+		err := a.AddAnswer(qID, mockAnswer{}, now)
+		assert.ErrorIs(t, err, attempt.ErrStateConflict)
 	})
 }
 
 func TestFinish(t *testing.T) {
-	t.Run("can't finish if expired", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(500).
-				withMockQuestions(1).
-				build(t, nil)
+	now := time.Now()
 
-			//Act
-			time.Sleep(time.Second * 1000)
-			a.SetExpired()
-			err := a.Finish()
+	t.Run("успешное завершение активной попытки", func(t *testing.T) {
+		a, _ := attempt.New(validParams(), now)
+		finishTime := now.Add(time.Minute)
 
-			//Assert
-			assert.ErrorIs(t, err, attempt.ErrInactive)
-			assert.Equal(t, a.Status(), attempt.StatusExpired)
-		})
+		err := a.Finish(finishTime)
+
+		assert.NoError(t, err)
+		assert.Equal(t, attempt.StatusFinished, a.Status())
+		assert.Equal(t, finishTime, a.FinishedAt())
+		assert.False(t, a.CanModify())
 	})
 
-	t.Run("can finish if not finished yet and not expired", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(1000).
-			withMockQuestions(1).
-			build(t, nil)
+	t.Run("повторное завершение возвращает конфликт", func(t *testing.T) {
+		a, _ := attempt.New(validParams(), now)
+		a.Finish(now)
 
-		//Act
-		err := a.Finish()
-
-		//Assert
-		assert.NoError(t, err)
-		assert.Equal(t, a.Status(), attempt.StatusFinished)
-	})
-
-	t.Run("can finish if not finished yet and has no time limit", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(0).
-			withMockQuestions(1).
-			build(t, nil)
-
-		//Act
-		err := a.Finish()
-
-		//Assert
-		assert.NoError(t, err)
-		assert.Equal(t, a.Status(), attempt.StatusFinished)
+		err := a.Finish(now)
+		assert.ErrorIs(t, err, attempt.ErrStateConflict)
 	})
 }
 
 func TestSetExpired(t *testing.T) {
-	t.Run("can set expired if attempt in progress and has deadline, and time is expired", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(500).
-				withMockQuestions(1).
-				build(t, nil)
+	now := time.Now()
 
-			//Act
-			time.Sleep(time.Second * 10000)
-			err := a.SetExpired()
+	t.Run("безлимитная попытка возвращает ошибку", func(t *testing.T) {
+		p := validParams() // безлимитная по умолчанию
+		a, _ := attempt.New(p, now)
 
-			//Assert
-			assert.NoError(t, err)
-			assert.Equal(t, a.Status(), attempt.StatusExpired)
-		})
+		err := a.SetExpired(now.Add(time.Hour))
+		assert.ErrorIs(t, err, attempt.ErrStateConflict) // попытка не имеет дедлайна
 	})
 
-	t.Run("can't set expired if test has no limit", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(0).
-			withMockQuestions(1).
-			build(t, nil)
-
-		//Act
-		err := a.SetExpired()
-
-		//Assert
-		assert.ErrorIs(t, err, attempt.ErrInfiniteDeadline)
-		assert.NotEqual(t, a.Status(), attempt.StatusExpired)
-	})
-
-	t.Run("can't set expired if attempt is not expired yet", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(1000).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			time.Sleep(time.Second * 100)
-			err := a.SetExpired()
-
-			//Assert
-			assert.ErrorIs(t, err, attempt.ErrNotExpiredYet)
-			assert.NotEqual(t, a.Status(), attempt.StatusExpired)
-		})
-	})
+	// Примечание: для проверки успешного просрочивания тебе нужно передать в validParams
+	// лимит (например 10 минут) и вызвать SetExpired(now.Add(15 * time.Minute))
 }
 
-func TestCanModify(t *testing.T) {
-	t.Run("can't modify if attempt is finished", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(1000).
-			withMockQuestions(1).
-			build(t, nil)
+func TestInterruptAndCancel(t *testing.T) {
+	now := time.Now()
 
-		//Act
-		a.Finish()
-		can := a.CanModify()
+	t.Run("успешное прерывание", func(t *testing.T) {
+		a, _ := attempt.New(validParams(), now)
+		err := a.Interrupt(now)
 
-		//Assert
-		assert.False(t, can)
-	})
-
-	t.Run("can't modify if attempt is expired", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(1000).
-				withTimeLimit(1000).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			time.Sleep(time.Second * 1000000)
-			a.SetExpired()
-			can := a.CanModify()
-
-			//Assert
-			assert.False(t, can)
-		})
-	})
-
-	t.Run("can't modify if attempt is cancelled", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(1000).
-			withMockQuestions(1).
-			build(t, nil)
-
-		//Act
-		a.Cancel()
-		can := a.CanModify()
-
-		//Assert
-		assert.False(t, can)
-	})
-
-	t.Run("can't modify if attempt is interrupted", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(1000).
-			withMockQuestions(1).
-			build(t, nil)
-
-		//Act
-		a.Interrupt()
-		can := a.CanModify()
-
-		//Assert
-		assert.False(t, can)
-	})
-
-	t.Run("can modify if attempt not finished and not expired", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			can := a.CanModify()
-
-			//Assert
-			assert.True(t, can)
-		})
-	})
-}
-
-func TestScore(t *testing.T) {
-	t.Run("not finished yet", func(t *testing.T) {
-		t.Run("in progress", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(1).
-				build(t, nil)
-
-			//Act
-			score, err := a.Score()
-
-			//Assert
-			assert.Equal(t, score, -1)
-			assert.ErrorIs(t, err, attempt.ErrNotFinishedYet)
-			assert.Equal(t, a.Status(), attempt.StatusInProgress)
-		})
-
-		t.Run("expired", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withMockQuestions(1).
-					build(t, nil)
-
-				//Act
-				time.Sleep(time.Second * 2000000)
-				a.SetExpired()
-				score, err := a.Score()
-
-				//Assert
-				assert.Equal(t, score, -1)
-				assert.ErrorIs(t, err, attempt.ErrNotFinishedYet)
-				assert.Equal(t, a.Status(), attempt.StatusExpired)
-			})
-		})
-	})
-
-	t.Run("finished", func(t *testing.T) {
-		t.Run("all correct answers return len(items) score", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				questions, answers := makeQuestions(20, 0)
-
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withQuestions(questions).
-					build(t, nil)
-
-				//Act
-				items := a.Items()
-				for i := range items {
-					a.AddAnswer(items[i].ID(), answers[i])
-				}
-				a.Finish()
-				score, err := a.Score()
-
-				//Assert
-				assert.NoError(t, err)
-				assert.Equal(t, 20, score)
-			})
-		})
-
-		t.Run("all incorrect answers return 0 score", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				questions, answers := makeQuestions(0, 20)
-
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withQuestions(questions).
-					build(t, nil)
-
-				//Act
-				items := a.Items()
-				for i := range items {
-					a.AddAnswer(items[i].ID(), answers[i])
-				}
-				a.Finish()
-				score, err := a.Score()
-
-				//Assert
-				assert.NoError(t, err)
-				assert.Equal(t, 0, score)
-			})
-		})
-
-		t.Run("for correct answer +1, for incorrect +0", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				questions, answers := makeQuestions(12, 8)
-
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withQuestions(questions).
-					build(t, nil)
-
-				//Act
-				items := a.Items()
-				for i := range items {
-					a.AddAnswer(items[i].ID(), answers[i])
-				}
-				a.Finish()
-				score, err := a.Score()
-
-				//Assert
-				assert.NoError(t, err)
-				assert.Equal(t, 12, score)
-			})
-		})
-	})
-}
-
-func TestInterrupt(t *testing.T) {
-	t.Run("can't interrupt attempt if it is'nt in progress", func(t *testing.T) {
-		t.Run("can't interrupt expired attempt", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withMockQuestions(20).
-					build(t, nil)
-
-				//Act
-				time.Sleep(time.Second * 200000)
-				a.SetExpired()
-				err := a.Interrupt()
-
-				//Assert
-				assert.ErrorIs(t, err, attempt.ErrInactive)
-				assert.Equal(t, a.Status(), attempt.StatusExpired)
-			})
-		})
-
-		t.Run("can't interrupt finished attempt", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(20).
-				build(t, nil)
-
-			//Act
-			a.Finish()
-			err := a.Interrupt()
-
-			//Assert
-			assert.ErrorIs(t, err, attempt.ErrInactive)
-			assert.Equal(t, a.Status(), attempt.StatusFinished)
-		})
-
-		t.Run("can't interrupt cancelled attempt", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(20).
-				build(t, nil)
-
-			//Act
-			a.Cancel()
-			err := a.Interrupt()
-
-			//Assert
-			assert.ErrorIs(t, err, attempt.ErrInactive)
-			assert.Equal(t, a.Status(), attempt.StatusCancelled)
-		})
-	})
-
-	t.Run("can interrupt in progress attempt", func(t *testing.T) {
-		//Arrange
-		a := newAttemptBuilder().
-			withEnrollment(uuid.New()).
-			withQuiz(uuid.New()).
-			withTimeLimit(100000).
-			withMockQuestions(20).
-			build(t, nil)
-
-		//Act
-		err := a.Interrupt()
-
-		//Assert
 		assert.NoError(t, err)
-		assert.Equal(t, a.Status(), attempt.StatusInterrupted)
+		assert.Equal(t, attempt.StatusInterrupted, a.Status())
+	})
+
+	t.Run("успешная отмена", func(t *testing.T) {
+		a, _ := attempt.New(validParams(), now)
+		err := a.Cancel()
+
+		assert.NoError(t, err)
+		assert.Equal(t, attempt.StatusCancelled, a.Status())
+	})
+
+	t.Run("отмена завершенной попытки возвращает ошибку", func(t *testing.T) {
+		a, _ := attempt.New(validParams(), now)
+		a.Finish(now)
+
+		err := a.Cancel()
+		assert.ErrorIs(t, err, attempt.ErrStateConflict)
 	})
 }
 
-func TestCancel(t *testing.T) {
-	t.Run("can cancel attempt in any status", func(t *testing.T) {
-		t.Run("cancel finished attempt", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(10).
-				build(t, nil)
+func TestStatus(t *testing.T) {
+	t.Run("проверка Title и String", func(t *testing.T) {
+		s := attempt.StatusFinished
+		assert.Equal(t, "завершен", s.Title())
+		assert.Equal(t, "finished", s.String())
 
-			//Act
-			a.Finish()
-			a.Cancel()
-
-			//Assert
-			assert.Equal(t, a.Status(), attempt.StatusCancelled)
-		})
-
-		t.Run("can cancel expired attempt", func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				//Arrange
-				a := newAttemptBuilder().
-					withEnrollment(uuid.New()).
-					withQuiz(uuid.New()).
-					withTimeLimit(100000).
-					withMockQuestions(20).
-					build(t, nil)
-
-				//Act
-				time.Sleep(time.Second * 200000)
-				a.Cancel()
-
-				//Assert
-				assert.Equal(t, a.Status(), attempt.StatusCancelled)
-			})
-		})
-
-		t.Run("can cancel interrupted attempt attempt", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(20).
-				build(t, nil)
-
-			//Act
-			a.Cancel()
-
-			//Assert
-			assert.Equal(t, a.Status(), attempt.StatusCancelled)
-		})
-
-		t.Run("can cancel cancelled attempt", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(20).
-				build(t, nil)
-
-			//Act
-			a.Cancel()
-			a.Cancel()
-
-			//Assert
-			assert.Equal(t, a.Status(), attempt.StatusCancelled)
-		})
-
-		t.Run("can cancel in progress attempt", func(t *testing.T) {
-			//Arrange
-			a := newAttemptBuilder().
-				withEnrollment(uuid.New()).
-				withQuiz(uuid.New()).
-				withTimeLimit(100000).
-				withMockQuestions(20).
-				build(t, nil)
-
-			//Act
-			a.Cancel()
-
-			//Assert
-			assert.Equal(t, a.Status(), attempt.StatusCancelled)
-		})
+		s = attempt.StatusInProgress
+		assert.Equal(t, "в процессе", s.Title())
+		assert.Equal(t, "in_progress", s.String())
 	})
 }

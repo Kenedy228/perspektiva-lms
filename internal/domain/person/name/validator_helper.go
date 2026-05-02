@@ -12,8 +12,8 @@ func validatePartStructure(field, value string) error {
 		return fmt.Errorf("%w, детали: %s не может быть пустым", ErrInvalid, field)
 	}
 
-	if len(runes) > maxPartLen {
-		return fmt.Errorf("%w, детали: количество символов в %s превышает лимит %d символов", ErrInvalid, field, maxPartLen)
+	if len(runes) > PartCharsLimit {
+		return fmt.Errorf("%w, детали: количество символов в %s превышает лимит %d символов", ErrInvalid, field, PartCharsLimit)
 	}
 
 	seenLetter := false

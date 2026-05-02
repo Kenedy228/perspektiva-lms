@@ -2,6 +2,6 @@ package short
 
 import "errors"
 
-var(
-	ErrInvalidVariants = errors.New("неверные варианты ответов")
+var (
+	ErrInvalid = errors.New("некорректный вопрос с коротким ответом")
 )

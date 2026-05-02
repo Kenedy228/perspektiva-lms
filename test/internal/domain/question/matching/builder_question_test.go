@@ -1,60 +1,34 @@
 package matching_test
 
 import (
-	"testing"
-
-	"gitflic.ru/lms/internal/domain/question"
+	"gitflic.ru/lms/internal/domain/question/content"
 	"gitflic.ru/lms/internal/domain/question/matching"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
+	"gitflic.ru/lms/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/internal/domain/question/title"
 )
 
-func newQuestionBuilder() *questionBuilder {
-	return &questionBuilder{
-		text:    "text",
-		imageID: uuid.Nil,
-		pairs:   []matching.Pair{},
-	}
-}
-
 type questionBuilder struct {
-	text    string
-	imageID uuid.UUID
-	pairs   []matching.Pair
+	title title.Title
+	pairs []pair.Pair
 }
 
-func (b *questionBuilder) withText(text string) *questionBuilder {
-	b.text = text
+func newQuestionBuilder() *questionBuilder {
+	return &questionBuilder{}
+}
+
+func (b *questionBuilder) withTitle(t string) *questionBuilder {
+	title, _ := title.New(makeContent(content.TypeText, t))
+	b.title = title
 	return b
 }
 
-func (b *questionBuilder) withImageID(id uuid.UUID) *questionBuilder {
-	b.imageID = id
+func (b *questionBuilder) withPairs(count int) *questionBuilder {
+	b.pairs = append(b.pairs, makePairs(count)...)
+
 	return b
 }
 
-func (b *questionBuilder) withPairParam(prompt, val string, cType question.ContentType) *questionBuilder {
-	pair := newPairBuilder().withPrompt(prompt).withContent(cType, val).buildNoTest()
-
-	b.pairs = append(b.pairs, pair)
-	return b
-}
-
-func (b *questionBuilder) withPairParamAsText(prompt, val string) *questionBuilder {
-	return b.withPairParam(prompt, val, question.ContentTypeText)
-}
-
-func (b *questionBuilder) build(t *testing.T, wantErr error) question.Question {
-	t.Helper()
-
-	params := matching.Params{
-		Text:    b.text,
-		ImageID: b.imageID,
-		Pairs:   b.pairs,
-	}
-
-	q, err := matching.New(params)
-
-	assert.ErrorIs(t, err, wantErr)
-	return q
+func (b *questionBuilder) build() (*matching.Question, error) {
+	q, err := matching.New(b.title, b.pairs)
+	return q, err
 }

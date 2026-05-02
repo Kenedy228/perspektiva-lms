@@ -4,54 +4,99 @@ import (
 	"testing"
 
 	"gitflic.ru/lms/internal/domain/account"
+	"gitflic.ru/lms/internal/domain/account/login"
+	"gitflic.ru/lms/internal/domain/account/passhash"
 	"gitflic.ru/lms/internal/domain/role"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type accountBuilder struct {
-	login        string
-	passwordHash string
-	role         role.Role
-	personID     uuid.UUID
+func TestNew(t *testing.T) {
+	t.Run("создание с personID", func(t *testing.T) {
+		//Arrange
+		personID := uuid.New()
+		acc, err := newAccountBuilder().
+			withLogin().
+			withPasswordHash().
+			withRole().
+			withPersonID(personID).
+			build()
+
+		//Assert
+		assert.NoError(t, err)
+		assert.NotEqual(t, uuid.Nil, acc.ID())
+		assert.Equal(t, acc.Login(), loginFixture())
+		assert.Equal(t, acc.PasswordHash(), hashFixture())
+		assert.Equal(t, acc.Role(), roleFixture())
+		assert.Equal(t, acc.PersonID(), personID)
+	})
+
+	t.Run("возвращает ошибку, если не установлен personID", func(t *testing.T) {
+		//Arrange
+		_, err := newAccountBuilder().
+			withLogin().
+			withPasswordHash().
+			withRole().
+			withPersonID(uuid.Nil).
+			build()
+
+		//Assert
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, account.ErrInvalid)
+	})
 }
 
-func newAccountBuilder() *accountBuilder {
-	return &accountBuilder{}
+func TestChangeLogin(t *testing.T) {
+	//Arrange
+	acc, err := newAccountBuilder().
+		withLogin().
+		withPasswordHash().
+		withRole().
+		withPersonID(uuid.New()).
+		build()
+	require.NoError(t, err)
+
+	//Act
+	newLogin, _ := login.New("ivan.ivanov-99")
+	acc.ChangeLogin(newLogin)
+
+	//Assert
+	assert.Equal(t, acc.Login(), newLogin)
 }
 
-func (b *accountBuilder) withLogin(login string) *accountBuilder {
-	b.login = login
-	return b
+func TestChangePasswordHash(t *testing.T) {
+	//Arrange
+	acc, err := newAccountBuilder().
+		withLogin().
+		withPasswordHash().
+		withRole().
+		withPersonID(uuid.New()).
+		build()
+	require.NoError(t, err)
+
+	//Act
+	newHash, _ := passhash.New("$2b$12$D24p4h.P6P4.82.jR.X1U.1Q6Qx4/G0iB2.JzH8H4w2rP/T5k0eZ2")
+	acc.ChangePasswordHash(newHash)
+
+	//Assert
+	assert.Equal(t, acc.PasswordHash(), newHash)
 }
 
-func (b *accountBuilder) withPasswordHash(hash string) *accountBuilder {
-	b.passwordHash = hash
-	return b
-}
+func TestChangeRole(t *testing.T) {
+	//Arrange
+	acc, err := newAccountBuilder().
+		withLogin().
+		withPasswordHash().
+		withRole().
+		withPersonID(uuid.New()).
+		build()
+	require.NoError(t, err)
 
-func (b *accountBuilder) withRole(r role.Role) *accountBuilder {
-	b.role = r
-	return b
-}
+	//Act
+	newRole := role.NewCreator()
+	acc.ChangeRole(newRole)
 
-func (b *accountBuilder) withPersonID(id uuid.UUID) *accountBuilder {
-	b.personID = id
-	return b
-}
-
-func (b *accountBuilder) build(t *testing.T, wantErr error) *account.Account {
-	t.Helper()
-
-	params := account.Params{
-		Login:        b.login,
-		PasswordHash: b.passwordHash,
-		Role:         b.role,
-		PersonID:     b.personID,
-	}
-
-	acc, err := account.New(params)
-	assert.ErrorIs(t, err, wantErr)
-
-	return acc
+	//Assert
+	assert.Equal(t, acc.Role(), newRole)
 }

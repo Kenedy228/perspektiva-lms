@@ -8,14 +8,23 @@ const (
 	StatusExpired  Status = "expired"
 )
 
+func (s Status) IsValid() bool {
+	switch s {
+	case StatusInactive, StatusActive, StatusExpired:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s Status) Title() string {
 	switch s {
-	case StatusInactive:
-		return "неактивна"
 	case StatusActive:
-		return "активна"
+		return "активен"
+	case StatusInactive:
+		return "неактивен"
 	case StatusExpired:
-		return "просрочена"
+		return "истек"
 	default:
 		return ""
 	}

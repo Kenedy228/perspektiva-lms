@@ -1,20 +1,20 @@
 package question
 
 import (
-	"time"
-
+	"gitflic.ru/lms/internal/domain/question/attachment"
+	"gitflic.ru/lms/internal/domain/question/title"
 	"github.com/google/uuid"
 )
 
 type Question interface {
 	ID() uuid.UUID
-	Text() string
+	Title() title.Title
+	Attachment() (attachment.Attachment, bool)
 	Instruction() string
-	ImageID() uuid.UUID
 	Type() Type
-	CreatedAt() time.Time
-	UpdatedAt() time.Time
-	HasImage() bool
 	Clone() Question
-	CheckAnswer(Answer) bool
+	ChangeTitle(title.Title)
+	ChangeAttachment(attachment.Attachment)
+	RemoveAttachment()
+	HasAttachment() bool
 }

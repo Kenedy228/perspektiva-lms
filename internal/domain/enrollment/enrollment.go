@@ -8,33 +8,37 @@ import (
 )
 
 type Enrollment struct {
-	id              uuid.UUID
-	courseID        uuid.UUID
-	courseVersionID uuid.UUID
-	accountID       uuid.UUID
-	activatedAt     time.Time
-	deactivatedAt   time.Time
-	createdAt       time.Time
-	updatedAt       time.Time
+	id            uuid.UUID
+	courseID      uuid.UUID
+	versionID     uuid.UUID
+	accountID     uuid.UUID
+	activatedAt   time.Time
+	deactivatedAt time.Time
 }
 
-func New(params Params) (*Enrollment, error) {
-	activatedAt := normalize(params.ActivatedAt)
-	deactivatedAt := normalize(params.DeactivatedAt)
+func New(
+	courseID uuid.UUID,
+	versionID uuid.UUID,
+	studentID uuid.UUID,
+	activatedAt time.Time,
+	deactivatedAt time.Time,
+) (*Enrollment, error) {
+	activatedAt = normalizeDate(activatedAt)
+	deactivatedAt = normalizeDate(deactivatedAt)
 
-	if err := validateCourseID(params.CourseID); err != nil {
+	if err := validateRequiredID("courseID", courseID); err != nil {
 		return nil, err
 	}
 
-	if err := validateCourseVersionID(params.CourseVersionID); err != nil {
+	if err := validateRequiredID("versionID", versionID); err != nil {
 		return nil, err
 	}
 
-	if err := validateAccountID(params.AccountID); err != nil {
+	if err := validateRequiredID("studentID", studentID); err != nil {
 		return nil, err
 	}
 
-	if err := validateTimeBoundaries(activatedAt, deactivatedAt); err != nil {
+	if err := validateActivationWindow(activatedAt, deactivatedAt); err != nil {
 		return nil, err
 	}
 
@@ -43,17 +47,13 @@ func New(params Params) (*Enrollment, error) {
 		return nil, err
 	}
 
-	now := time.Now()
-
 	return &Enrollment{
-		id:              id,
-		courseID:        params.CourseID,
-		courseVersionID: params.CourseVersionID,
-		accountID:       params.AccountID,
-		activatedAt:     activatedAt,
-		deactivatedAt:   deactivatedAt,
-		createdAt:       now,
-		updatedAt:       now,
+		id:            id,
+		courseID:      courseID,
+		versionID:     versionID,
+		accountID:     studentID,
+		activatedAt:   activatedAt,
+		deactivatedAt: deactivatedAt,
 	}, nil
 }
 
@@ -65,8 +65,8 @@ func (e *Enrollment) CourseID() uuid.UUID {
 	return e.courseID
 }
 
-func (e *Enrollment) CourseVersionID() uuid.UUID {
-	return e.courseVersionID
+func (e *Enrollment) VersionID() uuid.UUID {
+	return e.versionID
 }
 
 func (e *Enrollment) AccountID() uuid.UUID {
@@ -81,16 +81,8 @@ func (e *Enrollment) DeactivatedAt() time.Time {
 	return e.deactivatedAt
 }
 
-func (e *Enrollment) CreatedAt() time.Time {
-	return e.createdAt
-}
-
-func (e *Enrollment) UpdatedAt() time.Time {
-	return e.updatedAt
-}
-
 func (e *Enrollment) Status(at time.Time) Status {
-	today := normalize(at)
+	today := normalizeDate(at)
 
 	if today.Before(e.activatedAt) {
 		return StatusInactive
@@ -107,17 +99,27 @@ func (e *Enrollment) IsActive(at time.Time) bool {
 	return e.Status(at) == StatusActive
 }
 
-func (e *Enrollment) ChangeActivationWindow(from, to time.Time) error {
-	from = normalize(from)
-	to = normalize(to)
+func (e *Enrollment) ChangeActivationWindow(activatedAt, deactivatedAt time.Time) error {
+	activatedAt = normalizeDate(activatedAt)
+	deactivatedAt = normalizeDate(deactivatedAt)
 
-	if err := validateTimeBoundaries(from, to); err != nil {
+	if err := validateActivationWindow(activatedAt, deactivatedAt); err != nil {
 		return err
 	}
 
-	e.activatedAt = from
-	e.deactivatedAt = to
-	e.updatedAt = time.Now()
+	e.activatedAt = activatedAt
+	e.deactivatedAt = deactivatedAt
 
 	return nil
+}
+
+func (e *Enrollment) Clone() *Enrollment {
+	return &Enrollment{
+		id:            e.id,
+		courseID:      e.courseID,
+		versionID:     e.versionID,
+		accountID:     e.accountID,
+		activatedAt:   e.activatedAt,
+		deactivatedAt: e.deactivatedAt,
+	}
 }

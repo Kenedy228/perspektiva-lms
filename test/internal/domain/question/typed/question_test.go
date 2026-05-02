@@ -3,197 +3,149 @@ package typed_test
 import (
 	"testing"
 
+	"gitflic.ru/lms/internal/domain/question/title"
 	"gitflic.ru/lms/internal/domain/question/typed"
+	"gitflic.ru/lms/internal/domain/question/typed/blank"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewQuestion(t *testing.T) {
-	t.Run("less than min placeholders", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().
-			withText("hello {{placeholder}} not enough").
-			withBlank("placeholder", "value").
-			build(t, typed.ErrInvalidText)
+	t.Run("валидное создание", func(t *testing.T) {
+		// Arrange & Act
+		q := newQuestionBuilder().
+			withTitle("text with {{placeholder}} and {{another}}").
+			withBlank("{{placeholder}}", "value1").
+			withBlank("{{another}}", "value2").
+			build(t)
+
+		// Assert
+		assert.Equal(t, "text with {{placeholder}} and {{another}}", q.Title().Value())
+		assert.Len(t, q.Blanks(), 2)
 	})
 
-	t.Run("more than maxPlaceholders", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().
-			withText("{{1}}{{2}}{{3}}{{4}}{{5}}{{6}}{{7}}{{8}}{{9}}{{11}}{{12}}{{13}}{{14}}{{15}}{{16}}{{17}}{{18}}{{19}}{{21}}{{22}}{{23}}").
-			withBlank("placeholder", "value").
-			build(t, typed.ErrInvalidText)
+	t.Run("меньше необходимого числа плейсхолдеров", func(t *testing.T) {
+		// Arrange & Act
+		_, err := newQuestionBuilder().
+			withTitle("hello {{placeholder}} not enough").
+			withBlank("{{placeholder}}", "value").
+			buildWithError()
+
+		// Assert
+		assert.ErrorIs(t, err, typed.ErrInvalid)
+		assert.Contains(t, err.Error(), "не менее 2 штук")
 	})
 
-	t.Run("with placeholder duplicates", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().
-			withText("text with {{duplicate}} {{duplicate}}").
-			withBlank("duplicate", "value").
-			build(t, typed.ErrInvalidText)
+	t.Run("больше необходимого числа плейсхолдеров", func(t *testing.T) {
+		// Arrange & Act
+		qb := newQuestionBuilder().withTitle(
+			"{{1}} {{2}} {{3}} {{4}} {{5}} {{6}} {{7}} {{8}} {{9}} {{10}} " +
+				"{{11}} {{12}} {{13}} {{14}} {{15}} {{16}} {{17}} {{18}} {{19}} {{20}} {{21}}",
+		)
+		for i := 1; i <= 21; i++ {
+			qb = qb.withBlank("{{placeholder}}", "value")
+		}
+
+		_, err := qb.buildWithError()
+
+		// Assert
+		assert.ErrorIs(t, err, typed.ErrInvalid)
+		assert.Contains(t, err.Error(), "не более 20 штук")
 	})
 
-	t.Run("with missing placeholder", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().
-			withText("text with {{placeholder}} {{missing}}").
-			withBlank("placeholder", "value").
-			build(t, typed.ErrInvalidBlanks)
+	t.Run("отсутствует плейсхолдер в бланке", func(t *testing.T) {
+		// Arrange & Act
+		_, err := newQuestionBuilder().
+			withTitle("text with {{placeholder}} {{missing}}").
+			withBlank("{{placeholder}}", "value").
+			withBlank("{{wrong}}", "value"). // Бланк не совпадает с плейсхолдером в тексте
+			buildWithError()
+
+		// Assert
+		assert.ErrorIs(t, err, typed.ErrInvalid)
 	})
 
-	t.Run("with missing placeholder", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().
-			withText("text with {{placeholder}} {{missing}}").
-			withBlank("placeholder", "value").
-			build(t, typed.ErrInvalidBlanks)
-	})
+	t.Run("забыли плейсхолдер в бланке", func(t *testing.T) {
+		// Arrange & Act
+		_, err := newQuestionBuilder().
+			withTitle("text with {{placeholder}} {{missing}}").
+			withBlank("{{placeholder}}", "value"). // Забыли второй бланк
+			buildWithError()
 
-	t.Run("blanks with duplicates", func(t *testing.T) {
-		//Arrange-Assert
-		newQuestionBuilder().
-			withText("text with {{placeholder}} {{missing}}").
-			withBlank("placeholder", "value").
-			withBlank("placeholder", "value").
-			build(t, typed.ErrInvalidBlanks)
-	})
-
-	t.Run("valid", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().
-			withText("text with {{placeholder}} {{another}}").
-			withBlank("placeholder", "value").
-			withBlank("another", "value").
-			build(t, nil))
-
-		//Assert
-		assert.Equal(t, q.Text(), "text with {{placeholder}} {{another}}")
-		assert.Equal(t, len(q.Blanks()), 2)
+		// Assert
+		assert.ErrorIs(t, err, typed.ErrInvalid)
 	})
 }
 
 func TestReplaceContent(t *testing.T) {
-	t.Run("success update", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().
-			withText("text with {{placeholder}} {{another}}").
-			withBlank("placeholder", "value").
-			withBlank("another", "value").
-			build(t, nil))
+	t.Run("успешное обновление", func(t *testing.T) {
+		// Arrange
+		q := newQuestionBuilder().
+			withTitle("text with {{placeholder}} {{another}}").
+			withBlank("{{placeholder}}", "value").
+			withBlank("{{another}}", "value").
+			build(t)
 
-		blanks := []typed.Blank{
-			newBlankBuilder().withPlaceholder("new").
-				withVariant("answer").
-				buildNoTest(),
-			newBlankBuilder().withPlaceholder("new2").
-				withVariant("answer").
-				buildNoTest(),
+		newTitleStr := "text with {{new}} {{new2}}"
+		newTitle, _ := title.New(makeContent(newTitleStr))
+
+		newBlanks := []blank.Blank{
+			makeBlank("{{new}}", "answer"),
+			makeBlank("{{new2}}", "answer"),
 		}
 
-		//Act
-		err := q.ReplaceContent("text with {{new}} {{new2}}", blanks)
+		// Act
+		err := q.ReplaceContent(newTitle, newBlanks)
 
-		//Assert
-		assert.Nil(t, err)
-		assert.Equal(t, q.Text(), "text with {{new}} {{new2}}")
-		assert.Equal(t, len(q.Blanks()), 2)
-		assert.NotSame(t, &q.Blanks()[0], &blanks[0])
-		assert.True(t, q.UpdatedAt().After(q.CreatedAt()))
+		// Assert
+		require.NoError(t, err)
+		assert.Equal(t, "text with {{new}} {{new2}}", q.Title().Value())
+		assert.Len(t, q.Blanks(), 2)
+
+		// Проверяем защитное копирование
+		assert.NotSame(t, &q.Blanks()[0], &newBlanks[0])
 	})
 
-	t.Run("err update", func(t *testing.T) {
-		//Arrange
-		q := castQuestion(t, newQuestionBuilder().
-			withText("text with {{placeholder}} {{another}}").
-			withBlank("placeholder", "value").
-			withBlank("another", "value").
-			build(t, nil))
-
-		//Act
-		err := q.ReplaceContent("text with {{new}} {{new2}}", []typed.Blank{})
-
-		//Assert
-		assert.ErrorIs(t, err, typed.ErrInvalidBlanks)
-		assert.Equal(t, q.Text(), "text with {{placeholder}} {{another}}")
-		assert.Equal(t, len(q.Blanks()), 2)
-		assert.Equal(t, q.UpdatedAt(), q.CreatedAt())
-	})
-}
-
-func TestCheckAnswer(t *testing.T) {
-	q := castQuestion(t, newQuestionBuilder().
-		withText("text with {{placeholder}} {{another}}").
-		withBlank("placeholder", "value").
-		withBlank("another", "value").
-		build(t, nil))
-
-	t.Run("different len", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withBlank("{{placeholder}}", "value").
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("same len, but has different placeholders", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withBlank("{{placeholder}}", "value").
-			withBlank("{{diff}}", "value").
-			build()
-
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.False(t, check)
-	})
-
-	t.Run("same len, same placeholders, diff values", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withBlank("{{placeholder}}", "value123").
+	t.Run("пустые бланки", func(t *testing.T) {
+		// Arrange
+		q := newQuestionBuilder().
+			withTitle("text with {{placeholder}} {{another}}").
+			withBlank("{{placeholder}}", "value").
 			withBlank("{{another}}", "value").
-			build()
+			build(t)
 
-		//Act
-		check := q.CheckAnswer(answer)
+		newTitle, _ := title.New(makeContent("text with {{new}} {{new2}}"))
 
-		//Assert
-		assert.False(t, check)
-	})
+		// Act (передаем пустые бланки — это вызовет ошибку)
+		err := q.ReplaceContent(newTitle, []blank.Blank{})
 
-	t.Run("same len, same placeholders, same values", func(t *testing.T) {
-		//Arrange
-		answer := newAnswerBuilder().withBlank("{{placeholder}}", "value").
-			withBlank("{{another}}", "value").
-			build()
+		// Assert
+		require.ErrorIs(t, err, typed.ErrInvalid)
 
-		//Act
-		check := q.CheckAnswer(answer)
-
-		//Assert
-		assert.True(t, check)
+		// Состояние не должно было измениться!
+		assert.Equal(t, "text with {{placeholder}} {{another}}", q.Title().Value())
+		assert.Len(t, q.Blanks(), 2)
 	})
 }
 
 func TestClone(t *testing.T) {
-	//Arrange
-	q := castQuestion(t, newQuestionBuilder().
-		withText("text with {{placeholder}} {{another}}").
-		withBlank("placeholder", "value").
-		withBlank("another", "value").
-		build(t, nil))
+	// Arrange
+	q := newQuestionBuilder().
+		withTitle("text with {{placeholder}} {{another}}").
+		withBlank("{{placeholder}}", "value").
+		withBlank("{{another}}", "value").
+		build(t)
 
-	//Act
-	clone := castQuestion(t, q.Clone())
+	// Act
+	clone, ok := q.Clone().(*typed.Question)
+	require.True(t, ok, "cloned question must be *typed.Question")
 
-	//Assert
+	// Assert
 	assert.Equal(t, q.ID(), clone.ID())
-	assert.Equal(t, q.Text(), clone.Text())
-	assert.Equal(t, q.ImageID(), clone.ImageID())
+	assert.Equal(t, q.Title().Value(), clone.Title().Value())
+	assert.Equal(t, q.Instruction(), clone.Instruction())
+
+	// Проверяем, что массивы содержат одинаковые данные, но не шарят общую память
+	require.Len(t, clone.Blanks(), 2)
 	assert.NotSame(t, &q.Blanks()[0], &clone.Blanks()[0])
-	assert.Equal(t, q.CreatedAt(), clone.CreatedAt())
-	assert.Equal(t, q.UpdatedAt(), clone.UpdatedAt())
 }

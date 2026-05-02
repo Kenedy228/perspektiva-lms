@@ -1,33 +1,33 @@
 package enrollment
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-func validateCourseID(id uuid.UUID) error {
-	return validateRequiredID(courseIDField, id)
+func validateRequiredID(fieldName string, id uuid.UUID) error {
+	if id == uuid.Nil {
+		return fmt.Errorf("%w, детали: %s должен быть валидным идентификатором", ErrInvalid, fieldName)
+	}
+	return nil
 }
 
-func validateCourseVersionID(id uuid.UUID) error {
-	return validateRequiredID(courseVersionIDField, id)
-}
+func validateActivationWindow(activatedAt, deactivatedAt time.Time) error {
+	today := normalizeDate(time.Now())
 
-func validateAccountID(id uuid.UUID) error {
-	return validateRequiredID(accountIDField, id)
-}
-
-func validateTimeBoundaries(from, to time.Time) error {
-	today := normalize(time.Now())
-
-	if err := validateDateNotBefore("дата активации", from, today); err != nil {
-		return err
+	if activatedAt.Before(today) {
+		return fmt.Errorf("%w, детали: дата активации не может быть раньше сегодняшнего дня", ErrInvalid)
 	}
 
-	if err := validateDateNotBefore("дата деактивации", to, from); err != nil {
-		return err
+	if deactivatedAt.Before(activatedAt) {
+		return fmt.Errorf("%w, детали: дата деактивации не может быть раньше даты активации", ErrInvalid)
 	}
 
 	return nil
+}
+
+func normalizeDate(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }

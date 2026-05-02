@@ -1,67 +1,43 @@
 package organization
 
 import (
-	"time"
+	"gitflic.ru/lms/internal/domain/organization/inn"
+	"gitflic.ru/lms/internal/domain/organization/orgname"
+	"gitflic.ru/lms/internal/domain/shared/uid"
+	"github.com/google/uuid"
 )
 
 type Organization struct {
-	inn       string
-	name      string
-	createdAt time.Time
-	updatedAt time.Time
+	id   uuid.UUID
+	inn  inn.INN
+	name orgname.Name
 }
 
-func New(params Params) (*Organization, error) {
-	if err := validateName(params.Name); err != nil {
+func New(inn inn.INN, name orgname.Name) (*Organization, error) {
+	id, err := uid.New()
+	if err != nil {
 		return nil, err
 	}
-
-	if err := validateInn(params.INN); err != nil {
-		return nil, err
-	}
-
-	now := time.Now()
 
 	return &Organization{
-		name:      params.Name,
-		inn:       params.INN,
-		createdAt: now,
-		updatedAt: now,
+		id:   id,
+		inn:  inn,
+		name: name,
 	}, nil
 }
 
-func (o *Organization) Name() string {
+func (o *Organization) Name() orgname.Name {
 	return o.name
 }
 
-func (o *Organization) INN() string {
+func (o *Organization) INN() inn.INN {
 	return o.inn
 }
 
-func (o *Organization) CreatedAt() time.Time {
-	return o.createdAt
-}
-
-func (o *Organization) UpdatedAt() time.Time {
-	return o.updatedAt
-}
-
-func (o *Organization) Rename(name string) error {
-	if err := validateName(name); err != nil {
-		return err
-	}
-
+func (o *Organization) Rename(name orgname.Name) {
 	o.name = name
-	o.updatedAt = time.Now()
-	return nil
 }
 
-func (o *Organization) ChangeINN(inn string) error {
-	if err := validateInn(inn); err != nil {
-		return err
-	}
-
+func (o *Organization) ChangeINN(inn inn.INN) {
 	o.inn = inn
-	o.updatedAt = time.Now()
-	return nil
 }

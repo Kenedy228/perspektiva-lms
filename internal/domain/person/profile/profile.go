@@ -1,38 +1,29 @@
 package profile
 
 import (
-	"gitflic.ru/lms/internal/domain/person/dob"
-	"gitflic.ru/lms/internal/domain/person/snils"
+	"gitflic.ru/lms/internal/domain/person/profile/dob"
+	"gitflic.ru/lms/internal/domain/person/profile/education"
+	"gitflic.ru/lms/internal/domain/person/profile/jobtitle"
+	"gitflic.ru/lms/internal/domain/person/profile/snils"
 	"github.com/google/uuid"
 )
 
 type Profile struct {
 	snils          snils.Snils
 	dateOfBirth    dob.DateOfBirth
-	jobTitle       string
-	education      string
+	jobTitle       jobtitle.JobTitle
+	education      education.Education
 	organizationID uuid.UUID
 }
 
-func New(params Params) (Profile, error) {
-	jobTitle := normalize(params.JobTitle)
-	education := normalize(params.Education)
-
-	if err := validateJobTitle(jobTitle); err != nil {
-		return Profile{}, err
-	}
-
-	if err := validateEducation(education); err != nil {
-		return Profile{}, err
-	}
-
+func New(s snils.Snils, dateOfBirth dob.DateOfBirth, jt jobtitle.JobTitle, edu education.Education, orgID uuid.UUID) Profile {
 	return Profile{
-		snils:          params.Snils,
-		dateOfBirth:    params.DateOfBirth,
-		jobTitle:       jobTitle,
-		education:      education,
-		organizationID: params.OrganizationID,
-	}, nil
+		snils:          s,
+		dateOfBirth:    dateOfBirth,
+		jobTitle:       jt,
+		education:      edu,
+		organizationID: orgID,
+	}
 }
 
 func (p Profile) Snils() snils.Snils {
@@ -43,11 +34,11 @@ func (p Profile) DateOfBirth() dob.DateOfBirth {
 	return p.dateOfBirth
 }
 
-func (p Profile) JobTitle() string {
+func (p Profile) JobTitle() jobtitle.JobTitle {
 	return p.jobTitle
 }
 
-func (p Profile) Education() string {
+func (p Profile) Education() education.Education {
 	return p.education
 }
 
@@ -61,14 +52,4 @@ func (p Profile) HasOrganization() bool {
 	}
 
 	return true
-}
-
-func (p Profile) Clone() Profile {
-	return Profile{
-		snils:          p.snils,
-		dateOfBirth:    p.dateOfBirth,
-		jobTitle:       p.jobTitle,
-		education:      p.education,
-		organizationID: p.organizationID,
-	}
 }

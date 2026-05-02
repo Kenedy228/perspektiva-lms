@@ -5,6 +5,7 @@ type Status string
 const (
 	StatusDraft     Status = "draft"
 	StatusPublished Status = "published"
+	StatusDeleted   Status = "deleted"
 )
 
 func (s Status) Title() string {
@@ -13,6 +14,8 @@ func (s Status) Title() string {
 		return "черновик"
 	case StatusPublished:
 		return "опубликован"
+	case StatusDeleted:
+		return "удален"
 	default:
 		return ""
 	}

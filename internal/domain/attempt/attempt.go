@@ -2,8 +2,12 @@ package attempt
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
+	"gitflic.ru/lms/internal/domain/attempt/answer"
+	"gitflic.ru/lms/internal/domain/attempt/item"
 	"gitflic.ru/lms/internal/domain/question"
 	"gitflic.ru/lms/internal/domain/shared/uid"
 	"github.com/google/uuid"
@@ -17,10 +21,11 @@ type Attempt struct {
 	startedAt    time.Time
 	deadlineAt   time.Time
 	finishedAt   time.Time
-	items        []*Item
+	answers      map[uuid.UUID]answer.Entry
+	items        []item.Item
 }
 
-func New(params Params) (*Attempt, error) {
+func New(params Params, at time.Time) (*Attempt, error) {
 	if err := validateEnrollmentID(params.EnrollmentID); err != nil {
 		return nil, err
 	}
@@ -38,20 +43,22 @@ func New(params Params) (*Attempt, error) {
 		return nil, err
 	}
 
-	now := time.Now()
-
 	var deadlineAt time.Time
 	if !params.TimeLimit.IsInfinite() {
-		deadlineAt = now.Add(params.TimeLimit.Duration())
+		d, ok := params.TimeLimit.TryDuration()
+		if !ok {
+			return nil, fmt.Errorf("%w: невозможно получить длительность для установленного лимита", ErrInvalid)
+		}
+		deadlineAt = at.Add(d)
 	}
 
-	items := make([]*Item, 0, len(params.Questions))
+	items := make([]item.Item, 0, len(params.Questions))
 	for i := range params.Questions {
-		item, err := newItem(params.Questions[i])
+		itm, err := item.New(params.Questions[i])
 		if err != nil {
-			return nil, fmt.Errorf("error generating item")
+			return nil, fmt.Errorf("%w: %w", ErrInvalid, err)
 		}
-		items = append(items, item)
+		items = append(items, itm)
 	}
 
 	return &Attempt{
@@ -59,9 +66,10 @@ func New(params Params) (*Attempt, error) {
 		enrollmentID: params.EnrollmentID,
 		quizID:       params.QuizID,
 		status:       StatusInProgress,
-		startedAt:    now,
+		startedAt:    at,
 		deadlineAt:   deadlineAt,
 		items:        items,
+		answers:      make(map[uuid.UUID]answer.Entry, len(items)),
 	}, nil
 }
 
@@ -93,107 +101,87 @@ func (a *Attempt) FinishedAt() time.Time {
 	return a.finishedAt
 }
 
-func (a *Attempt) Items() []Item {
-	items := make([]Item, 0, len(a.items))
+func (a *Attempt) Items() []item.Item {
+	return slices.Clone(a.items)
+}
 
-	for i := range a.items {
-		items = append(items, a.items[i].Clone())
-	}
-
-	return items
+func (a *Attempt) Answers() map[uuid.UUID]answer.Entry {
+	return maps.Clone(a.answers)
 }
 
 func (a *Attempt) CountItems() int {
 	return len(a.items)
 }
 
+func (a *Attempt) CountAnswers() int {
+	return len(a.answers)
+}
+
 func (a *Attempt) CanModify() bool {
-	if a.status == StatusInProgress {
-		return true
-	}
-
-	return false
+	return a.status == StatusInProgress
 }
 
-func (a *Attempt) AddAnswer(itemID uuid.UUID, answer question.Answer) error {
+func (a *Attempt) AddAnswer(qID uuid.UUID, ans question.Answer, at time.Time) error {
 	if !a.CanModify() {
-		return ErrNotModifiable
+		return fmt.Errorf("%w: невозможно добавить ответ (попытка не активна)", ErrStateConflict)
 	}
 
-	if itemID == uuid.Nil {
-		return ErrUnexistingItem
+	if !hasQuestion(a.items, qID) {
+		return fmt.Errorf("%w: ID %s", ErrNotFound, qID)
 	}
 
-	for i := range a.items {
-		if a.items[i].ID() == itemID {
-			a.items[i].changeAnswer(answer)
-			return nil
-		}
+	entry, err := answer.New(qID, ans, at)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalid, err)
 	}
 
-	return ErrUnexistingItem
+	a.answers[qID] = entry
+	return nil
 }
 
-func (a *Attempt) Finish() error {
+func (a *Attempt) Finish(at time.Time) error {
 	if a.status != StatusInProgress {
-		return ErrInactive
+		return fmt.Errorf("%w: завершить можно только активную попытку", ErrStateConflict)
 	}
 
 	a.status = StatusFinished
-	a.finishedAt = time.Now()
-
-	for i := range a.items {
-		a.items[i].calculateScore()
-	}
-
+	a.finishedAt = at
 	return nil
 }
 
-func (a *Attempt) SetExpired() error {
+func (a *Attempt) SetExpired(at time.Time) error {
 	if a.status != StatusInProgress {
-		return ErrInactive
+		return fmt.Errorf("%w: просрочить можно только активную попытку", ErrStateConflict)
 	}
 
 	if a.deadlineAt.IsZero() {
-		return ErrInfiniteDeadline
+		return fmt.Errorf("%w: попытка не имеет дедлайна", ErrStateConflict)
 	}
 
-	now := time.Now()
-	if now.Before(a.deadlineAt) {
-		return ErrNotExpiredYet
+	if at.Before(a.deadlineAt) {
+		return fmt.Errorf("%w: дедлайн еще не наступил", ErrStateConflict)
 	}
 
 	a.status = StatusExpired
+	a.finishedAt = at
 	return nil
 }
 
-func (a *Attempt) Score() (int, error) {
-	if a.status != StatusFinished {
-		return -1, ErrNotFinishedYet
-	}
-
-	totalScore := 0
-
-	for i := range a.items {
-		totalScore += a.items[i].Score()
-	}
-
-	return totalScore, nil
-}
-
-func (a *Attempt) Cancel() {
-	if a.status == StatusCancelled {
-		return
-	}
-
-	a.status = StatusCancelled
-}
-
-func (a *Attempt) Interrupt() error {
+func (a *Attempt) Interrupt(at time.Time) error {
 	if a.status != StatusInProgress {
-		return ErrInactive
+		return fmt.Errorf("%w: прервать можно только активную попытку", ErrStateConflict)
 	}
 
 	a.status = StatusInterrupted
+	a.finishedAt = at
+	return nil
+}
+
+func (a *Attempt) Cancel() error {
+	if a.status == StatusFinished || a.status == StatusExpired {
+		return fmt.Errorf("%w: нельзя отменить завершенную попытку", ErrStateConflict)
+	}
+
+	a.status = StatusCancelled
 	return nil
 }

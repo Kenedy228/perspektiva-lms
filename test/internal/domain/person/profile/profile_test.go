@@ -1,118 +1,78 @@
 package profile_test
 
 import (
-	"strings"
 	"testing"
+	"time"
 
 	"gitflic.ru/lms/internal/domain/person/profile"
+	"gitflic.ru/lms/internal/domain/person/profile/dob"
+	"gitflic.ru/lms/internal/domain/person/profile/education"
+	"gitflic.ru/lms/internal/domain/person/profile/jobtitle"
+	"gitflic.ru/lms/internal/domain/person/profile/snils"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {
-	t.Run("with organization", func(t *testing.T) {
-		//Arrange
-		p := newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			withOrganizationID().
-			withJobTitle("  ведущий   инженер  ").
-			withEducation("  высшее   образование ").
-			build(t, nil)
+	// Arrange
+	orgID := uuid.New()
+	prof := profile.New(snilsFixture(), dateOfBirthFixture(), jobTitleFixture(), educationFixture(), orgID)
 
-		//Assert
-		assert.Equal(t, snilsFixture(), p.Snils())
-		assert.Equal(t, dateOfBirthFixture(), p.DateOfBirth())
-		assert.Equal(t, "ведущий инженер", p.JobTitle())
-		assert.Equal(t, "высшее образование", p.Education())
-		assert.Equal(t, p.OrganizationID(), organizationIDFixture())
-		assert.True(t, p.HasOrganization())
-	})
-
-	t.Run("without organization", func(t *testing.T) {
-		//Arrange
-		p := newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			// organizationID не задаём — остаётся uuid.Nil
-			withJobTitle("инженер").
-			withEducation("среднее профессиональное").
-			build(t, nil)
-
-		//Assert
-		assert.Equal(t, snilsFixture(), p.Snils())
-		assert.Equal(t, dateOfBirthFixture(), p.DateOfBirth())
-		assert.Equal(t, "инженер", p.JobTitle())
-		assert.Equal(t, "среднее профессиональное", p.Education())
-		assert.Equal(t, uuid.Nil, p.OrganizationID())
-		assert.False(t, p.HasOrganization())
-	})
+	// Assert
+	assert.Equal(t, snilsFixture(), prof.Snils())
+	assert.Equal(t, dateOfBirthFixture(), prof.DateOfBirth())
+	assert.Equal(t, jobTitleFixture(), prof.JobTitle())
+	assert.Equal(t, educationFixture(), prof.Education())
+	assert.Equal(t, orgID, prof.OrganizationID())
 }
 
-func TestNewProfileValidationErrors(t *testing.T) {
-	t.Run("empty job title after normalize", func(t *testing.T) {
-		//Arrange-Assert
-		newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			withJobTitle("   \t \n ").
-			withEducation("высшее").
-			build(t, profile.ErrInvalid)
-	})
+func TestHasOrganization(t *testing.T) {
+	tc := []struct {
+		name    string
+		orgID   uuid.UUID
+		wantHas bool
+	}{
+		{
+			name:    "orgID не равен uuid.Nil",
+			orgID:   uuid.New(),
+			wantHas: true,
+		},
+		{
+			name:    "orgID равен uuid.Nil",
+			orgID:   uuid.Nil,
+			wantHas: false,
+		},
+	}
 
-	t.Run("empty education after normalize", func(t *testing.T) {
-		//Arrange-Assert
-		newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			withJobTitle("инженер").
-			withEducation("   ").
-			build(t, profile.ErrInvalid)
-	})
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			prof := profile.New(snilsFixture(), dateOfBirthFixture(), jobTitleFixture(), educationFixture(), tt.orgID)
 
-	t.Run("job title too long", func(t *testing.T) {
-		//Arrange-Assert
-		longTitle := strings.Repeat("а", 1e5+1)
-
-		newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			withJobTitle(longTitle).
-			withEducation("высшее").
-			build(t, profile.ErrInvalid)
-	})
-
-	t.Run("education too long", func(t *testing.T) {
-		//Arrange-Assert
-		longEdu := strings.Repeat("б", 1e5+1)
-
-		newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			withJobTitle("инженер").
-			withEducation(longEdu).
-			build(t, profile.ErrInvalid)
-	})
+			// Assert
+			assert.Equal(t, tt.wantHas, prof.HasOrganization())
+		})
+	}
 }
 
-func TestClone(t *testing.T) {
-	t.Run("testing clone values", func(t *testing.T) {
-		//Arrange
-		original := newProfileBuilder().
-			withSnils().
-			withDateOfBirth().
-			withJobTitle("инженер").
-			withEducation("высшее").
-			build(t, nil)
+// Fixtures
 
-		//Act
-		cloned := original.Clone()
+func snilsFixture() snils.Snils {
+	s, _ := snils.New("11223344595")
+	return s
+}
 
-		//Assert
-		assert.Equal(t, original.Snils(), cloned.Snils())
-		assert.Equal(t, original.DateOfBirth(), cloned.DateOfBirth())
-		assert.Equal(t, original.JobTitle(), cloned.JobTitle())
-		assert.Equal(t, original.Education(), cloned.Education())
-		assert.Equal(t, original.OrganizationID(), cloned.OrganizationID())
-	})
+func dateOfBirthFixture() dob.DateOfBirth {
+	db, _ := dob.New(time.Date(2000, 1, 10, 15, 4, 5, 123, time.FixedZone("MSK", 3*3600)), time.Now())
+	return db
+}
+
+func jobTitleFixture() jobtitle.JobTitle {
+	jt, _ := jobtitle.New("jobtitle fixture")
+	return jt
+}
+
+func educationFixture() education.Education {
+	edu, _ := education.New("education fixture")
+	return edu
 }
