@@ -1,24 +1,19 @@
 package base
 
 import (
-	"fmt"
-
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
+	"gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
 
 type Base struct {
-	id            uuid.UUID
-	title         title.Title
-	attachment    attachment.Attachment
-	hasAttachment bool
+	id    uuid.UUID
+	title title.Title
 }
 
 func New(t title.Title) (*Base, error) {
-	if t.IsZero() {
-		return nil, fmt.Errorf("%w: invalid value", ErrInvalid)
+	if err := validateTitle(t); err != nil {
+		return nil, err
 	}
 
 	id, err := uid.New()
@@ -32,26 +27,19 @@ func New(t title.Title) (*Base, error) {
 	}, nil
 }
 
-func Restore(id uuid.UUID, t title.Title, att *attachment.Attachment) (*Base, error) {
-	if id == uuid.Nil {
-		return nil, fmt.Errorf("%w: invalid value", ErrInvalid)
+func Restore(id uuid.UUID, t title.Title) (*Base, error) {
+	if err := validateID(id); err != nil {
+		return nil, err
 	}
 
-	if t.IsZero() {
-		return nil, fmt.Errorf("%w: invalid value", ErrInvalid)
+	if err := validateTitle(t); err != nil {
+		return nil, err
 	}
 
-	b := &Base{
+	return &Base{
 		id:    id,
 		title: t,
-	}
-
-	if att != nil && !att.IsZero() {
-		b.attachment = *att
-		b.hasAttachment = true
-	}
-
-	return b, nil
+	}, nil
 }
 
 func (b *Base) ID() uuid.UUID {
@@ -62,45 +50,18 @@ func (b *Base) Title() title.Title {
 	return b.title
 }
 
-func (b *Base) Attachment() (attachment.Attachment, bool) {
-	if !b.hasAttachment {
-		return attachment.Attachment{}, false
-	}
-
-	return b.attachment, true
-}
-
-func (b *Base) ChangeTitle(t title.Title) {
-	if t.IsZero() {
-		return
+func (b *Base) ChangeTitle(t title.Title) error {
+	if err := validateTitle(t); err != nil {
+		return err
 	}
 
 	b.title = t
-}
-
-func (b *Base) ChangeAttachment(a attachment.Attachment) {
-	if a.IsZero() {
-		return
-	}
-
-	b.attachment = a
-	b.hasAttachment = true
-}
-
-func (b *Base) HasAttachment() bool {
-	return b.hasAttachment
-}
-
-func (b *Base) RemoveAttachment() {
-	b.attachment = attachment.Attachment{}
-	b.hasAttachment = false
+	return nil
 }
 
 func (b *Base) Clone() *Base {
 	return &Base{
-		id:            b.id,
-		title:         b.title,
-		attachment:    b.attachment,
-		hasAttachment: b.hasAttachment,
+		id:    b.id,
+		title: b.title,
 	}
 }
