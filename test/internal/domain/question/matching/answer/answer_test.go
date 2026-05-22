@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package answer_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/matching/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/answer"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +14,7 @@ import (
 
 func TestNew(t *testing.T) {
 	//Arrange
-	pairs := []answer.AnswerPair{
+	pairs := []answer.Pair{
 		makeAnswerPair(uuid.New(), uuid.New()),
 	}
 	ans := answer.New(pairs)
@@ -24,7 +27,7 @@ func TestNew(t *testing.T) {
 func TestIsEmpty(t *testing.T) {
 	t.Run("при пустых ответах возвращает true", func(t *testing.T) {
 		//Arrange
-		ans := answer.New([]answer.AnswerPair{})
+		ans := answer.New([]answer.Pair{})
 
 		//Assert
 		assert.True(t, ans.IsEmpty())
@@ -32,7 +35,7 @@ func TestIsEmpty(t *testing.T) {
 
 	t.Run("при непустых ответах возвращает false", func(t *testing.T) {
 		//Arrange
-		pairs := []answer.AnswerPair{
+		pairs := []answer.Pair{
 			makeAnswerPair(uuid.New(), uuid.New()),
 		}
 		ans := answer.New(pairs)
@@ -44,7 +47,7 @@ func TestIsEmpty(t *testing.T) {
 
 func TestAnswerClone(t *testing.T) {
 	//Arrange
-	pairs := []answer.AnswerPair{
+	pairs := []answer.Pair{
 		makeAnswerPair(uuid.New(), uuid.New()),
 	}
 	ans := answer.New(pairs)

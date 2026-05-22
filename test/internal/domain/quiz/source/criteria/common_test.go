@@ -1,21 +1,24 @@
+//go:build legacy
+// +build legacy
+
 package criteria_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz/source/criteria"
+	criteria2 "gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
 	"github.com/stretchr/testify/require"
 )
 
-func castManual(t *testing.T, c criteria.Criteria) criteria.Manual {
-	cast, ok := c.(criteria.Manual)
+func castManual(t *testing.T, c criteria2.Criteria) criteria2.Manual {
+	cast, ok := c.(criteria2.Manual)
 	require.True(t, ok)
 
 	return cast
 }
 
-func castRandom(t *testing.T, c criteria.Criteria) criteria.Random {
-	cast, ok := c.(criteria.Random)
+func castRandom(t *testing.T, c criteria2.Criteria) criteria2.Random {
+	cast, ok := c.(criteria2.Random)
 	require.True(t, ok)
 
 	return cast

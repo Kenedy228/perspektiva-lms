@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package name_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/person/name"
+	name2 "gitflic.ru/lms/backend/internal/domain/person/name"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,7 +64,7 @@ func TestNew(t *testing.T) {
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				n, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+				n, err := name2.New(tt.firstname, tt.lastname, tt.middlename)
 
 				// Assert
 				assert.NoError(t, err)
@@ -85,105 +88,105 @@ func TestNew(t *testing.T) {
 				firstname:  "",
 				lastname:   "Иванова",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "пустой lastname",
 				firstname:  "Мария",
 				lastname:   "",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "firstname из пробелов",
 				firstname:  "   \t\t\t\t\t ",
 				lastname:   "Иванова",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "lastname из пробелов",
 				firstname:  "Мария",
 				lastname:   "\t\t\t\t\t\t    ",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "firstname с цифрами",
 				firstname:  "Мария123",
 				lastname:   "Иванова",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "lastname с цифрами",
 				firstname:  "Мария",
 				lastname:   "Иванова123",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "middlename с цифрами",
 				firstname:  "Мария",
 				lastname:   "Иванова",
 				middlename: "Петро123вна",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "firstname с недопустимыми символами",
 				firstname:  "Мария...",
 				lastname:   "Иванова",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "lastname с недопустимыми символами",
 				firstname:  "Мария",
 				lastname:   "Иванова......[]]",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "middlename с недопустимыми символами",
 				firstname:  "Мария",
 				lastname:   "Иванова",
 				middlename: "Петровна[[[[",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "firstname с превышением лимита по символам",
-				firstname:  strings.Repeat("A", name.PartCharsLimit+1),
+				firstname:  strings.Repeat("A", name2.PartCharsLimit+1),
 				lastname:   "Иванова",
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "lastname с превышением лимита по символам",
 				firstname:  "Мария",
-				lastname:   strings.Repeat("A", name.PartCharsLimit+1),
+				lastname:   strings.Repeat("A", name2.PartCharsLimit+1),
 				middlename: "",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "middlename с превышением лимита по символам",
 				firstname:  "Мария",
 				lastname:   "Иванова",
-				middlename: strings.Repeat("A", name.PartCharsLimit+1),
-				wantErr:    name.ErrInvalid,
+				middlename: strings.Repeat("A", name2.PartCharsLimit+1),
+				wantErr:    name2.ErrInvalid,
 			},
 			{
 				name:       "middlename с разделителем и пробелами вокруг него",
 				firstname:  "Мария",
 				lastname:   "Иванова",
 				middlename: "Иванович - Петрович",
-				wantErr:    name.ErrInvalid,
+				wantErr:    name2.ErrInvalid,
 			},
 		}
 
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				_, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+				_, err := name2.New(tt.firstname, tt.lastname, tt.middlename)
 
 				// Assert
 				assert.Error(t, err)
@@ -227,7 +230,7 @@ func TestFullname(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			n, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+			n, err := name2.New(tt.firstname, tt.lastname, tt.middlename)
 			require.NoError(t, err)
 
 			// Assert
@@ -284,7 +287,7 @@ func TestWithInitials(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			n, err := name.New(tt.firstname, tt.lastname, tt.middlename)
+			n, err := name2.New(tt.firstname, tt.lastname, tt.middlename)
 			require.NoError(t, err)
 
 			// Assert

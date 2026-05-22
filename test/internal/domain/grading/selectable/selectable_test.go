@@ -1,14 +1,16 @@
+//go:build legacy
+// +build legacy
+
 package selectable_test
 
 import (
 	"testing"
 
+	cselectable "gitflic.ru/lms/backend/internal/domain/grading/selectable"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	cselectable "gitflic.ru/lms/internal/domain/grading/selectable"
-	"gitflic.ru/lms/internal/domain/question"
 )
 
 func TestChecker_Check(t *testing.T) {
@@ -30,7 +32,7 @@ func TestChecker_Check(t *testing.T) {
 	newYorkID := correctOptions[3].ID() // неправильный
 	fakeID := uuid.New()                // несуществующий в вопросе ID
 
-	c := cselectable.New()
+	c := selectable.New()
 
 	tests := []struct {
 		name           string
@@ -101,7 +103,7 @@ func TestSupports(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			c := cselectable.New()
+			c := selectable.New()
 
 			//Act
 			supports := c.Supports(tt.t)

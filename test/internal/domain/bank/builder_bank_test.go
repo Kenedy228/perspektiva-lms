@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package bank_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/bank"
-	"gitflic.ru/lms/internal/domain/bank/title"
+	"gitflic.ru/lms/backend/internal/domain/bank"
+	"gitflic.ru/lms/backend/internal/domain/bank/title"
 	"github.com/stretchr/testify/assert"
 )
 

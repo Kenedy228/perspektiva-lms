@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package element_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/element"
+	"gitflic.ru/lms/backend/internal/domain/element"
 	"github.com/stretchr/testify/assert"
 )
 

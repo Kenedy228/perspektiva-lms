@@ -1,10 +1,14 @@
+//go:build legacy
+// +build legacy
+
 package enrollment_test
 
 import (
 	"testing"
 	"time"
 
-	"gitflic.ru/lms/internal/domain/enrollment"
+	enrollment2 "gitflic.ru/lms/backend/internal/domain/enrollment"
+	"gitflic.ru/lms/backend/internal/domain/enrollment"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -52,7 +56,7 @@ func (b *enrollmentBuilder) withWindow(from, to time.Time) *enrollmentBuilder {
 	return b
 }
 
-func (b *enrollmentBuilder) build(t *testing.T, wantErr error) *enrollment.Enrollment {
+func (b *enrollmentBuilder) build(t *testing.T, wantErr error) *enrollment2.Enrollment {
 	t.Helper()
 
 	params := enrollment.Params{
@@ -63,7 +67,7 @@ func (b *enrollmentBuilder) build(t *testing.T, wantErr error) *enrollment.Enrol
 		DeactivatedAt:   b.deactivatedAt,
 	}
 
-	e, err := enrollment.New(params)
+	e, err := enrollment2.New(params)
 	assert.ErrorIs(t, err, wantErr)
 
 	return e

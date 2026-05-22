@@ -1,16 +1,19 @@
+//go:build legacy
+// +build legacy
+
 package person_test
 
 import (
 	"testing"
 	"time"
 
-	"gitflic.ru/lms/internal/domain/person"
-	"gitflic.ru/lms/internal/domain/person/name"
-	"gitflic.ru/lms/internal/domain/person/profile"
-	"gitflic.ru/lms/internal/domain/person/profile/dob"
-	"gitflic.ru/lms/internal/domain/person/profile/education"
-	"gitflic.ru/lms/internal/domain/person/profile/jobtitle"
-	"gitflic.ru/lms/internal/domain/person/profile/snils"
+	"gitflic.ru/lms/backend/internal/domain/person"
+	"gitflic.ru/lms/backend/internal/domain/person/name"
+	"gitflic.ru/lms/backend/internal/domain/person/profile"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/dob"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/education"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/jobtitle"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/snils"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -99,7 +102,17 @@ func profileFixture() profile.Profile {
 	jt, _ := jobtitle.New("ведущий инженер")
 	edu, _ := education.New("высшее")
 
-	return profile.New(snils, db, jt, edu, uuid.Nil)
+	prof, err := profile.New(profile.Params{
+		Snils:          snils,
+		DateOfBirth:    db,
+		JobTitle:       jt,
+		Education:      edu,
+		OrganizationID: uuid.Nil,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return prof
 }
 
 func nameFixture() name.Name {

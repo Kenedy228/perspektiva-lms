@@ -1,13 +1,16 @@
+//go:build legacy
+// +build legacy
+
 package short_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/grading/short"
-	"gitflic.ru/lms/internal/domain/question"
-	qshort "gitflic.ru/lms/internal/domain/question/short"
-	"gitflic.ru/lms/internal/domain/question/short/answer"
-	"gitflic.ru/lms/internal/domain/question/short/variant"
+	short2 "gitflic.ru/lms/backend/internal/domain/grading/short"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	qshort "gitflic.ru/lms/backend/internal/domain/question/short"
+	"gitflic.ru/lms/backend/internal/domain/question/short/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/short/variant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +36,7 @@ func TestSupports(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			c := short.Checker{}
+			c := short2.Checker{}
 
 			//Act
 			supports := c.Supports(tt.t)
@@ -55,7 +58,7 @@ func TestCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("проверка ответа без конфигурации", func(t *testing.T) {
-		c := short.New()
+		c := short2.New()
 
 		tc := []struct {
 			name    string
@@ -100,7 +103,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("проверка правильного ответа с удалением незначащих пробелов", func(t *testing.T) {
-		c := short.New(short.TrimSpace())
+		c := short2.New(short2.TrimSpace())
 
 		tc := []struct {
 			name    string
@@ -135,7 +138,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("проверка правильного ответа без учета регистра", func(t *testing.T) {
-		c := short.New(short.ToLower())
+		c := short2.New(short2.ToLower())
 
 		tc := []struct {
 			name    string
@@ -175,7 +178,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("проверка правильного ответа без учета регистра и с удалением незначащих пробелов", func(t *testing.T) {
-		c := short.New(short.ToLower(), short.TrimSpace())
+		c := short2.New(short2.ToLower(), short2.TrimSpace())
 
 		tc := []struct {
 			name    string

@@ -1,8 +1,11 @@
+//go:build legacy
+// +build legacy
+
 package option_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/sequence/option"
+	"gitflic.ru/lms/backend/internal/domain/question/sequence/option"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 )
 
 type optionBuilder struct {

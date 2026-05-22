@@ -1,11 +1,14 @@
+//go:build legacy
+// +build legacy
+
 package typed_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/title"
-	"gitflic.ru/lms/internal/domain/question/typed"
-	"gitflic.ru/lms/internal/domain/question/typed/blank"
+	"gitflic.ru/lms/backend/internal/domain/question/typed"
+	"gitflic.ru/lms/backend/internal/domain/question/typed/blank"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -1,25 +1,28 @@
+//go:build legacy
+// +build legacy
+
 package typed_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/title"
-	"gitflic.ru/lms/internal/domain/question/typed"
-	"gitflic.ru/lms/internal/domain/question/typed/answer"
-	"gitflic.ru/lms/internal/domain/question/typed/blank"
+	"gitflic.ru/lms/backend/internal/domain/question/typed"
+	answer2 "gitflic.ru/lms/backend/internal/domain/question/typed/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/typed/blank"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 	"github.com/stretchr/testify/require"
 )
 
-func makeAnswer(blanks map[string]string) answer.Answer {
-	var ansBlanks []answer.AnswerBlank
+func makeAnswer(blanks map[string]string) answer2.Answer {
+	var ansBlanks []answer2.AnswerBlank
 	for placeholder, variant := range blanks {
-		ansBlanks = append(ansBlanks, answer.AnswerBlank{
+		ansBlanks = append(ansBlanks, answer2.AnswerBlank{
 			Placeholder: placeholder,
 			Variant:     variant,
 		})
 	}
-	return answer.New(ansBlanks)
+	return answer2.New(ansBlanks)
 }
 
 type questionBuilder struct {

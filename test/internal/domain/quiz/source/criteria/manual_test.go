@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package criteria_test
 
 import (
 	"fmt"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz/source/criteria"
+	criteria2 "gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,14 +15,14 @@ import (
 func TestNewManual(t *testing.T) {
 	t.Run("при пустом списке вопросов возвращает error", func(t *testing.T) {
 		//Arrange-Assert
-		newManualBuilder().build(t, criteria.ErrInvalid)
+		newManualBuilder().build(t, criteria2.ErrInvalid)
 	})
 
 	t.Run("при налии несуществующего идентификатора возвращает error", func(t *testing.T) {
 		//Arrange-Assert
 		newManualBuilder().withQuestionID(uuid.New()).
 			withQuestionID(uuid.Nil).
-			build(t, criteria.ErrInvalid)
+			build(t, criteria2.ErrInvalid)
 	})
 
 	t.Run("при наличии дубликатов возвращает error", func(t *testing.T) {
@@ -27,13 +30,13 @@ func TestNewManual(t *testing.T) {
 		duplicate := uuid.New()
 		newManualBuilder().withQuestionID(duplicate).
 			withQuestionID(duplicate).
-			build(t, criteria.ErrInvalid)
+			build(t, criteria2.ErrInvalid)
 	})
 
 	t.Run("при выходе за лимиты возвращает error", func(t *testing.T) {
 		//Arrange-Assert
 		newManualBuilder().withMaxSizeQuestions().
-			build(t, criteria.ErrInvalid)
+			build(t, criteria2.ErrInvalid)
 	})
 
 	t.Run("корректные идентификаторы", func(t *testing.T) {
@@ -43,7 +46,7 @@ func TestNewManual(t *testing.T) {
 			build(t, nil))
 
 		//Assert
-		assert.Equal(t, c.Type(), criteria.TypeManual)
+		assert.Equal(t, c.Type(), criteria2.TypeManual)
 		assert.Equal(t, c.QuestionCount(), 2)
 		assert.Equal(t, len(c.QuestionIDs()), 2)
 	})

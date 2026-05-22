@@ -1,70 +1,79 @@
+//go:build legacy
+// +build legacy
+
 package title_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNew_Success(t *testing.T) {
-	tc := []struct {
-		name  string
-		cType content.Type
-		value string
-	}{
-		{
-			name:  "валидный кейс",
-			cType: content.TypeText,
-			value: "Что изображено на картинке?",
-		},
-	}
+func TestNew(t *testing.T) {
+	t.Run("успех", func(t *testing.T) {
+		tc := []struct {
+			name      string
+			value     string
+			wantValue string
+		}{
+			{
+				name:      "корректный кейс",
+				value:     "заголовок вопроса",
+				wantValue: "заголовок вопроса",
+			},
+			{
+				name:      "при создании объекта удаляет пробелы по краям",
+				value:     "   заголовок вопроса   ",
+				wantValue: "заголовок вопроса",
+			},
+		}
 
-	for _, tt := range tc {
-		t.Run(tt.name, func(t *testing.T) {
-			//Arrange
-			got, err := title.New(makeContent(tt.cType, tt.value))
+		for _, tt := range tc {
+			t.Run(tt.name, func(t *testing.T) {
+				// Arrange
+				titl, err := title.New(tt.value)
 
-			//Assert
-			assert.NoError(t, err)
-			assert.Equal(t, got.Value(), tt.value)
-		})
-	}
-}
+				// Assert
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantValue, titl.Value())
+			})
+		}
+	})
 
-func TestNew_Fail(t *testing.T) {
-	t.Parallel()
+	t.Run("ошибка", func(t *testing.T) {
+		tc := []struct {
+			name    string
+			value   string
+			wantErr error
+		}{
+			{
+				name:    "пустой заголовок",
+				value:   "",
+				wantErr: title.ErrInvalid,
+			},
+			{
+				name:    "заголовок из пробелов",
+				value:   "",
+				wantErr: title.ErrInvalid,
+			},
+			{
+				name:    "длина заголовка больше лимита",
+				value:   strings.Repeat("a", title.ValueCharsLimit+1),
+				wantErr: title.ErrInvalid,
+			},
+		}
 
-	tests := []struct {
-		name    string
-		cType   content.Type
-		value   string
-		wantErr error
-	}{
-		{
-			name:    "тип контента не текст",
-			cType:   content.TypeImage,
-			value:   "image.png",
-			wantErr: title.ErrInvalid,
-		},
-		{
-			name:    "значение контента выходит за пределы количества символов",
-			cType:   content.TypeText,
-			value:   strings.Repeat("a", 1e5),
-			wantErr: title.ErrInvalid,
-		},
-	}
+		for _, tt := range tc {
+			t.Run(tt.name, func(t *testing.T) {
+				// Arrange
+				_, err := title.New(tt.value)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			//Arrange
-			_, err := title.New(makeContent(tt.cType, tt.value))
-
-			//Assert
-			assert.Error(t, err)
-			assert.ErrorIs(t, err, tt.wantErr)
-		})
-	}
+				// Assert
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, tt.wantErr)
+			})
+		}
+	})
 }

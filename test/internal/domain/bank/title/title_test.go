@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package title_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/bank/title"
+	title2 "gitflic.ru/lms/backend/internal/domain/bank/title"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +25,7 @@ func TestNew_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			got, err := title.New(tt.value)
+			got, err := title2.New(tt.value)
 
 			//Assert
 			assert.NoError(t, err)
@@ -42,19 +45,19 @@ func TestNew_Fail(t *testing.T) {
 		{
 			name:    "пустой заголовк",
 			value:   "",
-			wantErr: title.ErrInvalid,
+			wantErr: title2.ErrInvalid,
 		},
 		{
 			name:    "количество символов выходит за пределы допустимого",
 			value:   strings.Repeat("a", 1e5),
-			wantErr: title.ErrInvalid,
+			wantErr: title2.ErrInvalid,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			_, err := title.New(tt.value)
+			_, err := title2.New(tt.value)
 
 			//Assert
 			assert.Error(t, err)

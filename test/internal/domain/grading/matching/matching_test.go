@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package matching_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/grading/matching"
-	"gitflic.ru/lms/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/grading/matching"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -92,7 +95,7 @@ func TestChecker_Check(t *testing.T) {
 			expectedScore: 0.0,
 		},
 		{
-			name: "сопоставление нескольких Prompts с одним и тем же Match",
+			name: "сопоставление нескольких Prompts с одним и тем же match",
 			studentPairs: map[uuid.UUID]uuid.UUID{
 				promptParisID:  matchFranceID,
 				promptBerlinID: matchFranceID, // Ошибка

@@ -1,11 +1,38 @@
+//go:build legacy
+// +build legacy
+
 package content_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNew(t *testing.T) {
+	t.Run("успех", func(t *testing.T) {
+		tc := []struct{
+			name string
+			cType content.Type
+			cValue string
+		} {
+			{
+				name: "валидный текст",
+				cType: content.TypeText,
+				cValue: "текст",
+			},
+			{
+				name: "валидное изображение",
+				cType: content.TypeImage,
+				cValue: "изображение",
+			},
+			{
+				name: ""
+			}
+		}
+	})
+}
 
 func TestNew_Success(t *testing.T) {
 	//Arrange

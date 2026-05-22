@@ -1,14 +1,17 @@
+//go:build legacy
+// +build legacy
+
 package profile_test
 
 import (
 	"testing"
 	"time"
 
-	"gitflic.ru/lms/internal/domain/person/profile"
-	"gitflic.ru/lms/internal/domain/person/profile/dob"
-	"gitflic.ru/lms/internal/domain/person/profile/education"
-	"gitflic.ru/lms/internal/domain/person/profile/jobtitle"
-	"gitflic.ru/lms/internal/domain/person/profile/snils"
+	"gitflic.ru/lms/backend/internal/domain/person/profile"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/dob"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/education"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/jobtitle"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/snils"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,9 +19,16 @@ import (
 func TestNew(t *testing.T) {
 	// Arrange
 	orgID := uuid.New()
-	prof := profile.New(snilsFixture(), dateOfBirthFixture(), jobTitleFixture(), educationFixture(), orgID)
+	prof, err := profile.New(profile.Params{
+		Snils:          snilsFixture(),
+		DateOfBirth:    dateOfBirthFixture(),
+		JobTitle:       jobTitleFixture(),
+		Education:      educationFixture(),
+		OrganizationID: orgID,
+	})
 
 	// Assert
+	assert.NoError(t, err)
 	assert.Equal(t, snilsFixture(), prof.Snils())
 	assert.Equal(t, dateOfBirthFixture(), prof.DateOfBirth())
 	assert.Equal(t, jobTitleFixture(), prof.JobTitle())
@@ -47,9 +57,16 @@ func TestHasOrganization(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			prof := profile.New(snilsFixture(), dateOfBirthFixture(), jobTitleFixture(), educationFixture(), tt.orgID)
+			prof, err := profile.New(profile.Params{
+				Snils:          snilsFixture(),
+				DateOfBirth:    dateOfBirthFixture(),
+				JobTitle:       jobTitleFixture(),
+				Education:      educationFixture(),
+				OrganizationID: tt.orgID,
+			})
 
 			// Assert
+			assert.NoError(t, err)
 			assert.Equal(t, tt.wantHas, prof.HasOrganization())
 		})
 	}

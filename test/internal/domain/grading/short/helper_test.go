@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package short_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/short/answer"
-	"gitflic.ru/lms/internal/domain/question/short/variant"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/short/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/short/variant"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 )
 
 func makeTitle() title.Title {

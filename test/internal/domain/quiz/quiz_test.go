@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package quiz_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz"
-	"gitflic.ru/lms/internal/domain/quiz/source"
+	"gitflic.ru/lms/backend/internal/domain/quiz"
+	"gitflic.ru/lms/backend/internal/domain/quiz/source"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

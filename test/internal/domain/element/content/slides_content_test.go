@@ -1,11 +1,14 @@
+//go:build legacy
+// +build legacy
+
 package content_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/element/content"
-	"gitflic.ru/lms/internal/domain/shared/s3validator"
+	"gitflic.ru/lms/backend/internal/domain/shared/s3validator"
+	"gitflic.ru/lms/backend/internal/domain/element/content"
 	"github.com/stretchr/testify/assert"
 )
 

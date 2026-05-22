@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package uid_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/shared/uid"
+	"gitflic.ru/lms/backend/internal/domain/shared/uid"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

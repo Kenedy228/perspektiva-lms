@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package attempt_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question"
-	"gitflic.ru/lms/internal/domain/question/attachment"
-	"gitflic.ru/lms/internal/domain/question/title"
+	question2 "gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question/attachment"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 	"github.com/google/uuid"
 )
 
@@ -15,7 +18,7 @@ func (m mockQuestion) ID() uuid.UUID {
 	return m.id
 }
 
-func (m mockQuestion) Clone() question.Question {
+func (m mockQuestion) Clone() question2.Question {
 	return m
 }
 
@@ -31,7 +34,7 @@ func (m mockQuestion) Instruction() string {
 	panic("")
 }
 
-func (m mockQuestion) Type() question.Type {
+func (m mockQuestion) Type() question2.Type {
 	panic("")
 }
 

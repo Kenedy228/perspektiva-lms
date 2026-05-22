@@ -1,0 +1,261 @@
+@startuml
+title LMS Backend - HTTP Routes Flow Chart
+
+start
+:Incoming HTTP request;
+:Recover middleware;
+:Assign request ID;
+:Apply security headers;
+
+if (Public route?) then (yes)
+  if (GET /healthz) then (yes)
+    :Return health status;
+    stop
+  elseif (GET /) then (yes)
+    :Return API index and HATEOAS links;
+    stop
+  elseif (POST /auth/login) then (yes)
+    :Decode credentials;
+    :Authenticate account;
+    if (credentials valid?) then (yes)
+      :Issue bearer session token;
+      :Return SessionResponse;
+    else (no)
+      :Return 401 invalid_credentials;
+    endif
+    stop
+  else (no)
+    :Return 404;
+    stop
+  endif
+else (no)
+  :Read Authorization bearer token;
+  if (token valid?) then (yes)
+    :Attach account/person/role claims;
+  else (no)
+    :Return 401 localized auth error;
+    stop
+  endif
+endif
+
+partition "Auth" {
+  if (POST /auth/logout) then (yes)
+    :Return logged_out status;
+    stop
+  elseif (GET /auth/session) then (yes)
+    :Return current session claims;
+    stop
+  endif
+}
+
+partition "Accounts" {
+  if (GET /accounts) then (yes)
+    :List accounts;
+    stop
+  elseif (POST /accounts) then (yes)
+    :Create account;
+    stop
+  elseif (GET /accounts/{id}) then (yes)
+    :Get account details;
+    stop
+  elseif (PATCH /accounts/{id}/login) then (yes)
+    :Change login;
+    stop
+  elseif (PATCH /accounts/{id}/password) then (yes)
+    :Change password;
+    stop
+  elseif (PATCH /accounts/{id}/role) then (yes)
+    :Change role;
+    stop
+  elseif (POST /accounts/{id}/block) then (yes)
+    :Block account;
+    stop
+  elseif (POST /accounts/{id}/activate) then (yes)
+    :Activate account;
+    stop
+  elseif (DELETE /accounts/{id}) then (yes)
+    :Delete account;
+    stop
+  endif
+}
+
+partition "Organizations" {
+  if (GET /organizations) then (yes)
+    :List organizations;
+    stop
+  elseif (POST /organizations) then (yes)
+    :Create organization;
+    stop
+  elseif (GET /organizations/{id}) then (yes)
+    :Get organization details;
+    stop
+  elseif (PATCH /organizations/{id}) then (yes)
+    :Rename organization;
+    stop
+  elseif (PATCH /organizations/{id}/inn) then (yes)
+    :Change organization INN;
+    stop
+  elseif (DELETE /organizations/{id}) then (yes)
+    :Delete organization;
+    stop
+  endif
+}
+
+partition "Persons" {
+  if (GET /persons) then (yes)
+    :List persons;
+    stop
+  elseif (POST /persons) then (yes)
+    :Create person;
+    stop
+  elseif (GET /persons/{id}) then (yes)
+    :Get person details;
+    stop
+  elseif (PATCH /persons/{id}) then (yes)
+    :Rename person;
+    stop
+  elseif (PUT /persons/{id}/profile) then (yes)
+    :Replace profile;
+    stop
+  elseif (PATCH /persons/{id}/profile) then (yes)
+    :Change profile fields;
+    stop
+  elseif (DELETE /persons/{id}/profile) then (yes)
+    :Detach profile;
+    stop
+  elseif (PUT /persons/{id}/organization) then (yes)
+    :Assign organization;
+    stop
+  elseif (DELETE /persons/{id}/organization) then (yes)
+    :Remove organization;
+    stop
+  elseif (DELETE /persons/{id}) then (yes)
+    :Delete person;
+    stop
+  endif
+}
+
+partition "Banks and Questions" {
+  if (GET /banks) then (yes)
+    :List question banks;
+    stop
+  elseif (POST /banks) then (yes)
+    :Create question bank;
+    stop
+  elseif (GET /banks/{id}) then (yes)
+    :Get bank details;
+    stop
+  elseif (PATCH /banks/{id}) then (yes)
+    :Rename bank;
+    stop
+  elseif (POST /banks/{id}/questions) then (yes)
+    :Add questions to bank;
+    stop
+  elseif (DELETE /banks/{id}/questions) then (yes)
+    :Remove questions from bank;
+    stop
+  elseif (POST /questions) then (yes)
+    :Create question;
+    stop
+  elseif (GET /questions/{id}) then (yes)
+    :Get question details;
+    stop
+  elseif (PATCH /questions/{id}) then (yes)
+    :Change question title;
+    stop
+  elseif (PUT /questions/{id}/content) then (yes)
+    :Replace question content;
+    stop
+  elseif (PUT /questions/{id}/attachment) then (yes)
+    :Replace question attachment;
+    stop
+  elseif (DELETE /questions/{id}/attachment) then (yes)
+    :Remove question attachment;
+    stop
+  elseif (POST /questions/{id}/grade) then (yes)
+    :Grade answer against question;
+    stop
+  endif
+}
+
+partition "Quizzes and Attempts" {
+  if (POST /quizzes) then (yes)
+    :Create quiz;
+    stop
+  elseif (GET /quizzes/{id}) then (yes)
+    :Get quiz details;
+    stop
+  elseif (PATCH /quizzes/{id}) then (yes)
+    :Rename quiz;
+    stop
+  elseif (PATCH /quizzes/{id}/limits) then (yes)
+    :Change quiz limits;
+    stop
+  elseif (PATCH /quizzes/{id}/shuffle) then (yes)
+    :Change shuffle policy;
+    stop
+  elseif (PUT /quizzes/{id}/sources) then (yes)
+    :Replace quiz sources;
+    stop
+  elseif (DELETE /quizzes/{id}) then (yes)
+    :Delete quiz;
+    stop
+  elseif (POST /attempts) then (yes)
+    :Start attempt and materialize questions;
+    stop
+  elseif (GET /attempts/{id}) then (yes)
+    :Get attempt;
+    stop
+  elseif (PUT /attempts/{id}/answers/{questionID}) then (yes)
+    :Add or replace answer;
+    stop
+  elseif (POST /attempts/{id}/finish) then (yes)
+    :Finish attempt;
+    stop
+  elseif (POST /attempts/{id}/cancel) then (yes)
+    :Cancel attempt;
+    stop
+  endif
+}
+
+partition "Courses, Enrollment, Statistics" {
+  if (GET /courses) then (yes)
+    :List courses by role visibility;
+    stop
+  elseif (POST /courses) then (yes)
+    :Create course;
+    stop
+  elseif (GET /courses/{id}) then (yes)
+    :Get course details;
+    stop
+  elseif (PATCH /courses/{id}) then (yes)
+    :Rename course;
+    stop
+  elseif (POST /courses/{id}/versions) then (yes)
+    :Create course version;
+    stop
+  elseif (POST /course-versions/{id}/blocks) then (yes)
+    :Add block to version;
+    stop
+  elseif (POST /course-versions/{id}/publish) then (yes)
+    :Publish version;
+    stop
+  elseif (POST /course-progress/{enrollmentID}/elements/{elementID}) then (yes)
+    :Mark content progress;
+    stop
+  elseif (GET /courses/{id}/ratings) then (yes)
+    :List course ratings;
+    stop
+  elseif (POST /enrollments) then (yes)
+    :Create enrollment and initialize progress;
+    stop
+  elseif (GET /statistics/students) then (yes)
+    :List student statistics by actor scope;
+    stop
+  endif
+}
+
+:Return 404 route not found;
+stop
+
+@enduml

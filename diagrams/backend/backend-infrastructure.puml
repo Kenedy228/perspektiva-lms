@@ -1,0 +1,46 @@
+@startuml
+title Серверная часть СДО - слой инфраструктуры
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "infrastructure" {
+  class AccountRepositoryPg {
+    - db: *sql.DB
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*account.Account, error)
+    + FindByLogin(ctx: context.Context, login: login.Login): (*account.Account, error)
+    + Save(ctx: context.Context, acc: *account.Account): error
+    + RecordAccountAudit(ctx: context.Context, event: AuditEvent): error
+  }
+
+  class CourseQueryServicePg {
+    - db: *sql.DB
+    + ListManageable(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + ListVisibleForStudent(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + GetDetailsByID(ctx: context.Context, id: uuid.UUID): (DetailedView, error)
+    + ListRatings(ctx: context.Context, courseID: uuid.UUID, limit: int, offset: int): ([]StudentRatingView, error)
+    + ListStudentStatistics(ctx: context.Context, filter: StudentStatisticsFilter): ([]StudentRatingView, error)
+  }
+
+  class BcryptPasswordComparer {
+    - cost: int
+    + Hash(plain: string): (passhash.Hash, error)
+    + Compare(hash: passhash.Hash, plain: string): bool
+  }
+
+  class MathRandQuestionShuffler {
+    - mu: sync.Mutex
+    - r: *rand.Rand
+    + ShuffleQuestions(questions: []question.Question): []question.Question
+  }
+
+  class MinIOStorage {
+    - client: *minio.Client
+    - bucket: string
+    + PutObject(ctx: context.Context, object: StoredObject): error
+    + GetObject(ctx: context.Context, key: string): (*Object, error)
+  }
+}
+
+@enduml

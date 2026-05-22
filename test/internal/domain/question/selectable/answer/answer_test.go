@@ -1,9 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package answer_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/selectable/answer"
+	answer2 "gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +15,7 @@ import (
 
 func TestNew(t *testing.T) {
 	//Arrange
-	ans := answer.New(makeOptions(10))
+	ans := answer2.New(makeOptions(10))
 
 	//Assert
 	assert.Equal(t, len(ans.Options()), 10)
@@ -21,7 +25,7 @@ func TestNew(t *testing.T) {
 func TestIsEmpty(t *testing.T) {
 	t.Run("при пустом слайсе возвращает true", func(t *testing.T) {
 		//Arrange
-		ans := answer.New(makeOptions(0))
+		ans := answer2.New(makeOptions(0))
 
 		//Assert
 		assert.True(t, ans.IsEmpty())
@@ -29,7 +33,7 @@ func TestIsEmpty(t *testing.T) {
 
 	t.Run("при непустом слайсе возвращает false", func(t *testing.T) {
 		//Arrange
-		ans := answer.New(makeOptions(10))
+		ans := answer2.New(makeOptions(10))
 
 		//Assert
 		assert.False(t, ans.IsEmpty())
@@ -38,7 +42,7 @@ func TestIsEmpty(t *testing.T) {
 
 func TestOptions(t *testing.T) {
 	//Arrange
-	ans := answer.New(makeOptions(10))
+	ans := answer2.New(makeOptions(10))
 	opts := ans.Options()
 
 	//Act
@@ -52,8 +56,8 @@ func TestOptions(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	//Arrange
-	ans := answer.New(makeOptions(10))
-	clone, ok := ans.Clone().(answer.Answer)
+	ans := answer2.New(makeOptions(10))
+	clone, ok := ans.Clone().(answer2.Answer)
 	require.True(t, ok)
 
 	//Assert

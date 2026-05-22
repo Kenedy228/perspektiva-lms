@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package score_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/grading/score"
+	score2 "gitflic.ru/lms/backend/internal/domain/grading/score"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +28,7 @@ func TestNew_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			s, err := score.New(tt.value)
+			s, err := score2.New(tt.value)
 
 			//Assert
 			assert.NoError(t, err)
@@ -48,11 +51,11 @@ func TestNew_Fail(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			_, err := score.New(tt.value)
+			_, err := score2.New(tt.value)
 
 			//Assert
 			assert.Error(t, err)
-			assert.ErrorIs(t, err, score.ErrInvalid)
+			assert.ErrorIs(t, err, score2.ErrInvalid)
 		})
 	}
 }

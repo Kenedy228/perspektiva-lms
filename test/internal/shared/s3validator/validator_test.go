@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package s3validator_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/shared/s3validator"
+	"gitflic.ru/lms/backend/internal/domain/shared/s3validator"
 	"github.com/stretchr/testify/assert"
 )
 

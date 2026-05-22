@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package bank_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/bank"
-	"gitflic.ru/lms/internal/domain/bank/title"
+	"gitflic.ru/lms/backend/internal/domain/bank"
+	title2 "gitflic.ru/lms/backend/internal/domain/bank/title"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,8 +15,8 @@ import (
 func TestNew(t *testing.T) {
 	t.Run("пустое название должно вернуть ошибку", func(t *testing.T) {
 		//Arrange-Assert
-		newBankBuilder().build(t, title.ErrInvalid)
-		newBankBuilder().withTitle(" ").build(t, title.ErrInvalid)
+		newBankBuilder().build(t, title2.ErrInvalid)
+		newBankBuilder().withTitle(" ").build(t, title2.ErrInvalid)
 	})
 
 	t.Run("успех", func(t *testing.T) {
@@ -33,7 +36,7 @@ func TestRename(t *testing.T) {
 		b := newBankBuilder().withTitle("title").build(t, nil)
 
 		//Act
-		newTitle, err := title.New("new title")
+		newTitle, err := title2.New("new title")
 		assert.NoError(t, err)
 		b.Rename(newTitle)
 

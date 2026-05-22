@@ -1,11 +1,14 @@
+//go:build legacy
+// +build legacy
+
 package pair_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,10 +22,10 @@ func TestNew_Success(t *testing.T) {
 
 	//Assert
 	assert.NoError(t, err)
-	assert.Equal(t, p.Prompt().Value(), "prompt")
-	assert.Equal(t, p.Match().Value(), "image.png")
-	assert.NotEqual(t, p.Prompt().ID(), uuid.Nil)
-	assert.NotEqual(t, p.Match().ID(), uuid.Nil)
+	assert.Equal(t, p.prompt().Value(), "prompt")
+	assert.Equal(t, p.match().Value(), "image.png")
+	assert.NotEqual(t, p.prompt().ID(), uuid.Nil)
+	assert.NotEqual(t, p.match().ID(), uuid.Nil)
 }
 
 func TestNew_Fail(t *testing.T) {

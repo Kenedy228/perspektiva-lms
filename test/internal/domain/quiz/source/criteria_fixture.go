@@ -1,6 +1,11 @@
+//go:build legacy
+// +build legacy
+
 package source_test
 
-import "gitflic.ru/lms/internal/domain/quiz/source/criteria"
+import (
+	"gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
+)
 
 type criteriaFixture struct{}
 

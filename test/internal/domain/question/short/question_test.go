@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package short_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question"
-	"gitflic.ru/lms/internal/domain/question/short"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question/short"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

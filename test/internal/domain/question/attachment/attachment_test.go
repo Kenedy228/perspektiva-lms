@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package attachment_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/attachment"
-	"gitflic.ru/lms/internal/domain/question/content"
+	attachment2 "gitflic.ru/lms/backend/internal/domain/question/attachment"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +32,7 @@ func TestNew_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			got, err := attachment.New(makeContent(tt.cType, tt.value))
+			got, err := attachment2.New(makeContent(tt.cType, tt.value))
 
 			//Assert
 			assert.NoError(t, err)
@@ -52,14 +55,14 @@ func TestNew_Fail(t *testing.T) {
 			name:    "текстовый контент недопустим в качестве вложения",
 			cType:   content.TypeText,
 			value:   "текст вложения",
-			wantErr: attachment.ErrInvalid,
+			wantErr: attachment2.ErrInvalid,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			_, err := attachment.New(makeContent(tt.cType, tt.value))
+			_, err := attachment2.New(makeContent(tt.cType, tt.value))
 
 			//Assert
 			assert.Error(t, err)

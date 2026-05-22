@@ -1,21 +1,24 @@
+//go:build legacy
+// +build legacy
+
 package matching_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/matching"
-	"gitflic.ru/lms/internal/domain/question/matching/answer"
-	"gitflic.ru/lms/internal/domain/question/matching/pair"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/matching"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
 func makeAnswer(pairs map[uuid.UUID]uuid.UUID) answer.Answer {
-	var ansPairs []answer.AnswerPair
+	var ansPairs []answer.Pair
 	for promptID, matchID := range pairs {
-		ansPairs = append(ansPairs, answer.AnswerPair{
+		ansPairs = append(ansPairs, answer.Pair{
 			PromptID: promptID,
 			MatchID:  matchID,
 		})

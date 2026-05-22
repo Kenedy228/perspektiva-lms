@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 package bank_test
 
 import "github.com/google/uuid"

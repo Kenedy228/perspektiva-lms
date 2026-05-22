@@ -1,0 +1,261 @@
+@startuml
+title Серверная часть СДО - организация HTTP-эндпоинтов
+
+start
+:Входящий HTTP-запрос;
+:Recover middleware;
+:Назначить ID запроса;
+:Применить заголовки безопасности;
+
+if (Публичный маршрут?) then (да)
+  if (GET /healthz) then (да)
+    :Вернуть статус работоспособности;
+    stop
+  elseif (GET /) then (да)
+    :Вернуть индекс API и HATEOAS-ссылки;
+    stop
+  elseif (POST /auth/login) then (да)
+    :Декодировать учетные данные;
+    :Аутентифицировать аккаунт;
+    if (учетные данные корректны?) then (да)
+      :Выдать bearer-токен сессии;
+      :Вернуть SessionResponse;
+    else (нет)
+      :Вернуть 401 invalid_credentials;
+    endif
+    stop
+  else (нет)
+    :Вернуть 404;
+    stop
+  endif
+else (нет)
+  :Прочитать bearer-токен из Authorization;
+  if (токен валиден?) then (да)
+    :Прикрепить claims аккаунта/персоны/роли;
+  else (нет)
+    :Вернуть 401 с локализованной ошибкой авторизации;
+    stop
+  endif
+endif
+
+partition "Аутентификация" {
+  if (POST /auth/logout) then (да)
+    :Вернуть статус logged_out;
+    stop
+  elseif (GET /auth/session) then (да)
+    :Вернуть claims текущей сессии;
+    stop
+  endif
+}
+
+partition "Аккаунты" {
+  if (GET /accounts) then (да)
+    :Получить список аккаунтов;
+    stop
+  elseif (POST /accounts) then (да)
+    :Создать аккаунт;
+    stop
+  elseif (GET /accounts/{id}) then (да)
+    :Получить данные аккаунта;
+    stop
+  elseif (PATCH /accounts/{id}/login) then (да)
+    :Изменить логин;
+    stop
+  elseif (PATCH /accounts/{id}/password) then (да)
+    :Изменить пароль;
+    stop
+  elseif (PATCH /accounts/{id}/role) then (да)
+    :Изменить роль;
+    stop
+  elseif (POST /accounts/{id}/block) then (да)
+    :Заблокировать аккаунт;
+    stop
+  elseif (POST /accounts/{id}/activate) then (да)
+    :Активировать аккаунт;
+    stop
+  elseif (DELETE /accounts/{id}) then (да)
+    :Удалить аккаунт;
+    stop
+  endif
+}
+
+partition "Организации" {
+  if (GET /organizations) then (да)
+    :Получить список организаций;
+    stop
+  elseif (POST /organizations) then (да)
+    :Создать организацию;
+    stop
+  elseif (GET /organizations/{id}) then (да)
+    :Получить данные организации;
+    stop
+  elseif (PATCH /organizations/{id}) then (да)
+    :Переименовать организацию;
+    stop
+  elseif (PATCH /organizations/{id}/inn) then (да)
+    :Изменить ИНН организации;
+    stop
+  elseif (DELETE /organizations/{id}) then (да)
+    :Удалить организацию;
+    stop
+  endif
+}
+
+partition "Персоны" {
+  if (GET /persons) then (да)
+    :Получить список персон;
+    stop
+  elseif (POST /persons) then (да)
+    :Создать персону;
+    stop
+  elseif (GET /persons/{id}) then (да)
+    :Получить данные персоны;
+    stop
+  elseif (PATCH /persons/{id}) then (да)
+    :Переименовать персону;
+    stop
+  elseif (PUT /persons/{id}/profile) then (да)
+    :Заменить профиль;
+    stop
+  elseif (PATCH /persons/{id}/profile) then (да)
+    :Изменить поля профиля;
+    stop
+  elseif (DELETE /persons/{id}/profile) then (да)
+    :Отвязать профиль;
+    stop
+  elseif (PUT /persons/{id}/organization) then (да)
+    :Назначить организацию;
+    stop
+  elseif (DELETE /persons/{id}/organization) then (да)
+    :Удалить организацию;
+    stop
+  elseif (DELETE /persons/{id}) then (да)
+    :Удалить персону;
+    stop
+  endif
+}
+
+partition "Банки вопросов и вопросы" {
+  if (GET /banks) then (да)
+    :Получить список банков вопросов;
+    stop
+  elseif (POST /banks) then (да)
+    :Создать банк вопросов;
+    stop
+  elseif (GET /banks/{id}) then (да)
+    :Получить данные банка;
+    stop
+  elseif (PATCH /banks/{id}) then (да)
+    :Переименовать банк;
+    stop
+  elseif (POST /banks/{id}/questions) then (да)
+    :Добавить вопросы в банк;
+    stop
+  elseif (DELETE /banks/{id}/questions) then (да)
+    :Удалить вопросы из банка;
+    stop
+  elseif (POST /questions) then (да)
+    :Создать вопрос;
+    stop
+  elseif (GET /questions/{id}) then (да)
+    :Получить данные вопроса;
+    stop
+  elseif (PATCH /questions/{id}) then (да)
+    :Изменить заголовок вопроса;
+    stop
+  elseif (PUT /questions/{id}/content) then (да)
+    :Заменить содержимое вопроса;
+    stop
+  elseif (PUT /questions/{id}/attachment) then (да)
+    :Заменить вложение вопроса;
+    stop
+  elseif (DELETE /questions/{id}/attachment) then (да)
+    :Удалить вложение вопроса;
+    stop
+  elseif (POST /questions/{id}/grade) then (да)
+    :Оценить ответ по вопросу;
+    stop
+  endif
+}
+
+partition "Тесты и попытки" {
+  if (POST /quizzes) then (да)
+    :Создать тест;
+    stop
+  elseif (GET /quizzes/{id}) then (да)
+    :Получить данные теста;
+    stop
+  elseif (PATCH /quizzes/{id}) then (да)
+    :Переименовать тест;
+    stop
+  elseif (PATCH /quizzes/{id}/limits) then (да)
+    :Изменить ограничения теста;
+    stop
+  elseif (PATCH /quizzes/{id}/shuffle) then (да)
+    :Изменить политику перемешивания;
+    stop
+  elseif (PUT /quizzes/{id}/sources) then (да)
+    :Заменить источники теста;
+    stop
+  elseif (DELETE /quizzes/{id}) then (да)
+    :Удалить тест;
+    stop
+  elseif (POST /attempts) then (да)
+    :Начать попытку и материализовать вопросы;
+    stop
+  elseif (GET /attempts/{id}) then (да)
+    :Получить попытку;
+    stop
+  elseif (PUT /attempts/{id}/answers/{questionID}) then (да)
+    :Добавить или заменить ответ;
+    stop
+  elseif (POST /attempts/{id}/finish) then (да)
+    :Завершить попытку;
+    stop
+  elseif (POST /attempts/{id}/cancel) then (да)
+    :Отменить попытку;
+    stop
+  endif
+}
+
+partition "Курсы, зачисления, статистика" {
+  if (GET /courses) then (да)
+    :Получить список курсов по видимости роли;
+    stop
+  elseif (POST /courses) then (да)
+    :Создать курс;
+    stop
+  elseif (GET /courses/{id}) then (да)
+    :Получить данные курса;
+    stop
+  elseif (PATCH /courses/{id}) then (да)
+    :Переименовать курс;
+    stop
+  elseif (POST /courses/{id}/versions) then (да)
+    :Создать версию курса;
+    stop
+  elseif (POST /course-versions/{id}/blocks) then (да)
+    :Добавить блок в версию;
+    stop
+  elseif (POST /course-versions/{id}/publish) then (да)
+    :Опубликовать версию;
+    stop
+  elseif (POST /course-progress/{enrollmentID}/elements/{elementID}) then (да)
+    :Отметить прогресс по контенту;
+    stop
+  elseif (GET /courses/{id}/ratings) then (да)
+    :Получить список оценок курса;
+    stop
+  elseif (POST /enrollments) then (да)
+    :Создать зачисление и инициализировать прогресс;
+    stop
+  elseif (GET /statistics/students) then (да)
+    :Получить статистику студентов по области видимости актёра;
+    stop
+  endif
+}
+
+:Вернуть 404 маршрут не найден;
+stop
+
+@enduml

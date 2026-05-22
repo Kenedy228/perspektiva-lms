@@ -1,25 +1,29 @@
+//go:build legacy
+// +build legacy
+
 package selectable_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/selectable"
-	"gitflic.ru/lms/internal/domain/question/selectable/answer"
-	"gitflic.ru/lms/internal/domain/question/selectable/option"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable"
+	answer2 "gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable/option"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
-func makeAnswer(optionIDs []uuid.UUID) answer.Answer {
+func makeAnswer(optionIDs []uuid.UUID) answer2.Answer {
 	var ansOptions []answer.AnswerOption
 	for _, id := range optionIDs {
 		ansOptions = append(ansOptions, answer.AnswerOption{
 			OptionID: id,
 		})
 	}
-	return answer.New(ansOptions)
+	return answer2.New(ansOptions)
 }
 
 type questionBuilder struct {

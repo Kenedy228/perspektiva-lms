@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package answer_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/typed/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/typed/answer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

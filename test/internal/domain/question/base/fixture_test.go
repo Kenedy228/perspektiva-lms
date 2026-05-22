@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package base_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/attachment"
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/attachment"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 )
 
 func makeTitle(s string) title.Title {

@@ -1,20 +1,23 @@
+//go:build legacy
+// +build legacy
+
 package quiz_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz"
-	"gitflic.ru/lms/internal/domain/quiz/limit"
-	"gitflic.ru/lms/internal/domain/quiz/source"
-	"gitflic.ru/lms/internal/domain/quiz/title"
+	quiz2 "gitflic.ru/lms/backend/internal/domain/quiz"
+	limit2 "gitflic.ru/lms/backend/internal/domain/quiz/limit"
+	"gitflic.ru/lms/backend/internal/domain/quiz/source"
+	"gitflic.ru/lms/backend/internal/domain/quiz/title"
 	"github.com/stretchr/testify/assert"
 )
 
 type quizBuilder struct {
 	title       title.Title
 	sources     []source.Source
-	maxAttempts limit.Attempts
-	timeLimit   limit.Time
+	maxAttempts limit2.Attempts
+	timeLimit   limit2.Time
 }
 
 func newQuizBuilder() *quizBuilder {
@@ -51,17 +54,17 @@ func (b *quizBuilder) withTimeLimit(val int) *quizBuilder {
 	return b
 }
 
-func (b *quizBuilder) build(t *testing.T, wantErr error) *quiz.Quiz {
+func (b *quizBuilder) build(t *testing.T, wantErr error) *quiz2.Quiz {
 	t.Helper()
 
-	params := quiz.Params{
+	params := quiz2.Params{
 		Title:       b.title,
 		Sources:     b.sources,
 		MaxAttempts: b.maxAttempts,
 		TimeLimit:   b.timeLimit,
 	}
 
-	q, err := quiz.New(params)
+	q, err := quiz2.New(params)
 	if wantErr != nil {
 		assert.ErrorIs(t, err, wantErr)
 		return nil

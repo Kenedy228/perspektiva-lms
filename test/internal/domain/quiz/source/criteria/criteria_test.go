@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package criteria_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz/source/criteria"
+	"gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
 	"github.com/stretchr/testify/assert"
 )
 

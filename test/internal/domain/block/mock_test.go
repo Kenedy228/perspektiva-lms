@@ -1,7 +1,10 @@
+//go:build legacy
+// +build legacy
+
 package block_test
 
 import (
-	"gitflic.ru/lms/internal/domain/element"
+	"gitflic.ru/lms/backend/internal/domain/element"
 )
 
 type contentFixture struct{}

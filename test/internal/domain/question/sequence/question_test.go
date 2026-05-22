@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package sequence_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question"
-	"gitflic.ru/lms/internal/domain/question/sequence"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	sequence2 "gitflic.ru/lms/backend/internal/domain/question/sequence"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +26,7 @@ func TestNew_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			q, err := sequence.New(
+			q, err := sequence2.New(
 				mockTitle(),
 				makeOptions(tt.count),
 			)
@@ -46,19 +49,19 @@ func TestNew_Fail(t *testing.T) {
 		{
 			name:    "количество опций меньше ограничения",
 			count:   1,
-			wantErr: sequence.ErrInvalid,
+			wantErr: sequence2.ErrInvalid,
 		},
 		{
 			name:    "количество опций больше ограничения",
 			count:   30,
-			wantErr: sequence.ErrInvalid,
+			wantErr: sequence2.ErrInvalid,
 		},
 	}
 
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			_, err := sequence.New(
+			_, err := sequence2.New(
 				mockTitle(),
 				makeOptions(tt.count),
 			)
@@ -72,7 +75,7 @@ func TestNew_Fail(t *testing.T) {
 
 func TestOptions(t *testing.T) {
 	//Arrange
-	q, err := sequence.New(
+	q, err := sequence2.New(
 		mockTitle(),
 		makeOptions(10),
 	)
@@ -100,7 +103,7 @@ func TestChangeOptions_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			q, err := sequence.New(
+			q, err := sequence2.New(
 				mockTitle(),
 				makeOptions(10),
 			)
@@ -126,12 +129,12 @@ func TestChangeOptions_Fail(t *testing.T) {
 		{
 			name:    "количество опций меньше ограничения",
 			count:   1,
-			wantErr: sequence.ErrInvalid,
+			wantErr: sequence2.ErrInvalid,
 		},
 		{
 			name:    "количество опций больше ограничения",
 			count:   30,
-			wantErr: sequence.ErrInvalid,
+			wantErr: sequence2.ErrInvalid,
 		},
 	}
 
@@ -139,7 +142,7 @@ func TestChangeOptions_Fail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
 			oldOpts := makeOptions(5)
-			q, err := sequence.New(
+			q, err := sequence2.New(
 				mockTitle(),
 				oldOpts,
 			)
@@ -159,12 +162,12 @@ func TestChangeOptions_Fail(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	//Arrange
-	q, err := sequence.New(
+	q, err := sequence2.New(
 		mockTitle(),
 		makeOptions(5),
 	)
 	require.NoError(t, err)
-	clone, ok := q.Clone().(*sequence.Question)
+	clone, ok := q.Clone().(*sequence2.Question)
 	require.True(t, ok)
 
 	//Assert

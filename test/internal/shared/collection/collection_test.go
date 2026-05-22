@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package collection_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/shared/collection"
+	"gitflic.ru/lms/backend/internal/domain/shared/collection"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

@@ -1,0 +1,126 @@
+@startuml
+title Серверная часть СДО - слой домена (ограниченный контекст "курс - запись на курс - прогресс") 
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "domain/course-enrollment-progress" {
+  class Course {
+    - id: uuid.UUID
+    - t: title.Title
+    - versionIDs: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + VersionIDs(): []uuid.UUID
+    + ChangeTitle(t: title.Title): error
+    + AddVersionID(versionID: uuid.UUID): error
+    + RemoveVersionID(versionID: uuid.UUID): error
+    + HasVersion(versionID: uuid.UUID): bool
+    + Clone(): *Course
+  }
+
+  class Version {
+    - id: uuid.UUID
+    - t: title.Title
+    - status: Status
+    - blockIDs: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + BlockIDs(): []uuid.UUID
+    + Status(): Status
+    + ChangeTitle(t: title.Title): error
+    + AddBlockID(id: uuid.UUID): error
+    + RemoveBlockID(id: uuid.UUID): error
+    + MoveFromTo(from: int, to: int): error
+    + Publish(): error
+    + MarkAsDeleted(): error
+    + IsDraft(): bool
+    + IsPublished(): bool
+    + IsDeleted(): bool
+    + Clone(): *Version
+    + Replicate(): (*Version, error)
+  }
+
+  class Block {
+    - id: uuid.UUID
+    - t: title.Title
+    - elementIDs: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + ElementIDs(): []uuid.UUID
+    + ChangeTitle(t: title.Title): error
+    + AddElementID(id: uuid.UUID): error
+    + RemoveElementID(id: uuid.UUID): error
+    + MoveFromTo(from: int, to: int): error
+    + Clone(): *Block
+    + Replicate(): (*Block, error)
+  }
+
+  class Element {
+    - id: uuid.UUID
+    - t: title.Title
+    - content: Content
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Content(): Content
+    + ChangeTitle(t: title.Title): error
+    + ChangeContent(c: Content): error
+    + Replicate(): (*Element, error)
+    + Clone(): *Element
+    + IsInteractive(): bool
+  }
+
+  class Enrollment {
+    - id: uuid.UUID
+    - courseID: uuid.UUID
+    - versionID: uuid.UUID
+    - accountID: uuid.UUID
+    - activatedAt: time.Time
+    - deactivatedAt: time.Time
+    + ID(): uuid.UUID
+    + CourseID(): uuid.UUID
+    + VersionID(): uuid.UUID
+    + AccountID(): uuid.UUID
+    + ActivatedAt(): time.Time
+    + DeactivatedAt(): time.Time
+    + Status(at: time.Time): Status
+    + IsActive(at: time.Time): bool
+    + ChangeActivationWindow(activatedAt: time.Time, deactivatedAt: time.Time): error
+    + ChangeActivationWindowAt(activatedAt: time.Time, deactivatedAt: time.Time, now: time.Time): error
+    + Deactivate(at: time.Time): error
+    + Clone(): *Enrollment
+  }
+
+  class Progress {
+    - id: uuid.UUID
+    - enrollmentID: uuid.UUID
+    - versionID: uuid.UUID
+    - markers: map[uuid.UUID]Marker
+    + ID(): uuid.UUID
+    + EnrollmentID(): uuid.UUID
+    + VersionID(): uuid.UUID
+    + Markers(): map[uuid.UUID]Marker
+    + MarkElement(elementID: uuid.UUID, markerType: MarkerType, at: time.Time): error
+    + CompletedCount(): int
+    + CompletionPercent(totalTrackedItems: int): int
+  }
+
+  class Marker {
+    - mType: MarkerType
+    - completedAt: time.Time
+    + Type(): MarkerType
+    + CompletedAt(): time.Time
+  }
+
+  ' связи внутри домена
+  Course "1" o-- "0..*" Version : versionIDs
+  Version "1" o-- "0..*" Block : blockIDs
+  Block "1" o-- "0..*" Element : elementIDs
+  Enrollment "1" --> "1" Course : courseID
+  Enrollment "1" --> "1" Version : versionID
+  Progress "1" --> "1" Enrollment : enrollmentID
+  Progress "1" o-- "0..*" Marker : markers
+}
+
+@enduml

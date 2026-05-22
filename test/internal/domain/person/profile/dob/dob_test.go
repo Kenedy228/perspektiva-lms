@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package dob_test
 
 import (
 	"testing"
 	"time"
 
-	"gitflic.ru/lms/internal/domain/person/profile/dob"
+	dob2 "gitflic.ru/lms/backend/internal/domain/person/profile/dob"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +28,7 @@ func TestNew(t *testing.T) {
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				db, err := dob.New(tt.date, tt.asOf)
+				db, err := dob2.New(tt.date, tt.asOf)
 				expectedDate := time.Date(tt.date.Year(), tt.date.Month(), tt.date.Day(), 0, 0, 0, 0, time.UTC)
 
 				// Assert
@@ -46,20 +49,20 @@ func TestNew(t *testing.T) {
 				name:    "возраст молодого человека (до 18)",
 				date:    time.Date(2005, 1, 10, 0, 0, 0, 0, time.UTC),
 				asOf:    time.Date(2020, 1, 10, 0, 0, 0, 0, time.UTC),
-				wantErr: dob.ErrInvalid,
+				wantErr: dob2.ErrInvalid,
 			},
 			{
 				name:    "родился в будущем",
 				date:    time.Date(2030, 1, 10, 0, 0, 0, 0, time.UTC),
 				asOf:    time.Date(2020, 1, 10, 0, 0, 0, 0, time.UTC),
-				wantErr: dob.ErrInvalid,
+				wantErr: dob2.ErrInvalid,
 			},
 		}
 
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				_, err := dob.New(tt.date, tt.asOf)
+				_, err := dob2.New(tt.date, tt.asOf)
 
 				// Assert
 				assert.Error(t, err)

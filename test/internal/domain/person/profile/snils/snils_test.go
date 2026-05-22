@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package snils_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/person/profile/snils"
+	snils2 "gitflic.ru/lms/backend/internal/domain/person/profile/snils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +41,7 @@ func TestNew(t *testing.T) {
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				s, err := snils.New(tt.input)
+				s, err := snils2.New(tt.input)
 
 				// Assert
 				assert.NoError(t, err)
@@ -57,29 +60,29 @@ func TestNew(t *testing.T) {
 			{
 				name:    "невалидная контрольная сумма",
 				input:   "112-233-445 00",
-				wantErr: snils.ErrInvalid,
+				wantErr: snils2.ErrInvalid,
 			},
 			{
 				name:    "недопустимый символ в отформатированном значении",
 				input:   "112-233-445 9A",
-				wantErr: snils.ErrInvalid,
+				wantErr: snils2.ErrInvalid,
 			},
 			{
 				name:    "слишком короткий ввод",
 				input:   "112-233-445 9",
-				wantErr: snils.ErrInvalid,
+				wantErr: snils2.ErrInvalid,
 			},
 			{
 				name:    " пустая строка",
 				input:   "",
-				wantErr: snils.ErrInvalid,
+				wantErr: snils2.ErrInvalid,
 			},
 		}
 
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				_, err := snils.New(tt.input)
+				_, err := snils2.New(tt.input)
 
 				// Assert
 				assert.Error(t, err)

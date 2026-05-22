@@ -1,0 +1,69 @@
+@startuml
+title Серверная часть СДО - слой домена (ограниченный контекст "учетная запись - персона - организация") 
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "domain/account-person-organization" {
+  class Account {
+    - id: uuid.UUID
+    - login: login.Login
+    - passwordHash: passhash.Hash
+    - role: Role
+    - personID: uuid.UUID
+    - status: Status
+    + ID(): uuid.UUID
+    + Login(): login.Login
+    + PasswordHash(): passhash.Hash
+    + PersonID(): uuid.UUID
+    + Role(): Role
+    + Status(): Status
+    + IsActive(): bool
+    + IsBlocked(): bool
+    + IsDeleted(): bool
+    + ChangeLogin(login: login.Login): error
+    + ChangePasswordHash(hash: passhash.Hash): error
+    + ChangeRole(role: Role): error
+    + Block(): error
+    + Activate(): error
+    + Delete(): void
+  }
+
+  class Person {
+    - id: uuid.UUID
+    - name: name.Name
+    - profile: *profile.Profile
+    + ID(): uuid.UUID
+    + Name(): name.Name
+    + Profile(): (profile.Profile, bool)
+    + HasProfile(): bool
+    + AttachProfile(prof: profile.Profile): error
+    + ReplaceProfile(prof: profile.Profile): error
+    + DetachProfile(): void
+    + Rename(n: name.Name): error
+    + ChangeSnils(s: snils.Snils): error
+    + ChangeDateOfBirth(db: dob.DateOfBirth): error
+    + ChangeJobTitle(jt: jobtitle.JobTitle): error
+    + ChangeEducation(e: education.Education): error
+    + AssignOrganization(id: uuid.UUID): error
+    + RemoveOrganization(): error
+  }
+
+  class Organization {
+    - id: uuid.UUID
+    - inn: inn.INN
+    - n: name.Name
+    + ID(): uuid.UUID
+    + INN(): inn.INN
+    + Name(): name.Name
+    + ChangeINN(inn: inn.INN): error
+    + Rename(n: name.Name): error
+  }
+
+  ' связи внутри домена
+  Account "1" --> "1" Person : personID
+  Person "0..1" --> "0..1" Organization : organizationID in profile
+}
+
+@enduml

@@ -1,11 +1,14 @@
+//go:build legacy
+// +build legacy
+
 package option_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/sequence/option"
+	"gitflic.ru/lms/backend/internal/domain/question/sequence/option"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

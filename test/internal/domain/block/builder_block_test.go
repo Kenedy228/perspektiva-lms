@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package block_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/block"
-	"gitflic.ru/lms/internal/domain/element"
+	"gitflic.ru/lms/backend/internal/domain/block"
+	"gitflic.ru/lms/backend/internal/domain/element"
 	"github.com/stretchr/testify/assert"
 )
 

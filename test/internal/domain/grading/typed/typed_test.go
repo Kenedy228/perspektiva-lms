@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package typed_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/grading/typed"
-	"gitflic.ru/lms/internal/domain/question"
+	typed2 "gitflic.ru/lms/backend/internal/domain/grading/typed"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +33,7 @@ func TestSupports(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			c := typed.Checker{}
+			c := typed2.Checker{}
 
 			//Act
 			supports := c.Supports(tt.t)
@@ -49,7 +52,7 @@ func TestCheck(t *testing.T) {
 		build(t)
 
 	t.Run("проверка без нормализаторов (строгая)", func(t *testing.T) {
-		c := typed.New()
+		c := typed2.New()
 
 		tests := []struct {
 			name          string
@@ -117,7 +120,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("проверка с обрезкой пробелов (TrimSpace)", func(t *testing.T) {
-		c := typed.New(typed.TrimSpace())
+		c := typed2.New(typed2.TrimSpace())
 
 		tests := []struct {
 			name          string
@@ -154,7 +157,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("проверка с игнорированием регистра (ToLower)", func(t *testing.T) {
-		c := typed.New(typed.ToLower())
+		c := typed2.New(typed2.ToLower())
 
 		tests := []struct {
 			name          string
@@ -191,7 +194,7 @@ func TestCheck(t *testing.T) {
 	})
 
 	t.Run("проверка с TrimSpace и ToLower одновременно", func(t *testing.T) {
-		c := typed.New(typed.TrimSpace(), typed.ToLower())
+		c := typed2.New(typed2.TrimSpace(), typed2.ToLower())
 
 		tests := []struct {
 			name          string

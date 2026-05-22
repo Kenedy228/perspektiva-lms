@@ -1,8 +1,11 @@
+//go:build legacy
+// +build legacy
+
 package blank_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 )
 
 func makeContent(cType content.Type, value string) content.Content {

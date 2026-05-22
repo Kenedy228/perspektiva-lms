@@ -1,0 +1,110 @@
+@startuml
+title Серверная часть СДО - слой вариантов использования (слой приложения) 
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "application/usecases" {
+  class AuthenticateUseCase {
+    - r: account.Repository
+    - comparer: account.PasswordComparer
+    + Execute(ctx: context.Context, in: AuthenticateInput): (*AuthenticateOutput, error)
+  }
+
+  class CreateAccountUseCase {
+    - r: account.Repository
+    - hasher: PasswordHasher
+    - audit: AuditRecorder
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class ChangePasswordUseCase {
+    - r: account.Repository
+    - hasher: PasswordHasher
+    - audit: AuditRecorder
+    + Execute(ctx: context.Context, in: ChangePasswordInput): (*Output, error)
+  }
+
+  class CreateQuestionUseCase {
+    - r: question.Repository
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class GradeUseCase {
+    - r: question.Repository
+    - checkers: []grading.Checker
+    + Execute(ctx: context.Context, in: GradeInput): (*GradeOutput, error)
+  }
+
+  class CreateQuizUseCase {
+    - r: quiz.Repository
+    - inspector: QuestionBankInspector
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class StartAttemptUseCase {
+    - attempts: attempt.Repository
+    - quizzes: quiz.Repository
+    - enrollment: EnrollmentPolicy
+    - questions: QuestionSetProvider
+    - shuffler: QuestionShuffler
+    + Execute(ctx: context.Context, in: StartInput): (*Output, error)
+  }
+
+  class AddAnswerUseCase {
+    - r: attempt.Repository
+    + Execute(ctx: context.Context, in: AddAnswerInput): error
+  }
+
+  class CreateCourseUseCase {
+    - courses: CourseRepository
+    + Execute(ctx: context.Context, in: CreateCourseInput): (*Output, error)
+  }
+
+  class CreateVersionUseCase {
+    - courses: CourseRepository
+    - versions: VersionRepository
+    + Execute(ctx: context.Context, in: CreateVersionInput): (*Output, error)
+  }
+
+  class AddBlockUseCase {
+    - versions: VersionRepository
+    - blocks: BlockRepository
+    + Execute(ctx: context.Context, in: AddBlockInput): (*Output, error)
+  }
+
+  class PublishVersionUseCase {
+    - versions: VersionRepository
+    + Execute(ctx: context.Context, in: VersionIDInput): error
+  }
+
+  class MarkProgressUseCase {
+    - progress: ProgressRepository
+    + Execute(ctx: context.Context, in: MarkProgressInput): error
+  }
+
+  class CreateEnrollmentUseCase {
+    - repo: enrollment.Repository
+    - versions: VersionPolicy
+    - progress: ProgressInitializer
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class ListCoursesQuery {
+    - s: course.QueryService
+    + Execute(ctx: context.Context, in: ListInput): (*ListOutput, error)
+  }
+
+  class RatingsQuery {
+    - s: course.QueryService
+    + Execute(ctx: context.Context, in: RatingsInput): (*RatingsOutput, error)
+  }
+
+  class StudentStatisticsQuery {
+    - s: course.QueryService
+    + Execute(ctx: context.Context, in: StudentStatisticsInput): (*StudentStatisticsOutput, error)
+  }
+}
+
+@enduml

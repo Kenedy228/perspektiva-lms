@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package matching_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/matching"
-	"gitflic.ru/lms/internal/domain/question/matching/pair"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/matching"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 )
 
 type questionBuilder struct {

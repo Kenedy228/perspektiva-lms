@@ -1,0 +1,340 @@
+Project lms_backend {
+  database_type: "PostgreSQL"
+  Note: "LMS backend schema from Goose migrations. Compatible with dbdiagram.io DBML."
+}
+
+Table organizations {
+  id uuid [pk]
+  inn text [not null, unique]
+  inn_type text [not null, note: "ip | physical | organization"]
+  name text [not null]
+  deleted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (name) [name: "organizations_name_idx"]
+  }
+}
+
+Table persons {
+  id uuid [pk]
+  first_name text [not null]
+  last_name text [not null]
+  middle_name text [not null, default: ""]
+  snils text [unique]
+  date_of_birth date
+  job_title text [not null, default: ""]
+  education text [not null, default: ""]
+  organization_id uuid
+  deleted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (last_name) [name: "persons_last_name_idx"]
+    (organization_id) [name: "persons_organization_id_idx"]
+  }
+}
+
+Table accounts {
+  id uuid [pk]
+  person_id uuid [not null, unique]
+  login text [not null, unique]
+  password_hash text [not null]
+  role text [not null, note: "admin | creator | student | organization"]
+  status text [not null, note: "active | blocked | deleted"]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (role) [name: "accounts_role_idx"]
+    (status) [name: "accounts_status_idx"]
+  }
+}
+
+Table questions {
+  id uuid [pk]
+  type text [not null]
+  payload jsonb [not null]
+  deleted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (type) [name: "questions_type_idx"]
+  }
+}
+
+Table question_banks {
+  id uuid [pk]
+  title text [not null]
+  deleted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (title) [name: "question_banks_title_idx"]
+  }
+}
+
+Table question_bank_questions {
+  bank_id uuid [not null]
+  question_id uuid [not null]
+  position integer [not null]
+
+  indexes {
+    (bank_id, question_id) [pk]
+    (bank_id, position) [unique]
+    (question_id) [name: "question_bank_questions_question_id_idx"]
+  }
+}
+
+Table quizzes {
+  id uuid [pk]
+  title text [not null]
+  time_limit_seconds integer [not null]
+  attempts_limit integer [not null]
+  shuffle_questions boolean [not null]
+  deleted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table quiz_sources {
+  quiz_id uuid [not null]
+  bank_id uuid [not null]
+  criteria_type text [not null, note: "manual | random"]
+  question_count integer [not null]
+  question_ids uuid[] [not null, default: "{}"]
+  position integer [not null]
+
+  indexes {
+    (quiz_id, bank_id) [pk]
+    (quiz_id, position) [unique]
+    (bank_id) [name: "quiz_sources_bank_id_idx"]
+  }
+}
+
+Table courses {
+  id uuid [pk]
+  title text [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (title) [name: "courses_title_idx"]
+  }
+}
+
+Table course_versions {
+  id uuid [pk]
+  title text [not null]
+  status text [not null, note: "draft | published | deleted"]
+  enrollment_opens_at timestamptz
+  enrollment_closes_at timestamptz
+  copied_from_version_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (status) [name: "course_versions_status_idx"]
+  }
+}
+
+Table course_version_links {
+  course_id uuid [not null]
+  version_id uuid [not null]
+  position integer [not null]
+
+  indexes {
+    (course_id, version_id) [pk]
+    (course_id, position) [unique]
+    (version_id) [name: "course_version_links_version_id_idx"]
+  }
+}
+
+Table course_blocks {
+  id uuid [pk]
+  title text [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table course_version_blocks {
+  version_id uuid [not null]
+  block_id uuid [not null]
+  position integer [not null]
+
+  indexes {
+    (version_id, block_id) [pk]
+    (version_id, position) [unique]
+    (block_id) [name: "course_version_blocks_block_id_idx"]
+  }
+}
+
+Table course_elements {
+  id uuid [pk]
+  type text [not null, note: "text | slides | document | video | quiz"]
+  title text [not null]
+  object_key text
+  quiz_id uuid
+  payload jsonb [not null, default: "{}"]
+  requires_read_marker boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (quiz_id) [name: "course_elements_quiz_id_idx"]
+  }
+}
+
+Table course_block_elements {
+  block_id uuid [not null]
+  element_id uuid [not null]
+  position integer [not null]
+
+  indexes {
+    (block_id, element_id) [pk]
+    (block_id, position) [unique]
+    (element_id) [name: "course_block_elements_element_id_idx"]
+  }
+}
+
+Table enrollments {
+  id uuid [pk]
+  account_id uuid [not null]
+  course_id uuid [not null]
+  version_id uuid [not null]
+  status text [not null, note: "inactive | active | expired"]
+  enrolled_at timestamptz [not null]
+  completed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (account_id, course_id, version_id) [unique]
+    (account_id) [name: "enrollments_account_id_idx"]
+    (course_id) [name: "enrollments_course_id_idx"]
+    (version_id) [name: "enrollments_version_id_idx"]
+  }
+}
+
+Table course_progress {
+  id uuid [pk, default: `gen_random_uuid()`]
+  enrollment_id uuid [not null, unique]
+  version_id uuid [not null]
+  completed_elements integer [not null, default: 0]
+  total_elements integer [not null, default: 0]
+  score numeric(6,2) [not null, default: 0]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (version_id) [name: "course_progress_version_id_idx"]
+  }
+}
+
+Table course_progress_markers {
+  progress_id uuid [not null]
+  element_id uuid [not null]
+  marker_type text [not null, note: "read | watched | download | quiz"]
+  completed_at timestamptz [not null]
+
+  indexes {
+    (progress_id, element_id) [pk]
+  }
+}
+
+Table attempts {
+  id uuid [pk]
+  enrollment_id uuid [not null]
+  quiz_id uuid [not null]
+  account_id uuid [not null]
+  status text [not null, note: "finished | expired | in_progress | interrupted | cancelled"]
+  started_at timestamptz [not null]
+  deadline_at timestamptz
+  submitted_at timestamptz
+  score numeric(6,2)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (enrollment_id, quiz_id) [name: "attempts_enrollment_quiz_idx"]
+    (account_id) [name: "attempts_account_id_idx"]
+  }
+}
+
+Table attempt_items {
+  attempt_id uuid [not null]
+  question_id uuid [not null]
+  position integer [not null]
+
+  indexes {
+    (attempt_id, question_id) [pk]
+    (attempt_id, position) [unique]
+  }
+}
+
+Table attempt_answers {
+  attempt_id uuid [not null]
+  question_id uuid [not null]
+  answer_payload jsonb [not null]
+  answered_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (attempt_id, question_id) [pk]
+  }
+}
+
+Table stored_objects {
+  object_key text [pk]
+  bucket text [not null]
+  filename text [not null]
+  content_type text [not null]
+  size_bytes bigint [not null]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table audit_events {
+  id bigint [pk, increment]
+  action text [not null]
+  entity_id uuid
+  actor_role text [not null]
+  payload jsonb [not null, default: "{}"]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (action) [name: "audit_events_action_idx"]
+    (entity_id) [name: "audit_events_entity_id_idx"]
+    (created_at) [name: "audit_events_created_at_idx"]
+  }
+}
+
+Ref: persons.organization_id > organizations.id [delete: set null]
+Ref: accounts.person_id > persons.id [delete: restrict]
+Ref: question_bank_questions.bank_id > question_banks.id [delete: cascade]
+Ref: question_bank_questions.question_id > questions.id [delete: restrict]
+Ref: quiz_sources.quiz_id > quizzes.id [delete: cascade]
+Ref: quiz_sources.bank_id > question_banks.id [delete: restrict]
+Ref: course_versions.copied_from_version_id > course_versions.id [delete: set null]
+Ref: course_version_links.course_id > courses.id [delete: cascade]
+Ref: course_version_links.version_id > course_versions.id [delete: restrict]
+Ref: course_version_blocks.version_id > course_versions.id [delete: cascade]
+Ref: course_version_blocks.block_id > course_blocks.id [delete: restrict]
+Ref: course_elements.quiz_id > quizzes.id [delete: restrict]
+Ref: course_block_elements.block_id > course_blocks.id [delete: cascade]
+Ref: course_block_elements.element_id > course_elements.id [delete: restrict]
+Ref: enrollments.account_id > accounts.id [delete: restrict]
+Ref: enrollments.course_id > courses.id [delete: restrict]
+Ref: enrollments.version_id > course_versions.id [delete: restrict]
+Ref: course_progress.enrollment_id > enrollments.id [delete: cascade]
+Ref: course_progress.version_id > course_versions.id [delete: restrict]
+Ref: course_progress_markers.progress_id > course_progress.id [delete: cascade]
+Ref: course_progress_markers.element_id > course_elements.id [delete: restrict]
+Ref: attempts.enrollment_id > enrollments.id [delete: cascade]
+Ref: attempts.quiz_id > quizzes.id [delete: restrict]
+Ref: attempts.account_id > accounts.id [delete: restrict]
+Ref: attempt_items.attempt_id > attempts.id [delete: cascade]
+Ref: attempt_items.question_id > questions.id [delete: restrict]
+Ref: attempt_answers.attempt_id > attempts.id [delete: cascade]
+Ref: attempt_answers.question_id > questions.id [delete: restrict]

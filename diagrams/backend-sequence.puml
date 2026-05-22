@@ -1,0 +1,121 @@
+@startuml
+title LMS Backend - Core HTTP Sequence Flows
+
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+
+actor "User" as User
+participant "React Frontend" as FE
+participant "HTTP Server\n(net/http mux)" as HTTP
+participant "Middleware\nRecover/RequestID/Security/Auth" as MW
+participant "Handlers\nAuth/API" as H
+participant "Application\nUse Cases / Queries" as UC
+participant "Domain\nAggregates & Services" as D
+database "PostgreSQL\nRepositories" as PG
+collections "MinIO\nObject Storage" as S3
+
+== Login ==
+User -> FE: Submit login/password
+FE -> HTTP: POST /auth/login
+HTTP -> H: AuthHandler.Login
+H -> UC: AuthenticateUseCase.Execute
+UC -> PG: Find account by login
+PG --> UC: Account + password hash
+UC -> D: PasswordComparer.Compare
+D --> UC: valid credentials
+UC --> H: account/person/role
+H -> H: Issue HMAC bearer session
+H --> FE: 200 SessionResponse + HATEOAS links
+FE --> User: Store session token in sessionStorage
+
+== Authenticated Request ==
+User -> FE: Open protected screen
+FE -> HTTP: GET /courses\nAuthorization: Bearer token
+HTTP -> MW: Auth middleware
+MW -> MW: Verify token signature and expiry
+MW -> H: API.ListCourses with session claims
+H -> UC: ListQuery.Execute(actor role, filters)
+UC -> PG: List manageable or enrolled courses
+PG --> UC: Course views
+UC --> H: Query output
+H --> FE: 200 envelope {data,_links}
+FE --> User: Render course list
+
+== Administrator Creates Course Version ==
+User -> FE: Create course/version/block
+FE -> HTTP: POST /courses
+HTTP -> MW: Verify bearer token
+MW -> H: API.CreateCourse
+H -> UC: CreateCourseUseCase.Execute
+UC -> D: Course.New(title)
+D --> UC: Course aggregate
+UC -> PG: Save course
+PG --> UC: persisted
+UC --> H: course id
+H --> FE: 201 created link
+
+FE -> HTTP: POST /courses/{id}/versions
+HTTP -> MW: Verify bearer token
+MW -> H: API.CreateCourseVersion
+H -> UC: CreateVersionUseCase.Execute
+UC -> PG: Find course
+UC -> D: Version.New(title)
+UC -> D: Course.AddVersionID
+UC -> PG: Save version and course
+H --> FE: 201 created link
+
+FE -> HTTP: POST /course-versions/{id}/blocks
+HTTP -> MW: Verify bearer token
+MW -> H: API.AddCourseBlock
+H -> UC: AddBlockUseCase.Execute
+UC -> D: Block.New(title)
+UC -> D: Version.AddBlockID
+UC -> PG: Save block and version
+H --> FE: 201 created link
+
+== Quiz Attempt ==
+User -> FE: Start quiz attempt
+FE -> HTTP: POST /attempts
+HTTP -> MW: Verify bearer token
+MW -> H: API.StartAttempt
+H -> UC: StartUseCase.Execute
+UC -> PG: Check enrollment policy
+UC -> PG: Load quiz and question sources
+UC -> D: Apply quiz shuffle policy
+UC -> D: Attempt.New(question snapshots)
+UC -> PG: Save attempt/items
+H --> FE: 201 attempt id
+
+User -> FE: Submit answer
+FE -> HTTP: PUT /attempts/{id}/answers/{questionID}
+HTTP -> MW: Verify bearer token
+MW -> H: API.AddAttemptAnswer
+H -> D: Build typed answer value object
+H -> UC: AddAnswerUseCase.Execute
+UC -> PG: Load attempt
+UC -> D: Attempt.AddAnswer
+UC -> PG: Save attempt answer
+H --> FE: 200 envelope
+
+User -> FE: Finish attempt
+FE -> HTTP: POST /attempts/{id}/finish
+HTTP -> MW: Verify bearer token
+MW -> H: API.FinishAttempt
+H -> UC: FinishUseCase.Execute
+UC -> PG: Load attempt
+UC -> D: Attempt.Finish
+UC -> PG: Save attempt
+H --> FE: 200 envelope
+
+== File-backed Course Content ==
+User -> FE: Upload or reference content
+FE -> HTTP: Course/content use case request
+HTTP -> MW: Verify bearer token
+MW -> H: Course API handler
+H -> UC: Course command
+UC -> S3: Store or validate object
+UC -> PG: Persist stored object/course element
+H --> FE: envelope with resource links
+
+@enduml

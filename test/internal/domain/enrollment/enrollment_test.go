@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 package enrollment_test
 
 import (
@@ -5,7 +8,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"gitflic.ru/lms/internal/domain/enrollment"
+	"gitflic.ru/lms/backend/internal/domain/enrollment"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

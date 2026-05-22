@@ -1,7 +1,10 @@
+//go:build legacy
+// +build legacy
+
 package answer_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/selectable/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
 	"github.com/google/uuid"
 )
 

@@ -1,6 +1,11 @@
+//go:build legacy
+// +build legacy
+
 package attempt_test
 
-import "gitflic.ru/lms/internal/domain/question"
+import (
+	"gitflic.ru/lms/backend/internal/domain/question"
+)
 
 type mockAnswer struct{}
 

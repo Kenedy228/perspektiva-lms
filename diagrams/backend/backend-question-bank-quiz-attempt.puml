@@ -1,0 +1,152 @@
+@startuml
+title Серверная часть СДО - слой домена (ограниченный контекст "вопрос - банк - тест - попытка пройти тест") 
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "domain/question-bank-quiz-attempt" {
+  class Bank {
+    - id: uuid.UUID
+    - t: title.Title
+    - questions: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Questions(): []uuid.UUID
+    + CountQuestions(): int
+    + HasQuestion(questionID: uuid.UUID): bool
+    + Rename(t: title.Title): error
+    + AddQuestions(questions: ...uuid.UUID): error
+    + RemoveQuestions(questions: ...uuid.UUID): error
+    + ClearQuestions(): void
+  }
+
+  interface Question {
+    + ID(): uuid.UUID
+    + Type(): question.Type
+    + Title(): base.Title
+    + Instruction(): string
+    + Attachment(): (attachment.Attachment, bool)
+    + Answer(): question.Answer
+  }
+
+  class SelectableQuestion {
+    - Base: *base.Base
+    - options: []selectable.option.Option
+    + Instruction(): string
+    + Options(): []selectable.option.Option
+    + CorrectOptionsCount(): int
+    + Type(): question.Type
+    + ChangeOptions(options: []selectable.option.Option): error
+    + Clone(): question.Question
+  }
+
+  class SequenceQuestion {
+    - Base: *base.Base
+    - options: []sequence.option.Option
+    + Instruction(): string
+    + Options(): []sequence.option.Option
+    + Type(): question.Type
+    + ChangeOptions(options: []sequence.option.Option): error
+    + Clone(): question.Question
+  }
+
+  class MatchingQuestion {
+    - Base: *base.Base
+    - pairs: []pair.Pair
+    + Instruction(): string
+    + Pairs(): []pair.Pair
+    + Type(): question.Type
+    + ChangePairs(pairs: []pair.Pair): error
+    + Clone(): question.Question
+  }
+
+  class TypedQuestion {
+    - Base: *base.Base
+    - blanks: []blank.Blank
+    + Instruction(): string
+    + Blanks(): []blank.Blank
+    + Type(): question.Type
+    + ReplaceContent(t: title.Title, blanks: []blank.Blank): error
+    + Clone(): question.Question
+  }
+
+  class ShortQuestion {
+    - Base: *base.Base
+    - variants: []variant.Variant
+    + Instruction(): string
+    + Variants(): []variant.Variant
+    + Type(): question.Type
+    + ChangeVariants(variants: []variant.Variant): error
+    + Clone(): question.Question
+  }
+
+  class Quiz {
+    - id: uuid.UUID
+    - time: limit.Time
+    - attempts: limit.Attempts
+    - t: title.Title
+    - shuffleQuestions: bool
+    - sources: []source.Source
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Sources(): []source.Source
+    + Attempts(): limit.Attempts
+    + Time(): limit.Time
+    + ShuffleQuestions(): bool
+    + HasInfiniteAttempts(): bool
+    + HasInfiniteTime(): bool
+    + ChangeMaxAttempts(maxAttempts: limit.Attempts): error
+    + ChangeTimeLimit(limit: limit.Time): error
+    + ChangeShuffleQuestions(enabled: bool): void
+    + Rename(t: title.Title): error
+    + ReplaceSources(sources: []source.Source): error
+    + ChangeSource(s: source.Source): error
+    + AddSource(s: source.Source): error
+    + RemoveSource(s: source.Source): error
+    + RemoveSourceByBankID(bankID: uuid.UUID): error
+  }
+
+  class Attempt {
+    - id: uuid.UUID
+    - enrollmentID: uuid.UUID
+    - quizID: uuid.UUID
+    - status: Status
+    - startedAt: time.Time
+    - deadlineAt: time.Time
+    - finishedAt: time.Time
+    - answers: map[uuid.UUID]answer.Entry
+    - items: []item.Item
+    + ID(): uuid.UUID
+    + EnrollmentID(): uuid.UUID
+    + QuizID(): uuid.UUID
+    + Status(): Status
+    + StartedAt(): time.Time
+    + DeadlineAt(): time.Time
+    + FinishedAt(): time.Time
+    + Items(): []item.Item
+    + Answers(): map[uuid.UUID]answer.Entry
+    + CountItems(): int
+    + CountAnswers(): int
+    + CanModify(): bool
+    + AddAnswer(qID: uuid.UUID, ans: question.Answer, at: time.Time): error
+    + Finish(at: time.Time): error
+    + SetExpired(at: time.Time): error
+    + Interrupt(at: time.Time): error
+    + Cancel(at: time.Time): error
+  }
+
+  ' иерархия Question
+  Question <|.. SelectableQuestion
+  Question <|.. SequenceQuestion
+  Question <|.. MatchingQuestion
+  Question <|.. TypedQuestion
+  Question <|.. ShortQuestion
+
+  ' связи внутри домена
+  Bank "1" o-- "0..*" Question : questionIDs
+  Quiz "1" --> "1..*" Bank : sources
+  Attempt "1" --> "1" Quiz : quizID
+}
+
+@enduml

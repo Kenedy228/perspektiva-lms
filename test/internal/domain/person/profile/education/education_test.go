@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package education_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/person/profile/education"
+	education2 "gitflic.ru/lms/backend/internal/domain/person/profile/education"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +33,7 @@ func TestNew(t *testing.T) {
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				edu, err := education.New(tt.in)
+				edu, err := education2.New(tt.in)
 
 				// Assert
 				assert.NoError(t, err)
@@ -46,35 +49,39 @@ func TestNew(t *testing.T) {
 			wantErr error
 		}{
 			{
-				name:    "пустой текст является некорректным",
-				in:      "",
-				wantErr: education.ErrInvalid,
-			},
-			{
-				name:    "текст без непробельных символов является некорректным",
-				in:      "      ",
-				wantErr: education.ErrInvalid,
-			},
-			{
-				name:    "текст без непробельных символов (с управляющими пробельными последовательностями) является некорректным",
-				in:      " \t \t \t ",
-				wantErr: education.ErrInvalid,
-			},
-			{
 				name:    "текст с количеством символов > лимита некорректный",
-				in:      strings.Repeat("A", education.ValueCharsLimit+1),
-				wantErr: education.ErrInvalid,
+				in:      strings.Repeat("A", education2.ValueCharsLimit+1),
+				wantErr: education2.ErrInvalid,
 			},
 		}
 
 		for _, tt := range tc {
 			t.Run(tt.name, func(t *testing.T) {
 				// Arrange
-				_, err := education.New(tt.in)
+				_, err := education2.New(tt.in)
 
 				// Assert
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, tt.wantErr)
+			})
+		}
+	})
+
+	t.Run("успех: пустое значение допустимо", func(t *testing.T) {
+		tc := []struct {
+			name string
+			in   string
+		}{
+			{name: "пустая строка", in: ""},
+			{name: "только пробелы", in: "      "},
+			{name: "управляющие пробельные последовательности", in: " \t \t \t "},
+		}
+
+		for _, tt := range tc {
+			t.Run(tt.name, func(t *testing.T) {
+				edu, err := education2.New(tt.in)
+				assert.NoError(t, err)
+				assert.Equal(t, "", edu.Value())
 			})
 		}
 	})

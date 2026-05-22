@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package limit_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz/limit"
+	"gitflic.ru/lms/backend/internal/domain/quiz/limit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

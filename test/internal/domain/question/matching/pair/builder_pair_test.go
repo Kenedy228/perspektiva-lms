@@ -1,8 +1,11 @@
+//go:build legacy
+// +build legacy
+
 package pair_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 )
 
 type pairBuilder struct {

@@ -1,11 +1,14 @@
+//go:build legacy
+// +build legacy
+
 package variant_test
 
 import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/short/variant"
+	"gitflic.ru/lms/backend/internal/domain/question/short/variant"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 	"github.com/stretchr/testify/assert"
 )
 

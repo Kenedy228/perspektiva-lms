@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package selectable_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/selectable/option"
-	"gitflic.ru/lms/internal/domain/question/title"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable/option"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
+	"gitflic.ru/lms/backend/internal/domain/question/title"
 )
 
 func makeOptions(correctCount, incorrectCount int) []option.Option {

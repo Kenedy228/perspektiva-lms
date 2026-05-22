@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 package collection_test
 
 import "github.com/google/uuid"

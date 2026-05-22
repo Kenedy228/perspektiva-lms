@@ -1,0 +1,748 @@
+@startuml
+title LMS Backend - Detailed Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "transport/http" {
+  class Server {
+    - logger: *slog.Logger
+    - session: *session.Manager
+    - handlers: Handlers
+    + Handler(): http.Handler
+    - requireAuth(next: http.HandlerFunc): http.HandlerFunc
+    - health(w: http.ResponseWriter, r: *http.Request): void
+    - index(w: http.ResponseWriter, r: *http.Request): void
+  }
+
+  class ServerConfig {
+    + Logger: *slog.Logger
+    + Session: *session.Manager
+    + Handlers: Handlers
+  }
+
+  class Handlers {
+    + Auth: *AuthHandler
+    + API: *API
+  }
+
+  class AuthHandler {
+    - authenticate: *AuthenticateUseCase
+    - sessions: *session.Manager
+    + Login(w: http.ResponseWriter, r: *http.Request): void
+    + Logout(w: http.ResponseWriter, r: *http.Request): void
+    + Session(w: http.ResponseWriter, r: *http.Request): void
+  }
+
+  class API {
+    + Accounts: AccountUseCases
+    + Organizations: OrganizationUseCases
+    + Persons: PersonUseCases
+    + Banks: BankUseCases
+    + Questions: QuestionUseCases
+    + Quizzes: QuizUseCases
+    + Attempts: AttemptUseCases
+    + Courses: CourseUseCases
+    + Enrollments: EnrollmentUseCases
+  }
+
+  class AccountUseCases {
+    + Create: *CreateUseCase
+    + ChangeLogin: *ChangeLoginUseCase
+    + ChangePassword: *ChangePasswordUseCase
+    + ChangeRole: *ChangeRoleUseCase
+    + Block: *BlockUseCase
+    + Activate: *ActivateUseCase
+    + Delete: *DeleteUseCase
+    + List: *ListQuery
+    + Get: *GetByIDQuery
+  }
+
+  class QuestionUseCases {
+    + Create: *CreateUseCase
+    + ChangeTitle: *ChangeTitleUseCase
+    + ChangeAttachment: *ChangeAttachmentUseCase
+    + RemoveAttachment: *RemoveAttachmentUseCase
+    + Selectable: *ChangeSelectableOptionsUseCase
+    + Sequence: *ChangeSequenceOptionsUseCase
+    + Matching: *ChangeMatchingPairsUseCase
+    + Typed: *ChangeTypedContentUseCase
+    + Short: *ChangeShortVariantsUseCase
+    + Grade: *GradeUseCase
+    + ValidateAnswer: *ValidateAnswerUseCase
+    + Repository: QuestionReader
+  }
+
+  class QuizUseCases {
+    + Create: *CreateUseCase
+    + Rename: *RenameUseCase
+    + ChangeLimits: *ChangeLimitsUseCase
+    + ChangeShuffle: *ChangeShufflePolicyUseCase
+    + Replace: *ReplaceSourcesUseCase
+    + Repository: quiz.Repository
+  }
+
+  class AttemptUseCases {
+    + Start: *StartUseCase
+    + Answer: *AddAnswerUseCase
+    + Finish: *FinishUseCase
+    + Cancel: *CancelUseCase
+    + Repository: attemptReader
+  }
+
+  class CourseUseCases {
+    + Create: *CreateCourseUseCase
+    + Rename: *RenameCourseUseCase
+    + Version: *CreateVersionUseCase
+    + Block: *AddBlockUseCase
+    + Publish: *PublishVersionUseCase
+    + Progress: *MarkProgressUseCase
+    + List: *ListQuery
+    + Ratings: *RatingsQuery
+    + Statistics: *StudentStatisticsQuery
+    + Query: course.QueryService
+  }
+
+  class Envelope {
+    + Data: any
+    + Links: Links
+  }
+
+  class Error {
+    + Status: int
+    + Code: string
+    + Message: string
+    + Details: map[string]any
+    + Links: Links
+  }
+
+  class SessionClaims {
+    + AccountID: uuid.UUID
+    + PersonID: uuid.UUID
+    + Role: role.Role
+    + RoleValue: string
+    + IssuedAt: int64
+    + ExpiresAt: int64
+  }
+
+  class SessionManager {
+    - secret: []byte
+    - ttl: time.Duration
+    - now: func(): time.Time
+    + Issue(accountID: uuid.UUID, personID: uuid.UUID, role: role.Role): (string, Claims, error)
+    + Verify(token: string): (Claims, error)
+  }
+}
+
+package "application/usecases" {
+  class AuthenticateUseCase {
+    - r: account.Repository
+    - comparer: account.PasswordComparer
+    + Execute(ctx: context.Context, in: AuthenticateInput): (*AuthenticateOutput, error)
+  }
+
+  class CreateAccountUseCase {
+    - r: account.Repository
+    - hasher: PasswordHasher
+    - audit: AuditRecorder
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class ChangePasswordUseCase {
+    - r: account.Repository
+    - hasher: PasswordHasher
+    - audit: AuditRecorder
+    + Execute(ctx: context.Context, in: ChangePasswordInput): (*Output, error)
+  }
+
+  class CreateQuestionUseCase {
+    - r: question.Repository
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class GradeUseCase {
+    - r: question.Repository
+    - checkers: []grading.Checker
+    + Execute(ctx: context.Context, in: GradeInput): (*GradeOutput, error)
+  }
+
+  class CreateQuizUseCase {
+    - r: quiz.Repository
+    - inspector: QuestionBankInspector
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class StartAttemptUseCase {
+    - attempts: attempt.Repository
+    - quizzes: quiz.Repository
+    - enrollment: EnrollmentPolicy
+    - questions: QuestionSetProvider
+    - shuffler: QuestionShuffler
+    + Execute(ctx: context.Context, in: StartInput): (*Output, error)
+  }
+
+  class AddAnswerUseCase {
+    - r: attempt.Repository
+    + Execute(ctx: context.Context, in: AddAnswerInput): error
+  }
+
+  class CreateCourseUseCase {
+    - courses: CourseRepository
+    + Execute(ctx: context.Context, in: CreateCourseInput): (*Output, error)
+  }
+
+  class CreateVersionUseCase {
+    - courses: CourseRepository
+    - versions: VersionRepository
+    + Execute(ctx: context.Context, in: CreateVersionInput): (*Output, error)
+  }
+
+  class AddBlockUseCase {
+    - versions: VersionRepository
+    - blocks: BlockRepository
+    + Execute(ctx: context.Context, in: AddBlockInput): (*Output, error)
+  }
+
+  class PublishVersionUseCase {
+    - versions: VersionRepository
+    + Execute(ctx: context.Context, in: VersionIDInput): error
+  }
+
+  class MarkProgressUseCase {
+    - progress: ProgressRepository
+    + Execute(ctx: context.Context, in: MarkProgressInput): error
+  }
+
+  class CreateEnrollmentUseCase {
+    - repo: enrollment.Repository
+    - versions: VersionPolicy
+    - progress: ProgressInitializer
+    + Execute(ctx: context.Context, in: CreateInput): (*Output, error)
+  }
+
+  class ListCoursesQuery {
+    - s: course.QueryService
+    + Execute(ctx: context.Context, in: ListInput): (*ListOutput, error)
+  }
+
+  class RatingsQuery {
+    - s: course.QueryService
+    + Execute(ctx: context.Context, in: RatingsInput): (*RatingsOutput, error)
+  }
+
+  class StudentStatisticsQuery {
+    - s: course.QueryService
+    + Execute(ctx: context.Context, in: StudentStatisticsInput): (*StudentStatisticsOutput, error)
+  }
+}
+
+package "application/ports" {
+  interface AccountRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*account.Account, error)
+    + FindByLogin(ctx: context.Context, login: login.Login): (*account.Account, error)
+    + LoginExists(ctx: context.Context, login: login.Login, excludeAccountID: uuid.UUID): (bool, error)
+    + PersonHasAccount(ctx: context.Context, personID: uuid.UUID, excludeAccountID: uuid.UUID): (bool, error)
+    + Save(ctx: context.Context, acc: *account.Account): error
+  }
+
+  interface CourseRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*course.Course, error)
+    + Save(ctx: context.Context, c: *course.Course): error
+  }
+
+  interface VersionRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*version.Version, error)
+    + Save(ctx: context.Context, v: *version.Version): error
+  }
+
+  interface BlockRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*block.Block, error)
+    + Save(ctx: context.Context, b: *block.Block): error
+  }
+
+  interface ProgressRepository {
+    + FindByEnrollmentID(ctx: context.Context, enrollmentID: uuid.UUID): (*progress.Progress, error)
+    + Save(ctx: context.Context, p: *progress.Progress): error
+  }
+
+  interface AttemptRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*attempt.Attempt, error)
+    + Save(ctx: context.Context, a: *attempt.Attempt): error
+    + CountByEnrollmentAndQuiz(ctx: context.Context, enrollmentID: uuid.UUID, quizID: uuid.UUID): (int, error)
+  }
+
+  interface QuizRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*quiz.Quiz, error)
+    + Save(ctx: context.Context, q: *quiz.Quiz): error
+    + DeleteByID(ctx: context.Context, id: uuid.UUID): error
+  }
+
+  interface QuestionSetProvider {
+    + FindQuestionsByIDs(ctx: context.Context, bankID: uuid.UUID, questionIDs: []uuid.UUID): ([]question.Question, error)
+    + SelectRandomQuestions(ctx: context.Context, bankID: uuid.UUID, count: int): ([]question.Question, error)
+  }
+
+  interface QuestionBankInspector {
+    + CountQuestionsInBank(ctx: context.Context, bankID: uuid.UUID): (int, error)
+    + QuestionsBelongToBank(ctx: context.Context, bankID: uuid.UUID, questionIDs: []uuid.UUID): (bool, error)
+  }
+
+  interface EnrollmentPolicy {
+    + CanStartQuiz(ctx: context.Context, accountID: uuid.UUID, enrollmentID: uuid.UUID, quizID: uuid.UUID, at: time.Time): (bool, error)
+  }
+
+  interface PasswordHasher {
+    + Hash(plain: string): (passhash.Hash, error)
+  }
+
+  interface PasswordComparer {
+    + Compare(hash: passhash.Hash, plain: string): bool
+  }
+
+  interface QuestionShuffler {
+    + ShuffleQuestions(questions: []question.Question): []question.Question
+  }
+
+  interface QueryService {
+    + ListManageable(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + ListVisibleForStudent(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + GetDetailsByID(ctx: context.Context, id: uuid.UUID): (DetailedView, error)
+    + ListRatings(ctx: context.Context, courseID: uuid.UUID, limit: int, offset: int): ([]StudentRatingView, error)
+    + ListStudentStatistics(ctx: context.Context, filter: StudentStatisticsFilter): ([]StudentRatingView, error)
+  }
+}
+
+package "domain/account-person-organization" {
+  class Account {
+    - id: uuid.UUID
+    - login: login.Login
+    - passwordHash: passhash.Hash
+    - role: Role
+    - personID: uuid.UUID
+    - status: Status
+    + ID(): uuid.UUID
+    + Login(): login.Login
+    + PasswordHash(): passhash.Hash
+    + PersonID(): uuid.UUID
+    + Role(): Role
+    + Status(): Status
+    + IsActive(): bool
+    + IsBlocked(): bool
+    + IsDeleted(): bool
+    + ChangeLogin(login: login.Login): error
+    + ChangePasswordHash(hash: passhash.Hash): error
+    + ChangeRole(role: Role): error
+    + Block(): error
+    + Activate(): error
+    + Delete(): void
+  }
+
+  class Person {
+    - id: uuid.UUID
+    - name: name.Name
+    - profile: *profile.Profile
+    + ID(): uuid.UUID
+    + Name(): name.Name
+    + Profile(): (profile.Profile, bool)
+    + HasProfile(): bool
+    + AttachProfile(prof: profile.Profile): error
+    + ReplaceProfile(prof: profile.Profile): error
+    + DetachProfile(): void
+    + Rename(n: name.Name): error
+    + ChangeSnils(s: snils.Snils): error
+    + ChangeDateOfBirth(db: dob.DateOfBirth): error
+    + ChangeJobTitle(jt: jobtitle.JobTitle): error
+    + ChangeEducation(e: education.Education): error
+    + AssignOrganization(id: uuid.UUID): error
+    + RemoveOrganization(): error
+  }
+
+  class Organization {
+    - id: uuid.UUID
+    - inn: inn.INN
+    - n: name.Name
+    + ID(): uuid.UUID
+    + INN(): inn.INN
+    + Name(): name.Name
+    + ChangeINN(inn: inn.INN): error
+    + Rename(n: name.Name): error
+  }
+}
+
+package "domain/question-bank-quiz-attempt" {
+  class Bank {
+    - id: uuid.UUID
+    - t: title.Title
+    - questions: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Questions(): []uuid.UUID
+    + CountQuestions(): int
+    + HasQuestion(questionID: uuid.UUID): bool
+    + Rename(t: title.Title): error
+    + AddQuestions(questions: ...uuid.UUID): error
+    + RemoveQuestions(questions: ...uuid.UUID): error
+    + ClearQuestions(): void
+  }
+
+  interface Question {
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Attachment(): (attachment.Attachment, bool)
+    + Instruction(): string
+    + Type(): question.Type
+    + Clone(): Question
+    + ChangeTitle(t: title.Title): void
+    + ChangeAttachment(a: attachment.Attachment): void
+    + RemoveAttachment(): void
+    + HasAttachment(): bool
+  }
+
+  class QuestionBase {
+    - id: uuid.UUID
+    - title: title.Title
+    - attachment: attachment.Attachment
+    - hasAttachment: bool
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Attachment(): (attachment.Attachment, bool)
+    + ChangeTitle(t: title.Title): void
+    + ChangeAttachment(a: attachment.Attachment): void
+    + HasAttachment(): bool
+    + RemoveAttachment(): void
+    + Clone(): *base.Base
+  }
+
+  class Attachment {
+    - media: media.Media
+    + Media(): media.Media
+    + IsZero(): bool
+  }
+
+  class SelectableQuestion {
+    - Base: *base.Base
+    - options: []selectable.option.Option
+    + Instruction(): string
+    + Options(): []selectable.option.Option
+    + CorrectOptionsCount(): int
+    + Type(): question.Type
+    + ChangeOptions(options: []selectable.option.Option): error
+    + Clone(): question.Question
+  }
+
+  class SequenceQuestion {
+    - Base: *base.Base
+    - options: []sequence.option.Option
+    + Instruction(): string
+    + Options(): []sequence.option.Option
+    + Type(): question.Type
+    + ChangeOptions(options: []sequence.option.Option): error
+    + Clone(): question.Question
+  }
+
+  class MatchingQuestion {
+    - Base: *base.Base
+    - pairs: []pair.Pair
+    + Instruction(): string
+    + Pairs(): []pair.Pair
+    + Type(): question.Type
+    + ChangePairs(pairs: []pair.Pair): error
+    + Clone(): question.Question
+  }
+
+  class TypedQuestion {
+    - Base: *base.Base
+    - blanks: []blank.Blank
+    + Instruction(): string
+    + Blanks(): []blank.Blank
+    + Type(): question.Type
+    + ReplaceContent(t: title.Title, blanks: []blank.Blank): error
+    + Clone(): question.Question
+  }
+
+  class ShortQuestion {
+    - Base: *base.Base
+    - variants: []variant.Variant
+    + Instruction(): string
+    + Variants(): []variant.Variant
+    + Type(): question.Type
+    + ChangeVariants(variants: []variant.Variant): error
+    + Clone(): question.Question
+  }
+
+  class Quiz {
+    - id: uuid.UUID
+    - time: limit.Time
+    - attempts: limit.Attempts
+    - t: title.Title
+    - shuffleQuestions: bool
+    - sources: []source.Source
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Sources(): []source.Source
+    + Attempts(): limit.Attempts
+    + Time(): limit.Time
+    + ShuffleQuestions(): bool
+    + HasInfiniteAttempts(): bool
+    + HasInfiniteTime(): bool
+    + ChangeMaxAttempts(maxAttempts: limit.Attempts): error
+    + ChangeTimeLimit(limit: limit.Time): error
+    + ChangeShuffleQuestions(enabled: bool): void
+    + Rename(t: title.Title): error
+    + ReplaceSources(sources: []source.Source): error
+    + ChangeSource(s: source.Source): error
+    + AddSource(s: source.Source): error
+    + RemoveSource(s: source.Source): error
+    + RemoveSourceByBankID(bankID: uuid.UUID): error
+  }
+
+  class Attempt {
+    - id: uuid.UUID
+    - enrollmentID: uuid.UUID
+    - quizID: uuid.UUID
+    - status: Status
+    - startedAt: time.Time
+    - deadlineAt: time.Time
+    - finishedAt: time.Time
+    - answers: map[uuid.UUID]answer.Entry
+    - items: []item.Item
+    + ID(): uuid.UUID
+    + EnrollmentID(): uuid.UUID
+    + QuizID(): uuid.UUID
+    + Status(): Status
+    + StartedAt(): time.Time
+    + DeadlineAt(): time.Time
+    + FinishedAt(): time.Time
+    + Items(): []item.Item
+    + Answers(): map[uuid.UUID]answer.Entry
+    + CountItems(): int
+    + CountAnswers(): int
+    + CanModify(): bool
+    + AddAnswer(qID: uuid.UUID, ans: question.Answer, at: time.Time): error
+    + Finish(at: time.Time): error
+    + SetExpired(at: time.Time): error
+    + Interrupt(at: time.Time): error
+    + Cancel(at: time.Time): error
+  }
+}
+
+package "domain/course-enrollment-progress" {
+  class Course {
+    - id: uuid.UUID
+    - t: title.Title
+    - versionIDs: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + VersionIDs(): []uuid.UUID
+    + ChangeTitle(t: title.Title): error
+    + AddVersionID(versionID: uuid.UUID): error
+    + RemoveVersionID(versionID: uuid.UUID): error
+    + HasVersion(versionID: uuid.UUID): bool
+    + Clone(): *Course
+  }
+
+  class Version {
+    - id: uuid.UUID
+    - t: title.Title
+    - status: Status
+    - blockIDs: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + BlockIDs(): []uuid.UUID
+    + Status(): Status
+    + ChangeTitle(t: title.Title): error
+    + AddBlockID(id: uuid.UUID): error
+    + RemoveBlockID(id: uuid.UUID): error
+    + MoveFromTo(from: int, to: int): error
+    + Publish(): error
+    + MarkAsDeleted(): error
+    + IsDraft(): bool
+    + IsPublished(): bool
+    + IsDeleted(): bool
+    + Clone(): *Version
+    + Replicate(): (*Version, error)
+  }
+
+  class Block {
+    - id: uuid.UUID
+    - t: title.Title
+    - elementIDs: []uuid.UUID
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + ElementIDs(): []uuid.UUID
+    + ChangeTitle(t: title.Title): error
+    + AddElementID(id: uuid.UUID): error
+    + RemoveElementID(id: uuid.UUID): error
+    + MoveFromTo(from: int, to: int): error
+    + Clone(): *Block
+    + Replicate(): (*Block, error)
+  }
+
+  class Element {
+    - id: uuid.UUID
+    - t: title.Title
+    - content: Content
+    + ID(): uuid.UUID
+    + Title(): title.Title
+    + Content(): Content
+    + ChangeTitle(t: title.Title): error
+    + ChangeContent(c: Content): error
+    + Replicate(): (*Element, error)
+    + Clone(): *Element
+    + IsInteractive(): bool
+  }
+
+  class Enrollment {
+    - id: uuid.UUID
+    - courseID: uuid.UUID
+    - versionID: uuid.UUID
+    - accountID: uuid.UUID
+    - activatedAt: time.Time
+    - deactivatedAt: time.Time
+    + ID(): uuid.UUID
+    + CourseID(): uuid.UUID
+    + VersionID(): uuid.UUID
+    + AccountID(): uuid.UUID
+    + ActivatedAt(): time.Time
+    + DeactivatedAt(): time.Time
+    + Status(at: time.Time): Status
+    + IsActive(at: time.Time): bool
+    + ChangeActivationWindow(activatedAt: time.Time, deactivatedAt: time.Time): error
+    + ChangeActivationWindowAt(activatedAt: time.Time, deactivatedAt: time.Time, now: time.Time): error
+    + Deactivate(at: time.Time): error
+    + Clone(): *Enrollment
+  }
+
+  class Progress {
+    - id: uuid.UUID
+    - enrollmentID: uuid.UUID
+    - versionID: uuid.UUID
+    - markers: map[uuid.UUID]Marker
+    + ID(): uuid.UUID
+    + EnrollmentID(): uuid.UUID
+    + VersionID(): uuid.UUID
+    + Markers(): map[uuid.UUID]Marker
+    + MarkElement(elementID: uuid.UUID, markerType: MarkerType, at: time.Time): error
+    + CompletedCount(): int
+    + CompletionPercent(totalTrackedItems: int): int
+  }
+
+  class Marker {
+    - mType: MarkerType
+    - completedAt: time.Time
+    + Type(): MarkerType
+    + CompletedAt(): time.Time
+  }
+}
+
+package "infrastructure" {
+  class AccountRepositoryPg {
+    - db: *sql.DB
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*account.Account, error)
+    + FindByLogin(ctx: context.Context, login: login.Login): (*account.Account, error)
+    + Save(ctx: context.Context, acc: *account.Account): error
+    + RecordAccountAudit(ctx: context.Context, event: AuditEvent): error
+  }
+
+  class CourseQueryServicePg {
+    - db: *sql.DB
+    + ListManageable(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + ListVisibleForStudent(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + GetDetailsByID(ctx: context.Context, id: uuid.UUID): (DetailedView, error)
+    + ListRatings(ctx: context.Context, courseID: uuid.UUID, limit: int, offset: int): ([]StudentRatingView, error)
+    + ListStudentStatistics(ctx: context.Context, filter: StudentStatisticsFilter): ([]StudentRatingView, error)
+  }
+
+  class BcryptPasswordComparer {
+    - cost: int
+    + Hash(plain: string): (passhash.Hash, error)
+    + Compare(hash: passhash.Hash, plain: string): bool
+  }
+
+  class MathRandQuestionShuffler {
+    - mu: sync.Mutex
+    - r: *rand.Rand
+    + ShuffleQuestions(questions: []question.Question): []question.Question
+  }
+
+  class MinIOStorage {
+    - client: *minio.Client
+    - bucket: string
+    + PutObject(ctx: context.Context, object: StoredObject): error
+    + GetObject(ctx: context.Context, key: string): (*Object, error)
+  }
+}
+
+ServerConfig --> Handlers
+Server --> Handlers
+Server --> SessionManager
+Handlers --> AuthHandler
+Handlers --> API
+AuthHandler --> AuthenticateUseCase
+API --> AccountUseCases
+API --> QuestionUseCases
+API --> QuizUseCases
+API --> AttemptUseCases
+API --> CourseUseCases
+
+AuthenticateUseCase --> AccountRepository
+CreateAccountUseCase --> AccountRepository
+ChangePasswordUseCase --> AccountRepository
+CreateQuestionUseCase --> Question
+GradeUseCase --> Question
+CreateQuizUseCase --> QuizRepository
+StartAttemptUseCase --> AttemptRepository
+StartAttemptUseCase --> QuizRepository
+StartAttemptUseCase --> QuestionSetProvider
+StartAttemptUseCase --> QuestionShuffler
+CreateCourseUseCase --> CourseRepository
+CreateVersionUseCase --> VersionRepository
+AddBlockUseCase --> BlockRepository
+CreateEnrollmentUseCase --> ProgressRepository
+ListCoursesQuery --> QueryService
+RatingsQuery --> QueryService
+StudentStatisticsQuery --> QueryService
+
+AccountRepository --> Account
+CourseRepository --> Course
+VersionRepository --> Version
+BlockRepository --> Block
+ProgressRepository --> Progress
+AttemptRepository --> Attempt
+QuizRepository --> Quiz
+
+Question <|.. SelectableQuestion
+Question <|.. SequenceQuestion
+Question <|.. MatchingQuestion
+Question <|.. TypedQuestion
+Question <|.. ShortQuestion
+SelectableQuestion *-- QuestionBase : embedded Base
+SequenceQuestion *-- QuestionBase : embedded Base
+MatchingQuestion *-- QuestionBase : embedded Base
+TypedQuestion *-- QuestionBase : embedded Base
+ShortQuestion *-- QuestionBase : embedded Base
+QuestionBase o-- Attachment : optional attachment
+
+Account "1" --> "1" Person : personID
+Person "0..1" --> "0..1" Organization : organizationID in profile
+Bank "1" o-- "0..*" Question : questionIDs
+Quiz "1" --> "1..*" Bank : sources
+Attempt "1" --> "1" Quiz : quizID
+Attempt "1" --> "1" Enrollment : enrollmentID
+Course "1" o-- "0..*" Version : versionIDs
+Version "1" o-- "0..*" Block : blockIDs
+Block "1" o-- "0..*" Element : elementIDs
+Enrollment "1" --> "1" Account : accountID
+Enrollment "1" --> "1" Course : courseID
+Enrollment "1" --> "1" Version : versionID
+Progress "1" --> "1" Enrollment : enrollmentID
+Progress "1" o-- "0..*" Marker : markers
+
+AccountRepositoryPg ..|> AccountRepository
+CourseQueryServicePg ..|> QueryService
+BcryptPasswordComparer ..|> PasswordHasher
+BcryptPasswordComparer ..|> PasswordComparer
+MathRandQuestionShuffler ..|> QuestionShuffler
+
+@enduml

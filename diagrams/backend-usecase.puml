@@ -1,0 +1,144 @@
+@startuml
+title LMS Backend - Use Case Diagram
+left to right direction
+
+skinparam packageStyle rectangle
+
+actor "Administrator" as Admin
+actor "Course Creator" as Creator
+actor "Student" as Student
+actor "Organization Role" as OrgRole
+
+rectangle "Authentication" {
+  usecase "Login" as UC_Login
+  usecase "View session" as UC_Session
+  usecase "Logout" as UC_Logout
+}
+
+rectangle "Account Management" {
+  usecase "List accounts" as UC_AccountsList
+  usecase "Create account" as UC_AccountCreate
+  usecase "Change login" as UC_AccountLogin
+  usecase "Change password" as UC_AccountPassword
+  usecase "Change role" as UC_AccountRole
+  usecase "Block account" as UC_AccountBlock
+  usecase "Activate account" as UC_AccountActivate
+  usecase "Delete account" as UC_AccountDelete
+}
+
+rectangle "Organization & Person Management" {
+  usecase "Manage organizations" as UC_Org
+  usecase "Manage persons" as UC_Person
+  usecase "Assign person organization" as UC_PersonOrg
+}
+
+rectangle "Question Bank and Quiz" {
+  usecase "Manage question banks" as UC_Bank
+  usecase "Manage questions" as UC_Question
+  usecase "Grade question answer" as UC_Grade
+  usecase "Manage quizzes" as UC_Quiz
+  usecase "Configure shuffle policy" as UC_Shuffle
+}
+
+rectangle "Course Management" {
+  usecase "List courses" as UC_CourseList
+  usecase "Create course" as UC_CourseCreate
+  usecase "Rename draft course" as UC_CourseRename
+  usecase "Create version" as UC_VersionCreate
+  usecase "Add version block" as UC_BlockAdd
+  usecase "Publish version" as UC_VersionPublish
+  usecase "View ratings" as UC_Ratings
+}
+
+rectangle "Enrollment and Learning" {
+  usecase "Create enrollment" as UC_Enroll
+  usecase "View own enrolled courses" as UC_StudentCourses
+  usecase "Mark content progress" as UC_Progress
+  usecase "Start quiz attempt" as UC_AttemptStart
+  usecase "Submit attempt answer" as UC_AttemptAnswer
+  usecase "Finish/cancel attempt" as UC_AttemptEnd
+}
+
+rectangle "Statistics" {
+  usecase "View all student statistics" as UC_StatsAll
+  usecase "View organization student statistics" as UC_StatsOrg
+  usecase "View own statistics" as UC_StatsOwn
+}
+
+Admin --> UC_Login
+Creator --> UC_Login
+Student --> UC_Login
+OrgRole --> UC_Login
+
+Admin --> UC_Session
+Creator --> UC_Session
+Student --> UC_Session
+OrgRole --> UC_Session
+
+Admin --> UC_Logout
+Creator --> UC_Logout
+Student --> UC_Logout
+OrgRole --> UC_Logout
+
+Admin --> UC_AccountsList
+Admin --> UC_AccountCreate
+Admin --> UC_AccountLogin
+Admin --> UC_AccountPassword
+Admin --> UC_AccountRole
+Admin --> UC_AccountBlock
+Admin --> UC_AccountActivate
+Admin --> UC_AccountDelete
+
+Admin --> UC_Org
+Admin --> UC_Person
+Admin --> UC_PersonOrg
+
+Admin --> UC_Bank
+Creator --> UC_Bank
+Admin --> UC_Question
+Creator --> UC_Question
+Admin --> UC_Quiz
+Creator --> UC_Quiz
+UC_Quiz .> UC_Shuffle : includes
+Student --> UC_Grade
+Admin --> UC_Grade
+Creator --> UC_Grade
+
+Admin --> UC_CourseList
+Creator --> UC_CourseList
+Student --> UC_StudentCourses
+Admin --> UC_CourseCreate
+Creator --> UC_CourseCreate
+Admin --> UC_CourseRename
+Creator --> UC_CourseRename
+Admin --> UC_VersionCreate
+Creator --> UC_VersionCreate
+Admin --> UC_BlockAdd
+Creator --> UC_BlockAdd
+Admin --> UC_VersionPublish
+Creator --> UC_VersionPublish
+Admin --> UC_Ratings
+Creator --> UC_Ratings
+
+Admin --> UC_Enroll
+Creator --> UC_Enroll
+Student --> UC_Progress
+Student --> UC_AttemptStart
+Student --> UC_AttemptAnswer
+Student --> UC_AttemptEnd
+
+Admin --> UC_StatsAll
+OrgRole --> UC_StatsOrg
+Student --> UC_StatsOwn
+
+note right of UC_AccountPassword
+Only Administrator changes passwords.
+Students cannot self-change passwords.
+end note
+
+note right of UC_CourseRename
+Courses are editable before publication.
+Published versions are copied instead of edited.
+end note
+
+@enduml

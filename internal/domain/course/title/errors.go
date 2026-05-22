@@ -1,7 +1,0 @@
-package title
-
-import "errors"
-
-var (
-	ErrInvalid = errors.New("некорректное название банка вопросов")
-)

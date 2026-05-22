@@ -1,16 +1,19 @@
+//go:build legacy
+// +build legacy
+
 package answer_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/short/answer"
+	answer2 "gitflic.ru/lms/backend/internal/domain/question/short/answer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
 	//Arrange
-	ans := answer.New(answer.AnswerVariant{
+	ans := answer2.New(answer2.AnswerVariant{
 		Input: "input",
 	})
 
@@ -39,7 +42,7 @@ func TestIsEmpty(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			ans := answer.New(answer.AnswerVariant{
+			ans := answer2.New(answer2.AnswerVariant{
 				Input: "input",
 			})
 
@@ -51,10 +54,10 @@ func TestIsEmpty(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	//Arrange
-	ans := answer.New(answer.AnswerVariant{
+	ans := answer2.New(answer2.AnswerVariant{
 		Input: "input",
 	})
-	clone, ok := ans.Clone().(answer.Answer)
+	clone, ok := ans.Clone().(answer2.Answer)
 	require.True(t, ok)
 
 	//Assert

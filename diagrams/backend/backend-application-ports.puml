@@ -1,0 +1,84 @@
+@startuml
+title Серверная часть СДО - слой портов (слой приложения) 
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "application/ports" {
+  interface AccountRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*account.Account, error)
+    + FindByLogin(ctx: context.Context, login: login.Login): (*account.Account, error)
+    + LoginExists(ctx: context.Context, login: login.Login, excludeAccountID: uuid.UUID): (bool, error)
+    + PersonHasAccount(ctx: context.Context, personID: uuid.UUID, excludeAccountID: uuid.UUID): (bool, error)
+    + Save(ctx: context.Context, acc: *account.Account): error
+  }
+
+  interface CourseRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*course.Course, error)
+    + Save(ctx: context.Context, c: *course.Course): error
+  }
+
+  interface VersionRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*version.Version, error)
+    + Save(ctx: context.Context, v: *version.Version): error
+  }
+
+  interface BlockRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*block.Block, error)
+    + Save(ctx: context.Context, b: *block.Block): error
+  }
+
+  interface ProgressRepository {
+    + FindByEnrollmentID(ctx: context.Context, enrollmentID: uuid.UUID): (*progress.Progress, error)
+    + Save(ctx: context.Context, p: *progress.Progress): error
+  }
+
+  interface AttemptRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*attempt.Attempt, error)
+    + Save(ctx: context.Context, a: *attempt.Attempt): error
+    + CountByEnrollmentAndQuiz(ctx: context.Context, enrollmentID: uuid.UUID, quizID: uuid.UUID): (int, error)
+  }
+
+  interface QuizRepository {
+    + FindByID(ctx: context.Context, id: uuid.UUID): (*quiz.Quiz, error)
+    + Save(ctx: context.Context, q: *quiz.Quiz): error
+    + DeleteByID(ctx: context.Context, id: uuid.UUID): error
+  }
+
+  interface QuestionSetProvider {
+    + FindQuestionsByIDs(ctx: context.Context, bankID: uuid.UUID, questionIDs: []uuid.UUID): ([]question.Question, error)
+    + SelectRandomQuestions(ctx: context.Context, bankID: uuid.UUID, count: int): ([]question.Question, error)
+  }
+
+  interface QuestionBankInspector {
+    + CountQuestionsInBank(ctx: context.Context, bankID: uuid.UUID): (int, error)
+    + QuestionsBelongToBank(ctx: context.Context, bankID: uuid.UUID, questionIDs: []uuid.UUID): (bool, error)
+  }
+
+  interface EnrollmentPolicy {
+    + CanStartQuiz(ctx: context.Context, accountID: uuid.UUID, enrollmentID: uuid.UUID, quizID: uuid.UUID, at: time.Time): (bool, error)
+  }
+
+  interface PasswordHasher {
+    + Hash(plain: string): (passhash.Hash, error)
+  }
+
+  interface PasswordComparer {
+    + Compare(hash: passhash.Hash, plain: string): bool
+  }
+
+  interface QuestionShuffler {
+    + ShuffleQuestions(questions: []question.Question): []question.Question
+  }
+
+  interface QueryService {
+    + ListManageable(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + ListVisibleForStudent(ctx: context.Context, filter: Filter): ([]ShortView, error)
+    + GetDetailsByID(ctx: context.Context, id: uuid.UUID): (DetailedView, error)
+    + ListRatings(ctx: context.Context, courseID: uuid.UUID, limit: int, offset: int): ([]StudentRatingView, error)
+    + ListStudentStatistics(ctx: context.Context, filter: StudentStatisticsFilter): ([]StudentRatingView, error)
+  }
+}
+
+@enduml

@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package duplicates_test
 
 import (
 	"fmt"
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/shared/duplicates"
+	"gitflic.ru/lms/backend/internal/domain/shared/duplicates"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

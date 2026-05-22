@@ -1,0 +1,21 @@
+@startuml
+title Серверная часть СДО - зависимости между слоями
+
+skinparam packageStyle rectangle
+
+package http
+package usecases
+package ports
+
+package domain
+
+package infra
+
+http --> usecases
+http --> ports
+usecases --> ports
+usecases --> domain
+ports --> domain
+infra ..|> ports
+
+@enduml

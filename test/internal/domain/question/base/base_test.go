@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package base_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/base"
+	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

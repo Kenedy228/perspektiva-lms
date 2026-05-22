@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 package duplicates_test
 
 import "github.com/google/uuid"

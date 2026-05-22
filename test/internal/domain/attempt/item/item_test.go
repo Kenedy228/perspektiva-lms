@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package item_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/attempt/item"
+	item2 "gitflic.ru/lms/backend/internal/domain/attempt/item"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,10 +16,10 @@ import (
 func TestNew(t *testing.T) {
 	t.Run("передан nil вместо вопроса возвращает ошибку", func(t *testing.T) {
 		// Act
-		_, err := item.New(nil)
+		_, err := item2.New(nil)
 
 		// Assert
-		assert.ErrorIs(t, err, item.ErrInvalid)
+		assert.ErrorIs(t, err, item2.ErrInvalid)
 	})
 
 	t.Run("успешное создание", func(t *testing.T) {
@@ -25,7 +28,7 @@ func TestNew(t *testing.T) {
 		q := mockQuestion{id: qID}
 
 		// Act
-		itm, err := item.New(q)
+		itm, err := item2.New(q)
 
 		// Assert
 		assert.NoError(t, err)

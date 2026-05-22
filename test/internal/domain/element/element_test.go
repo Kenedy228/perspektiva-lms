@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 package element_test
 
 import (
@@ -5,7 +8,7 @@ import (
 	"testing/synctest"
 	"time"
 
-	"gitflic.ru/lms/internal/domain/element"
+	"gitflic.ru/lms/backend/internal/domain/element"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

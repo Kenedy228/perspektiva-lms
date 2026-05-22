@@ -1,0 +1,145 @@
+@startuml
+title Серверная часть СДО - транспортный слой (слой презентации) 
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+package "transport/http" {
+  class Server {
+    - logger: *slog.Logger
+    - session: *session.Manager
+    - handlers: Handlers
+    + Handler(): http.Handler
+    - requireAuth(next: http.HandlerFunc): http.HandlerFunc
+    - health(w: http.ResponseWriter, r: *http.Request): void
+    - index(w: http.ResponseWriter, r: *http.Request): void
+  }
+
+  class ServerConfig {
+    + Logger: *slog.Logger
+    + Session: *session.Manager
+    + Handlers: Handlers
+  }
+
+  class Handlers {
+    + Auth: *AuthHandler
+    + API: *API
+  }
+
+  class AuthHandler {
+    - authenticate: *AuthenticateUseCase
+    - sessions: *session.Manager
+    + Login(w: http.ResponseWriter, r: *http.Request): void
+    + Logout(w: http.ResponseWriter, r: *http.Request): void
+    + Session(w: http.ResponseWriter, r: *http.Request): void
+  }
+
+  class API {
+    + Accounts: AccountUseCases
+    + Organizations: OrganizationUseCases
+    + Persons: PersonUseCases
+    + Banks: BankUseCases
+    + Questions: QuestionUseCases
+    + Quizzes: QuizUseCases
+    + Attempts: AttemptUseCases
+    + Courses: CourseUseCases
+    + Enrollments: EnrollmentUseCases
+  }
+
+  class Envelope {
+    + Data: any
+    + Links: Links
+  }
+
+  class Error {
+    + Status: int
+    + Code: string
+    + Message: string
+    + Details: map[string]any
+    + Links: Links
+  }
+
+  class SessionClaims {
+    + AccountID: uuid.UUID
+    + PersonID: uuid.UUID
+    + Role: role.Role
+    + RoleValue: string
+    + IssuedAt: int64
+    + ExpiresAt: int64
+  }
+
+  class SessionManager {
+    - secret: []byte
+    - ttl: time.Duration
+    - now: func(): time.Time
+    + Issue(accountID: uuid.UUID, personID: uuid.UUID, role: role.Role): (string, Claims, error)
+    + Verify(token: string): (Claims, error)
+  }
+
+  class AccountUseCases {
+    + Create: *CreateUseCase
+    + ChangeLogin: *ChangeLoginUseCase
+    + ChangePassword: *ChangePasswordUseCase
+    + ChangeRole: *ChangeRoleUseCase
+    + Block: *BlockUseCase
+    + Activate: *ActivateUseCase
+    + Delete: *DeleteUseCase
+    + List: *ListQuery
+    + Get: *GetByIDQuery
+  }
+
+  class QuestionUseCases {
+    + Create: *CreateUseCase
+    + ChangeTitle: *ChangeTitleUseCase
+    + ChangeAttachment: *ChangeAttachmentUseCase
+    + RemoveAttachment: *RemoveAttachmentUseCase
+    + Selectable: *ChangeSelectableOptionsUseCase
+    + Sequence: *ChangeSequenceOptionsUseCase
+    + Matching: *ChangeMatchingPairsUseCase
+    + Typed: *ChangeTypedContentUseCase
+    + Short: *ChangeShortVariantsUseCase
+    + Grade: *GradeUseCase
+    + ValidateAnswer: *ValidateAnswerUseCase
+    + Repository: QuestionReader
+  }
+
+  class QuizUseCases {
+    + Create: *CreateUseCase
+    + Rename: *RenameUseCase
+    + ChangeLimits: *ChangeLimitsUseCase
+    + ChangeShuffle: *ChangeShufflePolicyUseCase
+    + Replace: *ReplaceSourcesUseCase
+    + Repository: quiz.Repository
+  }
+
+  class AttemptUseCases {
+    + Start: *StartUseCase
+    + Answer: *AddAnswerUseCase
+    + Finish: *FinishUseCase
+    + Cancel: *CancelUseCase
+    + Repository: attemptReader
+  }
+
+  class CourseUseCases {
+    + Create: *CreateCourseUseCase
+    + Rename: *RenameCourseUseCase
+    + Version: *CreateVersionUseCase
+    + Block: *AddBlockUseCase
+    + Publish: *PublishVersionUseCase
+    + Progress: *MarkProgressUseCase
+    + List: *ListQuery
+    + Ratings: *RatingsQuery
+    + Statistics: *StudentStatisticsQuery
+    + Query: course.QueryService
+  }
+
+  ' связи внутри пакета
+  ServerConfig --> Handlers
+  Server --> Handlers
+  Server --> SessionManager
+  Handlers --> AuthHandler
+  Handlers --> API
+}
+
+@enduml

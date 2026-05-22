@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package selectable_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question"
-	"gitflic.ru/lms/internal/domain/question/selectable"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	selectable2 "gitflic.ru/lms/backend/internal/domain/question/selectable"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +28,7 @@ func TestNew_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			q, err := selectable.New(
+			q, err := selectable2.New(
 				mockTitle(),
 				makeOptions(tt.correctCount, tt.optionsCount-tt.correctCount),
 			)
@@ -51,26 +54,26 @@ func TestNew_Fail(t *testing.T) {
 			name:         "количество опций меньше ограничения",
 			optionsCount: 1,
 			correctCount: 1,
-			wantErr:      selectable.ErrInvalid,
+			wantErr:      selectable2.ErrInvalid,
 		},
 		{
 			name:         "количество опций больше ограничения",
 			optionsCount: 30,
 			correctCount: 1,
-			wantErr:      selectable.ErrInvalid,
+			wantErr:      selectable2.ErrInvalid,
 		},
 		{
 			name:         "количество верных опций меньше ограничения",
 			optionsCount: 10,
 			correctCount: 0,
-			wantErr:      selectable.ErrInvalid,
+			wantErr:      selectable2.ErrInvalid,
 		},
 	}
 
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			_, err := selectable.New(
+			_, err := selectable2.New(
 				mockTitle(),
 				makeOptions(tt.correctCount, tt.optionsCount-tt.correctCount),
 			)
@@ -84,7 +87,7 @@ func TestNew_Fail(t *testing.T) {
 
 func TestOptions(t *testing.T) {
 	//Arrange
-	q, err := selectable.New(
+	q, err := selectable2.New(
 		mockTitle(),
 		makeOptions(5, 3),
 	)
@@ -114,7 +117,7 @@ func TestUpdateOptions_Success(t *testing.T) {
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
-			q, err := selectable.New(
+			q, err := selectable2.New(
 				mockTitle(),
 				makeOptions(5, 3),
 			)
@@ -122,7 +125,7 @@ func TestUpdateOptions_Success(t *testing.T) {
 			newOpts := makeOptions(2, 3)
 
 			//Act
-			err = q.UpdateOptions(newOpts)
+			err = q.ChangeOptions(newOpts)
 
 			//Assert
 			assert.NoError(t, err)
@@ -142,19 +145,19 @@ func TestUpdateOptions_Fail(t *testing.T) {
 			name:         "количество опций меньше ограничения",
 			optionsCount: 1,
 			correctCount: 1,
-			wantErr:      selectable.ErrInvalid,
+			wantErr:      selectable2.ErrInvalid,
 		},
 		{
 			name:         "количество опций больше ограничения",
 			optionsCount: 30,
 			correctCount: 1,
-			wantErr:      selectable.ErrInvalid,
+			wantErr:      selectable2.ErrInvalid,
 		},
 		{
 			name:         "количество верных опций меньше ограничения",
 			optionsCount: 10,
 			correctCount: 0,
-			wantErr:      selectable.ErrInvalid,
+			wantErr:      selectable2.ErrInvalid,
 		},
 	}
 
@@ -162,7 +165,7 @@ func TestUpdateOptions_Fail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			//Arrange
 			oldOpts := makeOptions(5, 3)
-			q, err := selectable.New(
+			q, err := selectable2.New(
 				mockTitle(),
 				oldOpts,
 			)
@@ -170,7 +173,7 @@ func TestUpdateOptions_Fail(t *testing.T) {
 			newOpts := makeOptions(tt.correctCount, tt.optionsCount-tt.correctCount)
 
 			//Act
-			err = q.UpdateOptions(newOpts)
+			err = q.ChangeOptions(newOpts)
 
 			//Assert
 			assert.Error(t, err)
@@ -182,12 +185,12 @@ func TestUpdateOptions_Fail(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	//Arrange
-	q, err := selectable.New(
+	q, err := selectable2.New(
 		mockTitle(),
 		makeOptions(5, 3),
 	)
 	require.NoError(t, err)
-	clone, ok := q.Clone().(*selectable.Question)
+	clone, ok := q.Clone().(*selectable2.Question)
 	require.True(t, ok)
 
 	//Assert

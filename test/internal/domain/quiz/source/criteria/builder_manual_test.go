@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package criteria_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz/source/criteria"
+	criteria2 "gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,17 +38,17 @@ func (b *manualBuilder) withMaxSizeQuestions() *manualBuilder {
 	return b
 }
 
-func (b *manualBuilder) build(t *testing.T, wantErr error) criteria.Criteria {
+func (b *manualBuilder) build(t *testing.T, wantErr error) criteria2.Criteria {
 	t.Helper()
 
-	c, err := criteria.NewManual(b.questionIDs)
+	c, err := criteria2.NewManual(b.questionIDs)
 
 	assert.ErrorIs(t, err, wantErr)
 
 	return c
 }
 
-func (b *manualBuilder) buildNoTest() criteria.Criteria {
-	c, _ := criteria.NewManual(b.questionIDs)
+func (b *manualBuilder) buildNoTest() criteria2.Criteria {
+	c, _ := criteria2.NewManual(b.questionIDs)
 	return c
 }

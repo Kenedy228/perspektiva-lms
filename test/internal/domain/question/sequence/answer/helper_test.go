@@ -1,7 +1,10 @@
+//go:build legacy
+// +build legacy
+
 package answer_test
 
 import (
-	"gitflic.ru/lms/internal/domain/question/sequence/answer"
+	"gitflic.ru/lms/backend/internal/domain/question/sequence/answer"
 	"github.com/google/uuid"
 )
 

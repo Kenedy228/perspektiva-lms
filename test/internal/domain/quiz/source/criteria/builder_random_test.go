@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package criteria_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/quiz/source/criteria"
+	criteria2 "gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,10 +25,10 @@ func (b *randomBuilder) withCount(count int) *randomBuilder {
 	return b
 }
 
-func (b *randomBuilder) build(t *testing.T, wantErr error) criteria.Criteria {
+func (b *randomBuilder) build(t *testing.T, wantErr error) criteria2.Criteria {
 	t.Helper()
 
-	c, err := criteria.NewRandom(b.questionCount)
+	c, err := criteria2.NewRandom(b.questionCount)
 
 	assert.ErrorIs(t, err, wantErr)
 

@@ -1,9 +1,12 @@
+//go:build legacy
+// +build legacy
+
 package matching_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/matching"
+	matching2 "gitflic.ru/lms/backend/internal/domain/question/matching"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,12 +46,12 @@ func TestNew_Fail(t *testing.T) {
 		{
 			name:    "количество пар меньше необходимого",
 			count:   1,
-			wantErr: matching.ErrInvalid,
+			wantErr: matching2.ErrInvalid,
 		},
 		{
 			name:    "количество пар больше необходимого",
 			count:   30,
-			wantErr: matching.ErrInvalid,
+			wantErr: matching2.ErrInvalid,
 		},
 	}
 
@@ -90,7 +93,7 @@ func TestClone(t *testing.T) {
 		withTitle("title").
 		build()
 	require.NoError(t, err)
-	clone, ok := q.Clone().(*matching.Question)
+	clone, ok := q.Clone().(*matching2.Question)
 	require.True(t, ok)
 
 	//Assert

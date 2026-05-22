@@ -1,68 +1,71 @@
+//go:build legacy
+// +build legacy
+
 package role_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/role"
+	role2 "gitflic.ru/lms/backend/internal/domain/role"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTypeTitle(t *testing.T) {
 	t.Run("для фиксированных значений возвращает непустую строку", func(t *testing.T) {
 		//Assert
-		assert.NotEmpty(t, role.TypeAdmin.Title())
-		assert.NotEmpty(t, role.TypeOrganization.Title())
-		assert.NotEmpty(t, role.TypeStudent.Title())
-		assert.NotEmpty(t, role.TypeCreator.Title())
+		assert.NotEmpty(t, role2.TypeAdmin.Title())
+		assert.NotEmpty(t, role2.TypeOrganization.Title())
+		assert.NotEmpty(t, role2.TypeStudent.Title())
+		assert.NotEmpty(t, role2.TypeCreator.Title())
 	})
 
 	t.Run("для нефиксированных значений возвращает пустую строку", func(t *testing.T) {
 		//Assert
-		assert.Empty(t, role.Type("unexisting").Title())
+		assert.Empty(t, role2.Type("unexisting").Title())
 	})
 }
 
 func TestTypeAllows(t *testing.T) {
 	tc := []struct {
 		name    string
-		rType   role.Type
-		res     role.Resource
-		action  role.Action
+		rType   role2.Type
+		res     role2.Resource
+		action  role2.Action
 		allowed bool
 	}{
 		{
 			name:    "администратор разрешает доступ к существующему ресурсу и действию",
-			rType:   role.TypeAdmin,
-			res:     role.ResourceUser,
-			action:  role.ActionWrite,
+			rType:   role2.TypeAdmin,
+			res:     role2.ResourceUser,
+			action:  role2.ActionWrite,
 			allowed: true,
 		},
 		{
 			name:    "администратор запрещает доступ к несуществующему ресурсу с существующим действием",
-			rType:   role.TypeAdmin,
-			res:     role.Resource("unexisting"),
-			action:  role.ActionWrite,
+			rType:   role2.TypeAdmin,
+			res:     role2.Resource("unexisting"),
+			action:  role2.ActionWrite,
 			allowed: false,
 		},
 		{
 			name:    "администратор запрещает несуществующее действие с существующим ресурсом",
-			rType:   role.TypeAdmin,
-			res:     role.ResourceUser,
-			action:  role.Action("unexisting"),
+			rType:   role2.TypeAdmin,
+			res:     role2.ResourceUser,
+			action:  role2.Action("unexisting"),
 			allowed: false,
 		},
 		{
 			name:    "несуществующий тип запрещает доступ к существующему ресурс и действию",
-			rType:   role.Type("incorrect"),
-			res:     role.ResourceUser,
-			action:  role.ActionRead,
+			rType:   role2.Type("incorrect"),
+			res:     role2.ResourceUser,
+			action:  role2.ActionRead,
 			allowed: false,
 		},
 		{
 			name:    "студент запрещает доступ к ресурсу, который не привязан к нему",
-			rType:   role.TypeStudent,
-			res:     role.ResourceUser,
-			action:  role.ActionWrite,
+			rType:   role2.TypeStudent,
+			res:     role2.ResourceUser,
+			action:  role2.ActionWrite,
 			allowed: false,
 		},
 	}

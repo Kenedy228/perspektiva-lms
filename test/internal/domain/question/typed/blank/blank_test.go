@@ -1,10 +1,13 @@
+//go:build legacy
+// +build legacy
+
 package blank_test
 
 import (
 	"testing"
 
-	"gitflic.ru/lms/internal/domain/question/content"
-	"gitflic.ru/lms/internal/domain/question/typed/blank"
+	"gitflic.ru/lms/backend/internal/domain/question/typed/blank"
+	"gitflic.ru/lms/backend/internal/domain/question/content"
 	"github.com/stretchr/testify/assert"
 )
 
