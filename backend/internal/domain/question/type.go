@@ -1,40 +1,21 @@
 package question
 
-import (
-	"fmt"
-	"strings"
-)
-
 type Type string
 
 const (
 	TypeSelectable Type = "selectable"
 	TypeMatching   Type = "matching"
 	TypeSequence   Type = "sequence"
-	TypeTyped      Type = "typed"
 	TypeShort      Type = "short"
 )
 
-var validTypes = map[Type]struct{}{
-	TypeSelectable: {},
-	TypeMatching:   {},
-	TypeSequence:   {},
-	TypeTyped:      {},
-	TypeShort:      {},
-}
-
-func ParseType(value string) (Type, error) {
-	t := Type(strings.TrimSpace(value))
-	if !t.IsValid() {
-		return "", fmt.Errorf("unknown question type %q", value)
-	}
-
-	return t, nil
-}
-
 func (t Type) IsValid() bool {
-	_, ok := validTypes[t]
-	return ok
+	switch t {
+	case TypeSelectable, TypeMatching, TypeSequence, TypeShort:
+		return true
+	default:
+		return false
+	}
 }
 
 func (t Type) Title() string {
@@ -47,8 +28,6 @@ func (t Type) Title() string {
 		return "последовательность"
 	case TypeShort:
 		return "короткий ответ"
-	case TypeTyped:
-		return "пропуски"
 	default:
 		return ""
 	}
@@ -64,8 +43,6 @@ func (t Type) DefaultInstruction() string {
 		return "расставьте события в хронологическом порядке"
 	case TypeShort:
 		return "введите короткий ответ"
-	case TypeTyped:
-		return "заполните пропуски"
 	default:
 		return ""
 	}
