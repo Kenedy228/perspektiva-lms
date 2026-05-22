@@ -1,33 +1,25 @@
 package variant
 
-import (
-	"errors"
-
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
-)
-
-const TextCharsLimit int = 1000
-
-var ErrInvalid = errors.New("invalid value")
-
 type Variant struct {
-	text text.Text
+	value string
 }
 
-func New(t text.Text) (Variant, error) {
-	if err := validateText(t); err != nil {
+func New(value string) (Variant, error) {
+	value = normalizeValue(value)
+
+	if err := validateValue(value); err != nil {
 		return Variant{}, err
 	}
 
 	return Variant{
-		text: t,
+		value: value,
 	}, nil
 }
 
-func (v Variant) Text() text.Text {
-	return v.text
+func (v Variant) Value() string {
+	return v.value
 }
 
 func (v Variant) IsZero() bool {
-	return len(v.text.Value()) == 0
+	return v.value == ""
 }
