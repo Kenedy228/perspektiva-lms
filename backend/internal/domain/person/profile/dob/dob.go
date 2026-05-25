@@ -2,12 +2,13 @@ package dob
 
 import "time"
 
-// DateOfBirth объект-значение нормализованная дата рождения человека.
+// DateOfBirth объект-значение нормализованной даты рождения взрослого человека.
 type DateOfBirth struct {
 	date time.Time
 }
 
-// New создает объект DateOfBirth.
+// New создает DateOfBirth из переданной даты рождения, нормализует её и проверяет,
+// что на момент asOf человек достиг совершеннолетия.
 func New(date, asOf time.Time) (DateOfBirth, error) {
 	date = normalize(date)
 	asOf = normalize(asOf)
@@ -21,12 +22,12 @@ func New(date, asOf time.Time) (DateOfBirth, error) {
 	}, nil
 }
 
-// Date возвращает нормализованную дату рождения.
+// Date возвращает нормализованную (UTC, без времени) дату рождения.
 func (db DateOfBirth) Date() time.Time {
 	return db.date
 }
 
-// IsZero сигнализирует, был ли инициализирован объект.
+// IsZero возвращает true, если DateOfBirth не был инициализирован через New.
 func (db DateOfBirth) IsZero() bool {
 	return db.date.IsZero()
 }
