@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"gitflic.ru/lms/backend/internal/domain/grading"
 	"gitflic.ru/lms/backend/internal/domain/grading/matching"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
@@ -40,8 +41,8 @@ func TestChecker_Check(t *testing.T) {
 		{name: "лишние пары", question: q, answer: mustMatchingAnswer(t, []answer.Pair{{PromptID: p1.PromptID(), MatchID: p1.MatchID()}, {PromptID: p2.PromptID(), MatchID: p2.MatchID()}, {PromptID: uuid.New(), MatchID: uuid.New()}}), wantScore: 0},
 		{name: "недостаточное количество пар", question: q, answer: mustMatchingAnswer(t, []answer.Pair{{PromptID: p1.PromptID(), MatchID: p1.MatchID()}}), wantScore: 0},
 		{name: "пустой ответ", question: q, answer: mustMatchingAnswer(t, nil), wantScore: 0},
-		{name: "неверный тип вопроса", question: wrongQuestion, answer: mustMatchingAnswer(t, []answer.Pair{{PromptID: p1.PromptID(), MatchID: p1.MatchID()}}), wantErr: matching.ErrInvalidQuestionType},
-		{name: "неверный тип ответа", question: q, answer: wrongAnswer, wantErr: matching.ErrInvalidAnswerType},
+		{name: "неверный тип вопроса", question: wrongQuestion, answer: mustMatchingAnswer(t, []answer.Pair{{PromptID: p1.PromptID(), MatchID: p1.MatchID()}}), wantErr: grading.ErrInvalidQuestionType},
+		{name: "неверный тип ответа", question: q, answer: wrongAnswer, wantErr: grading.ErrInvalidAnswerType},
 	}
 
 	checker := matching.New()

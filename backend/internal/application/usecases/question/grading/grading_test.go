@@ -3,11 +3,11 @@ package grading_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	appgrading "gitflic.ru/lms/backend/internal/application/usecases/question/grading"
 	domaingrading "gitflic.ru/lms/backend/internal/domain/grading"
+	"gitflic.ru/lms/backend/internal/domain/grading/registry"
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
@@ -21,15 +21,13 @@ import (
 )
 
 type fakeRepository struct {
-	question   question.Question
-	err        error
-	findCalls  int
-	lastFindID uuid.UUID
+	question  question.Question
+	err       error
+	findCalls int
 }
 
-func (r *fakeRepository) FindByID(_ context.Context, id uuid.UUID) (question.Question, error) {
+func (r *fakeRepository) FindByID(_ context.Context, _ uuid.UUID) (question.Question, error) {
 	r.findCalls++
-	r.lastFindID = id
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -40,15 +38,12 @@ func (r *fakeRepository) Save(_ context.Context, _ question.Question) error { re
 func (r *fakeRepository) DeleteByID(_ context.Context, _ uuid.UUID) error   { return nil }
 
 type fakeChecker struct {
-	supportedTypes map[question.Type]bool
-	result         score.Score
-	err            error
-	checkCalls     int
+	result     score.Score
+	err        error
+	checkCalls int
 }
 
-func (c *fakeChecker) Supports(t question.Type) bool {
-	return c.supportedTypes[t]
-}
+func (c *fakeChecker) Supports(_ question.Type) bool { return true }
 
 func (c *fakeChecker) Check(_ question.Question, _ question.Answer) (score.Score, error) {
 	c.checkCalls++
@@ -56,6 +51,14 @@ func (c *fakeChecker) Check(_ question.Question, _ question.Answer) (score.Score
 		return score.Score{}, c.err
 	}
 	return c.result, nil
+}
+
+type fakeValidator struct {
+	err error
+}
+
+func (v fakeValidator) Validate(_ question.Question, _ question.Answer) error {
+	return v.err
 }
 
 func TestGradeUseCase_Execute(t *testing.T) {
@@ -71,91 +74,111 @@ func TestGradeUseCase_Execute(t *testing.T) {
 		input          appgrading.GradeInput
 		repoErr        error
 		question       question.Question
-		checkers       []*fakeChecker
+		checker        *fakeChecker
+		validator      fakeValidator
+		registryTypes  map[question.Type]domaingrading.Checker
+		validatorTypes map[question.Type]domaingrading.AnswerValidator
 		wantErr        error
 		wantFindCalls  int
-		wantCheckCalls []int
+		wantCheckCalls int
 		wantScore      float64
 	}{
 		{
 			name:           "успешная оценка",
 			input:          appgrading.GradeInput{QuestionID: q.ID().String(), Answer: ans},
 			question:       q,
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK}},
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantFindCalls:  1,
-			wantCheckCalls: []int{1},
+			wantCheckCalls: 1,
 			wantScore:      1,
 		},
 		{
 			name:           "пустой question id",
 			input:          appgrading.GradeInput{QuestionID: "", Answer: ans},
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK}},
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:        appgrading.ErrInvalidInput,
 			wantFindCalls:  0,
-			wantCheckCalls: []int{0},
 		},
 		{
 			name:           "некорректный uuid",
 			input:          appgrading.GradeInput{QuestionID: "not-uuid", Answer: ans},
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK}},
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:        appgrading.ErrInvalidInput,
 			wantFindCalls:  0,
-			wantCheckCalls: []int{0},
 		},
 		{
 			name:           "uuid nil",
 			input:          appgrading.GradeInput{QuestionID: uuid.Nil.String(), Answer: ans},
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK}},
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:        appgrading.ErrInvalidInput,
 			wantFindCalls:  0,
-			wantCheckCalls: []int{0},
 		},
 		{
 			name:           "nil answer",
 			input:          appgrading.GradeInput{QuestionID: q.ID().String(), Answer: nil},
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK}},
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:        appgrading.ErrInvalidInput,
 			wantFindCalls:  0,
-			wantCheckCalls: []int{0},
 		},
 		{
 			name:           "ошибка репозитория",
 			input:          appgrading.GradeInput{QuestionID: q.ID().String(), Answer: ans},
 			repoErr:        repoErr,
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK}},
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:        repoErr,
 			wantFindCalls:  1,
-			wantCheckCalls: []int{0},
 		},
 		{
 			name:           "ошибка checker",
 			input:          appgrading.GradeInput{QuestionID: q.ID().String(), Answer: ans},
 			question:       q,
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, err: checkerErr}},
+			checker:        &fakeChecker{err: checkerErr},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{err: checkerErr}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:        checkerErr,
 			wantFindCalls:  1,
-			wantCheckCalls: []int{1},
+			wantCheckCalls: 1,
 		},
 		{
-			name:           "поддерживаемый checker не найден",
+			name:           "checker не найден в registry",
 			input:          appgrading.GradeInput{QuestionID: q.ID().String(), Answer: ans},
 			question:       q,
-			checkers:       []*fakeChecker{{supportedTypes: map[question.Type]bool{question.TypeShort: true}, result: sOK}},
-			wantErr:        appgrading.ErrUnsupportedChecker,
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{},
+			registryTypes:  map[question.Type]domaingrading.Checker{},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
+			wantErr:        registry.ErrNotFound,
 			wantFindCalls:  1,
-			wantCheckCalls: []int{0},
 		},
 		{
-			name:     "выбирается корректный checker по типу",
-			input:    appgrading.GradeInput{QuestionID: q.ID().String(), Answer: ans},
-			question: q,
-			checkers: []*fakeChecker{
-				{supportedTypes: map[question.Type]bool{question.TypeShort: true}, result: sOK},
-				{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK},
-			},
+			name:           "ошибка валидации ответа",
+			input:          appgrading.GradeInput{QuestionID: q.ID().String(), Answer: ans},
+			question:       q,
+			checker:        &fakeChecker{result: sOK},
+			validator:      fakeValidator{err: domaingrading.ErrInvalidAnswerType},
+			registryTypes:  map[question.Type]domaingrading.Checker{question.TypeSelectable: &fakeChecker{result: sOK}},
+			validatorTypes: map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{err: domaingrading.ErrInvalidAnswerType}},
+			wantErr:        domaingrading.ErrInvalidAnswerType,
 			wantFindCalls:  1,
-			wantCheckCalls: []int{0, 1},
-			wantScore:      1,
 		},
 	}
 
@@ -166,17 +189,15 @@ func TestGradeUseCase_Execute(t *testing.T) {
 				repo.question = q
 			}
 
-			checkers := make([]domaingrading.Checker, 0, len(tt.checkers))
-			for i := range tt.checkers {
-				checkers = append(checkers, tt.checkers[i])
-			}
+			reg, err := registry.New(tt.registryTypes)
+			require.NoError(t, err)
 
-			uc := appgrading.NewGradeUseCase(repo, checkers...)
+			uc := appgrading.NewGradeUseCase(repo, reg, tt.validatorTypes)
 			out, err := uc.Execute(context.Background(), tt.input)
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				assert.True(t, errors.Is(err, tt.wantErr))
+				assert.True(t, errors.Is(err, tt.wantErr), "expected %v, got %v", tt.wantErr, err)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, out)
@@ -184,42 +205,51 @@ func TestGradeUseCase_Execute(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.wantFindCalls, repo.findCalls)
-			for i := range tt.checkers {
-				assert.Equal(t, tt.wantCheckCalls[i], tt.checkers[i].checkCalls)
-			}
 		})
 	}
 }
 
 func TestValidateAnswerUseCase_Execute(t *testing.T) {
 	q, ans := selectableFixture(t)
-	sOK, err := score.New(1)
-	require.NoError(t, err)
 
 	tests := []struct {
 		name          string
 		input         appgrading.ValidateAnswerInput
 		repoErr       error
-		checkerErr    error
+		validator     fakeValidator
+		validatorMap  map[question.Type]domaingrading.AnswerValidator
 		wantErr       error
 		wantFindCalls int
 	}{
 		{
-			name:          "успешная валидация без двойной загрузки",
+			name:          "успешная валидация",
 			input:         appgrading.ValidateAnswerInput{QuestionID: q.ID().String(), Answer: ans},
+			validator:     fakeValidator{},
+			validatorMap:  map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantFindCalls: 1,
 		},
 		{
 			name:          "ошибка валидации входа",
 			input:         appgrading.ValidateAnswerInput{QuestionID: "", Answer: ans},
+			validator:     fakeValidator{},
+			validatorMap:  map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{}},
 			wantErr:       appgrading.ErrInvalidInput,
 			wantFindCalls: 0,
 		},
 		{
-			name:          "ошибка checker",
+			name:          "ошибка валидации ответа",
 			input:         appgrading.ValidateAnswerInput{QuestionID: q.ID().String(), Answer: ans},
-			checkerErr:    errors.New("checker failed"),
-			wantErr:       errors.New("checker failed"),
+			validator:     fakeValidator{err: domaingrading.ErrInvalidAnswerType},
+			validatorMap:  map[question.Type]domaingrading.AnswerValidator{question.TypeSelectable: fakeValidator{err: domaingrading.ErrInvalidAnswerType}},
+			wantErr:       domaingrading.ErrInvalidAnswerType,
+			wantFindCalls: 1,
+		},
+		{
+			name:          "валидатор не найден",
+			input:         appgrading.ValidateAnswerInput{QuestionID: q.ID().String(), Answer: ans},
+			validator:     fakeValidator{},
+			validatorMap:  map[question.Type]domaingrading.AnswerValidator{question.TypeMatching: fakeValidator{}},
+			wantErr:       errors.New("валидатор для типа вопроса"),
 			wantFindCalls: 1,
 		},
 	}
@@ -227,17 +257,12 @@ func TestValidateAnswerUseCase_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &fakeRepository{question: q, err: tt.repoErr}
-			checker := &fakeChecker{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}, result: sOK, err: tt.checkerErr}
-			uc := appgrading.NewValidateAnswerUseCase(repo, checker)
+			uc := appgrading.NewValidateAnswerUseCase(repo, tt.validatorMap)
 
 			err := uc.Execute(context.Background(), tt.input)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				if tt.name == "ошибка checker" {
-					assert.Contains(t, err.Error(), "checker failed")
-				} else {
-					assert.True(t, errors.Is(err, tt.wantErr))
-				}
+				assert.Contains(t, err.Error(), tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -249,15 +274,42 @@ func TestValidateAnswerUseCase_Execute(t *testing.T) {
 
 func TestNewGradeUseCase_Panics(t *testing.T) {
 	q, _ := selectableFixture(t)
-	checker := &fakeChecker{supportedTypes: map[question.Type]bool{question.TypeSelectable: true}}
+	repo := &fakeRepository{question: q}
+
+	reg, err := registry.New(map[question.Type]domaingrading.Checker{
+		question.TypeSelectable: &fakeChecker{},
+	})
+	require.NoError(t, err)
+
+	validators := map[question.Type]domaingrading.AnswerValidator{
+		question.TypeSelectable: fakeValidator{},
+	}
 
 	assert.Panics(t, func() {
-		appgrading.NewGradeUseCase(nil, checker)
+		appgrading.NewGradeUseCase(nil, reg, validators)
 	})
 
-	repo := &fakeRepository{question: q}
 	assert.Panics(t, func() {
-		appgrading.NewGradeUseCase(repo)
+		appgrading.NewGradeUseCase(repo, nil, validators)
+	})
+
+	assert.Panics(t, func() {
+		appgrading.NewGradeUseCase(repo, reg, nil)
+	})
+}
+
+func TestNewValidateAnswerUseCase_Panics(t *testing.T) {
+	repo := &fakeRepository{}
+	validators := map[question.Type]domaingrading.AnswerValidator{
+		question.TypeSelectable: fakeValidator{},
+	}
+
+	assert.Panics(t, func() {
+		appgrading.NewValidateAnswerUseCase(nil, validators)
+	})
+
+	assert.Panics(t, func() {
+		appgrading.NewValidateAnswerUseCase(repo, nil)
 	})
 }
 
@@ -281,9 +333,4 @@ func selectableFixture(t *testing.T) (*qselectable.Question, selectableanswer.An
 	require.NoError(t, err)
 
 	return q, a
-}
-
-func TestSentinelIdentity(t *testing.T) {
-	err := fmt.Errorf("wrapped: %w", appgrading.ErrUnsupportedChecker)
-	assert.True(t, errors.Is(err, appgrading.ErrUnsupportedChecker))
 }

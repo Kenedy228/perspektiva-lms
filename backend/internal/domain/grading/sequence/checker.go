@@ -1,6 +1,7 @@
 package sequence
 
 import (
+	"gitflic.ru/lms/backend/internal/domain/grading"
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/sequence"
@@ -20,12 +21,12 @@ func New() Checker {
 func (c Checker) Check(q question.Question, a question.Answer) (score.Score, error) {
 	qCast, ok := q.(*sequence.Question)
 	if !ok {
-		return score.Score{}, ErrInvalidQuestionType
+		return score.Score{}, grading.ErrInvalidQuestionType
 	}
 
 	aCast, ok := a.(answer.Answer)
 	if !ok {
-		return score.Score{}, ErrInvalidAnswerType
+		return score.Score{}, grading.ErrInvalidAnswerType
 	}
 
 	seq := qCast.Options()

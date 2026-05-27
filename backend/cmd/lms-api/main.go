@@ -26,10 +26,12 @@ import (
 	quizcommands "gitflic.ru/lms/backend/internal/application/usecases/quiz/commands"
 	domaingrading "gitflic.ru/lms/backend/internal/domain/grading"
 	matchinggrading "gitflic.ru/lms/backend/internal/domain/grading/matching"
+	"gitflic.ru/lms/backend/internal/domain/grading/registry"
 	selectablegrading "gitflic.ru/lms/backend/internal/domain/grading/selectable"
 	sequencegrading "gitflic.ru/lms/backend/internal/domain/grading/sequence"
 	shortgrading "gitflic.ru/lms/backend/internal/domain/grading/short"
 	typedgrading "gitflic.ru/lms/backend/internal/domain/grading/typed"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	attemptinfra "gitflic.ru/lms/backend/internal/infrastructure/attempt"
 	"gitflic.ru/lms/backend/internal/infrastructure/auth"
 	"gitflic.ru/lms/backend/internal/infrastructure/postgres"
@@ -75,12 +77,23 @@ func main() {
 
 	passwordComparer := auth.NewBcryptPasswordComparer()
 	sessionManager := session.NewManager([]byte(cfg.sessionSecret), cfg.sessionTTL)
-	questionCheckers := []domaingrading.Checker{
-		selectablegrading.New(),
-		sequencegrading.New(),
-		matchinggrading.New(),
-		typedgrading.New(),
-		shortgrading.New(),
+	checkerRegistry, err := registry.New(map[question.Type]domaingrading.Checker{
+		question.TypeSelectable: selectablegrading.New(),
+		question.TypeSequence:   sequencegrading.New(),
+		question.TypeMatching:   matchinggrading.New(),
+		question.TypeTyped:      typedgrading.New(),
+		question.TypeShort:      shortgrading.New(),
+	})
+	if err != nil {
+		logger.Error("create checker registry", "error", err)
+		os.Exit(1)
+	}
+
+	answerValidators := map[question.Type]domaingrading.AnswerValidator{
+		question.TypeSelectable: selectablegrading.NewValidator(),
+		question.TypeSequence:   sequencegrading.NewValidator(),
+		question.TypeMatching:   matchinggrading.NewValidator(),
+		question.TypeShort:      shortgrading.NewValidator(),
 	}
 
 	authHandler := handlers.NewAuthHandler(
@@ -147,8 +160,8 @@ func main() {
 			Matching:         questioncommands.NewChangeMatchingPairsUseCase(questionRepo),
 			Typed:            questioncommands.NewChangeTypedContentUseCase(questionRepo),
 			Short:            questioncommands.NewChangeShortVariantsUseCase(questionRepo),
-			Grade:            questiongrading.NewGradeUseCase(questionRepo, questionCheckers...),
-			ValidateAnswer:   questiongrading.NewValidateAnswerUseCase(questionRepo, questionCheckers...),
+			Grade:            questiongrading.NewGradeUseCase(questionRepo, checkerRegistry, answerValidators),
+			ValidateAnswer:   questiongrading.NewValidateAnswerUseCase(questionRepo, answerValidators),
 			Repository:       questionRepo,
 		},
 		Quizzes: handlers.QuizUseCases{
