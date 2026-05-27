@@ -1,2 +1,2 @@
-// Package pair defines matching question pair value objects.
+// Package pair содержит value-объекты пары для вопроса на соответствие.
 package pair

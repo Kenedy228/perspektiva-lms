@@ -3,5 +3,6 @@ package pair
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	// ErrInvalid возвращается при нарушении инвариантов pair value-объектов.
+	ErrInvalid = errors.New("некорректное значение")
 )

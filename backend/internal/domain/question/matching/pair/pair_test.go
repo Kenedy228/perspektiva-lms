@@ -6,25 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
 	"github.com/google/uuid"
 )
-
-func mustText(t *testing.T, value string) text.Text {
-	t.Helper()
-
-	got, err := text.New(value)
-	if err != nil {
-		t.Fatalf("text.New() error = %v", err)
-	}
-
-	return got
-}
 
 func mustPrompt(t *testing.T, value string) Prompt {
 	t.Helper()
 
-	got, err := NewPrompt(mustText(t, value))
+	got, err := NewPrompt(value)
 	if err != nil {
 		t.Fatalf("NewPrompt() error = %v", err)
 	}
@@ -35,7 +23,7 @@ func mustPrompt(t *testing.T, value string) Prompt {
 func mustMatch(t *testing.T, value string) Match {
 	t.Helper()
 
-	got, err := NewMatch(mustText(t, value))
+	got, err := NewMatch(value)
 	if err != nil {
 		t.Fatalf("NewMatch() error = %v", err)
 	}
@@ -46,10 +34,7 @@ func mustMatch(t *testing.T, value string) Match {
 func mustPair(t *testing.T, promptValue, matchValue string) Pair {
 	t.Helper()
 
-	got, err := New(
-		mustPrompt(t, promptValue),
-		mustMatch(t, matchValue),
-	)
+	got, err := New(mustPrompt(t, promptValue), mustMatch(t, matchValue))
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -57,772 +42,329 @@ func mustPair(t *testing.T, promptValue, matchValue string) Pair {
 	return got
 }
 
-func TestMatch_ID(t *testing.T) {
-	text1 := mustText(t, "match")
-	id1 := uuid.New()
-
-	type fields struct {
-		id   uuid.UUID
-		text text.Text
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
-	}{
-		{
-			name: "returns match id",
-			fields: fields{
-				id:   id1,
-				text: text1,
-			},
-			want: id1,
-		},
-		{
-			name: "returns nil for zero value",
-			fields: fields{
-				id:   uuid.Nil,
-				text: text.Text{},
-			},
-			want: uuid.Nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := Match{
-				id:   tt.fields.id,
-				text: tt.fields.text,
-			}
-			if got := m.ID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMatch_IsIncomplete(t *testing.T) {
-	validText := mustText(t, "valid match")
-	validID := uuid.New()
-
-	type fields struct {
-		id   uuid.UUID
-		text text.Text
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "complete match",
-			fields: fields{
-				id:   validID,
-				text: validText,
-			},
-			want: false,
-		},
-		{
-			name: "incomplete because nil id",
-			fields: fields{
-				id:   uuid.Nil,
-				text: validText,
-			},
-			want: true,
-		},
-		{
-			name: "incomplete because empty text",
-			fields: fields{
-				id:   validID,
-				text: text.Text{},
-			},
-			want: true,
-		},
-		{
-			name: "incomplete zero value",
-			fields: fields{
-				id:   uuid.Nil,
-				text: text.Text{},
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := Match{
-				id:   tt.fields.id,
-				text: tt.fields.text,
-			}
-			if got := m.IsIncomplete(); got != tt.want {
-				t.Errorf("IsIncomplete() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMatch_Text(t *testing.T) {
-	text1 := mustText(t, "match")
-
-	type fields struct {
-		id   uuid.UUID
-		text text.Text
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   text.Text
-	}{
-		{
-			name: "returns text",
-			fields: fields{
-				id:   uuid.New(),
-				text: text1,
-			},
-			want: text1,
-		},
-		{
-			name: "returns zero text for zero value",
-			fields: fields{
-				id:   uuid.Nil,
-				text: text.Text{},
-			},
-			want: text.Text{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := Match{
-				id:   tt.fields.id,
-				text: tt.fields.text,
-			}
-			if got := m.Text(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Text() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNew(t *testing.T) {
-	validPrompt := mustPrompt(t, "prompt")
-	validMatch := mustMatch(t, "match")
-
-	type args struct {
-		prompt Prompt
-		match  Match
-	}
+func TestNewPrompt(t *testing.T) {
 	tests := []struct {
 		name    string
-		args    args
-		want    Pair
+		value   string
 		wantErr bool
 	}{
-		{
-			name: "valid pair",
-			args: args{
-				prompt: validPrompt,
-				match:  validMatch,
-			},
-			want: Pair{
-				prompt: validPrompt,
-				match:  validMatch,
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid empty prompt",
-			args: args{
-				prompt: Prompt{},
-				match:  validMatch,
-			},
-			want:    Pair{},
-			wantErr: true,
-		},
-		{
-			name: "invalid empty match",
-			args: args{
-				prompt: validPrompt,
-				match:  Match{},
-			},
-			want:    Pair{},
-			wantErr: true,
-		},
-		{
-			name: "invalid both empty",
-			args: args{
-				prompt: Prompt{},
-				match:  Match{},
-			},
-			want:    Pair{},
-			wantErr: true,
-		},
+		{name: "valid prompt", value: "prompt"},
+		{name: "valid unicode prompt", value: "Привет, мир"},
+		{name: "value at limit", value: strings.Repeat("я", ValueCharsLimit)},
+		{name: "empty value", value: "", wantErr: true},
+		{name: "value over limit", value: strings.Repeat("я", ValueCharsLimit+1), wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.prompt, tt.args.match)
+			got, err := NewPrompt(tt.value)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("NewPrompt() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("NewPrompt() error = %v, want wrapped ErrInvalid", err)
+				}
+				return
+			}
+			if got.ID() == uuid.Nil {
+				t.Fatalf("NewPrompt() ID() = nil, want non-nil uuid")
+			}
+			if got.Value() != tt.value {
+				t.Fatalf("NewPrompt() Value() = %q, want %q", got.Value(), tt.value)
+			}
+		})
+	}
+}
+
+func TestRestorePrompt(t *testing.T) {
+	id := uuid.New()
+
+	tests := []struct {
+		name    string
+		id      uuid.UUID
+		value   string
+		want    Prompt
+		wantErr bool
+	}{
+		{name: "valid restore", id: id, value: "prompt", want: Prompt{id: id, value: "prompt"}},
+		{name: "nil id", id: uuid.Nil, value: "prompt", wantErr: true},
+		{name: "empty value", id: id, value: "", wantErr: true},
+		{name: "over limit", id: id, value: strings.Repeat("я", ValueCharsLimit+1), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := RestorePrompt(tt.id, tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("RestorePrompt() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("RestorePrompt() error = %v, want wrapped ErrInvalid", err)
+				}
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("New() got = %v, want %v", got, tt.want)
+				t.Fatalf("RestorePrompt() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPromptMethods(t *testing.T) {
+	id := uuid.New()
+
+	tests := []struct {
+		name   string
+		prompt Prompt
+		wantID uuid.UUID
+		wantV  string
+		wantZ  bool
+	}{
+		{name: "valid prompt", prompt: Prompt{id: id, value: "prompt"}, wantID: id, wantV: "prompt", wantZ: false},
+		{name: "zero value", prompt: Prompt{}, wantID: uuid.Nil, wantV: "", wantZ: true},
+		{name: "nil id", prompt: Prompt{id: uuid.Nil, value: "prompt"}, wantID: uuid.Nil, wantV: "prompt", wantZ: true},
+		{name: "empty value", prompt: Prompt{id: id, value: ""}, wantID: id, wantV: "", wantZ: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.prompt.ID(); got != tt.wantID {
+				t.Fatalf("ID() = %v, want %v", got, tt.wantID)
+			}
+			if got := tt.prompt.Value(); got != tt.wantV {
+				t.Fatalf("Value() = %q, want %q", got, tt.wantV)
+			}
+			if got := tt.prompt.IsZero(); got != tt.wantZ {
+				t.Fatalf("IsZero() = %v, want %v", got, tt.wantZ)
 			}
 		})
 	}
 }
 
 func TestNewMatch(t *testing.T) {
-	validText := mustText(t, "match")
-	longText := mustText(t, strings.Repeat("а", MatchCharsLimit+1))
-
-	type args struct {
-		t text.Text
-	}
 	tests := []struct {
-		name     string
-		args     args
-		wantText text.Text
-		wantErr  bool
+		name    string
+		value   string
+		wantErr bool
 	}{
-		{
-			name: "valid match",
-			args: args{
-				t: validText,
-			},
-			wantText: validText,
-			wantErr:  false,
-		},
-		{
-			name: "too long match",
-			args: args{
-				t: longText,
-			},
-			wantText: text.Text{},
-			wantErr:  true,
-		},
+		{name: "valid match", value: "match"},
+		{name: "valid unicode match", value: "Совпадение"},
+		{name: "value at limit", value: strings.Repeat("ы", ValueCharsLimit)},
+		{name: "empty value", value: "", wantErr: true},
+		{name: "value over limit", value: strings.Repeat("ы", ValueCharsLimit+1), wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewMatch(tt.args.t)
+			got, err := NewMatch(tt.value)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewMatch() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Fatalf("NewMatch() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
 			if tt.wantErr {
 				if !errors.Is(err, ErrInvalid) {
-					t.Errorf("NewMatch() error = %v, want wrapped ErrInvalid", err)
+					t.Fatalf("NewMatch() error = %v, want wrapped ErrInvalid", err)
 				}
 				return
 			}
-
 			if got.ID() == uuid.Nil {
-				t.Errorf("NewMatch() ID() = %v, want non-nil uuid", got.ID())
+				t.Fatalf("NewMatch() ID() = nil, want non-nil uuid")
 			}
-			if !reflect.DeepEqual(got.Text(), tt.wantText) {
-				t.Errorf("NewMatch() Text() = %v, want %v", got.Text(), tt.wantText)
+			if got.Value() != tt.value {
+				t.Fatalf("NewMatch() Value() = %q, want %q", got.Value(), tt.value)
 			}
 		})
 	}
 }
 
-func TestNewPrompt(t *testing.T) {
-	validText := mustText(t, "prompt")
-	longText := mustText(t, strings.Repeat("а", PromptCharsLimit+1))
+func TestRestoreMatch(t *testing.T) {
+	id := uuid.New()
 
-	type args struct {
-		t text.Text
-	}
 	tests := []struct {
-		name     string
-		args     args
-		wantText text.Text
-		wantErr  bool
+		name    string
+		id      uuid.UUID
+		value   string
+		want    Match
+		wantErr bool
 	}{
-		{
-			name: "valid prompt",
-			args: args{
-				t: validText,
-			},
-			wantText: validText,
-			wantErr:  false,
-		},
-		{
-			name: "too long prompt",
-			args: args{
-				t: longText,
-			},
-			wantText: text.Text{},
-			wantErr:  true,
-		},
+		{name: "valid restore", id: id, value: "match", want: Match{id: id, value: "match"}},
+		{name: "nil id", id: uuid.Nil, value: "match", wantErr: true},
+		{name: "empty value", id: id, value: "", wantErr: true},
+		{name: "over limit", id: id, value: strings.Repeat("ы", ValueCharsLimit+1), wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewPrompt(tt.args.t)
+			got, err := RestoreMatch(tt.id, tt.value)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewPrompt() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Fatalf("RestoreMatch() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
 			if tt.wantErr {
 				if !errors.Is(err, ErrInvalid) {
-					t.Errorf("NewPrompt() error = %v, want wrapped ErrInvalid", err)
+					t.Fatalf("RestoreMatch() error = %v, want wrapped ErrInvalid", err)
 				}
 				return
 			}
-
-			if got.ID() == uuid.Nil {
-				t.Errorf("NewPrompt() ID() = %v, want non-nil uuid", got.ID())
-			}
-			if !reflect.DeepEqual(got.Text(), tt.wantText) {
-				t.Errorf("NewPrompt() Text() = %v, want %v", got.Text(), tt.wantText)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("RestoreMatch() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestPair_IsIncomplete(t *testing.T) {
-	validPrompt := mustPrompt(t, "prompt")
-	validMatch := mustMatch(t, "match")
+func TestMatchMethods(t *testing.T) {
+	id := uuid.New()
 
-	type fields struct {
-		prompt Prompt
-		match  Match
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "complete pair",
-			fields: fields{
-				prompt: validPrompt,
-				match:  validMatch,
-			},
-			want: false,
-		},
-		{
-			name: "incomplete because prompt empty",
-			fields: fields{
-				prompt: Prompt{},
-				match:  validMatch,
-			},
-			want: true,
-		},
-		{
-			name: "incomplete because match empty",
-			fields: fields{
-				prompt: validPrompt,
-				match:  Match{},
-			},
-			want: true,
-		},
-		{
-			name: "incomplete because both empty",
-			fields: fields{
-				prompt: Prompt{},
-				match:  Match{},
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Pair{
-				prompt: tt.fields.prompt,
-				match:  tt.fields.match,
-			}
-			if got := p.IsIncomplete(); got != tt.want {
-				t.Errorf("IsIncomplete() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPair_Match(t *testing.T) {
-	pair1 := mustPair(t, "prompt", "match")
-
-	type fields struct {
-		prompt Prompt
-		match  Match
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   Match
-	}{
-		{
-			name: "returns match",
-			fields: fields{
-				prompt: pair1.Prompt(),
-				match:  pair1.Match(),
-			},
-			want: pair1.Match(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Pair{
-				prompt: tt.fields.prompt,
-				match:  tt.fields.match,
-			}
-			if got := p.Match(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Match() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPair_MatchID(t *testing.T) {
-	pair1 := mustPair(t, "prompt", "match")
-
-	type fields struct {
-		prompt Prompt
-		match  Match
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
-	}{
-		{
-			name: "returns match id",
-			fields: fields{
-				prompt: pair1.Prompt(),
-				match:  pair1.Match(),
-			},
-			want: pair1.Match().ID(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Pair{
-				prompt: tt.fields.prompt,
-				match:  tt.fields.match,
-			}
-			if got := p.MatchID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MatchID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPair_Prompt(t *testing.T) {
-	pair1 := mustPair(t, "prompt", "match")
-
-	type fields struct {
-		prompt Prompt
-		match  Match
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   Prompt
-	}{
-		{
-			name: "returns prompt",
-			fields: fields{
-				prompt: pair1.Prompt(),
-				match:  pair1.Match(),
-			},
-			want: pair1.Prompt(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Pair{
-				prompt: tt.fields.prompt,
-				match:  tt.fields.match,
-			}
-			if got := p.Prompt(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Prompt() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPair_PromptID(t *testing.T) {
-	pair1 := mustPair(t, "prompt", "match")
-
-	type fields struct {
-		prompt Prompt
-		match  Match
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
-	}{
-		{
-			name: "returns prompt id",
-			fields: fields{
-				prompt: pair1.Prompt(),
-				match:  pair1.Match(),
-			},
-			want: pair1.Prompt().ID(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Pair{
-				prompt: tt.fields.prompt,
-				match:  tt.fields.match,
-			}
-			if got := p.PromptID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("PromptID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPrompt_ID(t *testing.T) {
-	text1 := mustText(t, "prompt")
-	id1 := uuid.New()
-
-	type fields struct {
-		id   uuid.UUID
-		text text.Text
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
-	}{
-		{
-			name: "returns prompt id",
-			fields: fields{
-				id:   id1,
-				text: text1,
-			},
-			want: id1,
-		},
-		{
-			name: "returns nil for zero value",
-			fields: fields{
-				id:   uuid.Nil,
-				text: text.Text{},
-			},
-			want: uuid.Nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Prompt{
-				id:   tt.fields.id,
-				text: tt.fields.text,
-			}
-			if got := p.ID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPrompt_IsIncomplete(t *testing.T) {
-	validText := mustText(t, "valid prompt")
-	validID := uuid.New()
-
-	type fields struct {
-		id   uuid.UUID
-		text text.Text
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "complete prompt",
-			fields: fields{
-				id:   validID,
-				text: validText,
-			},
-			want: false,
-		},
-		{
-			name: "incomplete because nil id",
-			fields: fields{
-				id:   uuid.Nil,
-				text: validText,
-			},
-			want: true,
-		},
-		{
-			name: "incomplete because empty text",
-			fields: fields{
-				id:   validID,
-				text: text.Text{},
-			},
-			want: true,
-		},
-		{
-			name: "incomplete zero value",
-			fields: fields{
-				id:   uuid.Nil,
-				text: text.Text{},
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Prompt{
-				id:   tt.fields.id,
-				text: tt.fields.text,
-			}
-			if got := p.IsIncomplete(); got != tt.want {
-				t.Errorf("IsIncomplete() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPrompt_Text(t *testing.T) {
-	text1 := mustText(t, "prompt")
-
-	type fields struct {
-		id   uuid.UUID
-		text text.Text
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   text.Text
-	}{
-		{
-			name: "returns text",
-			fields: fields{
-				id:   uuid.New(),
-				text: text1,
-			},
-			want: text1,
-		},
-		{
-			name: "returns zero text for zero value",
-			fields: fields{
-				id:   uuid.Nil,
-				text: text.Text{},
-			},
-			want: text.Text{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := Prompt{
-				id:   tt.fields.id,
-				text: tt.fields.text,
-			}
-			if got := p.Text(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Text() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_validateMatch(t *testing.T) {
-	validMatch := mustMatch(t, "match")
-
-	type args struct {
+		name  string
 		match Match
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		wantI uuid.UUID
+		wantV string
+		wantZ bool
 	}{
-		{
-			name: "valid match",
-			args: args{
-				match: validMatch,
-			},
-			wantErr: false,
-		},
-		{
-			name: "zero match",
-			args: args{
-				match: Match{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "match with nil id",
-			args: args{
-				match: Match{
-					id:   uuid.Nil,
-					text: mustText(t, "match"),
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "match with empty text",
-			args: args{
-				match: Match{
-					id:   uuid.New(),
-					text: text.Text{},
-				},
-			},
-			wantErr: true,
-		},
+		{name: "valid match", match: Match{id: id, value: "match"}, wantI: id, wantV: "match", wantZ: false},
+		{name: "zero value", match: Match{}, wantI: uuid.Nil, wantV: "", wantZ: true},
+		{name: "nil id", match: Match{id: uuid.Nil, value: "match"}, wantI: uuid.Nil, wantV: "match", wantZ: true},
+		{name: "empty value", match: Match{id: id, value: ""}, wantI: id, wantV: "", wantZ: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validateMatch(tt.args.match); (err != nil) != tt.wantErr {
-				t.Errorf("validateMatch() error = %v, wantErr %v", err, tt.wantErr)
+			if got := tt.match.ID(); got != tt.wantI {
+				t.Fatalf("ID() = %v, want %v", got, tt.wantI)
+			}
+			if got := tt.match.Value(); got != tt.wantV {
+				t.Fatalf("Value() = %q, want %q", got, tt.wantV)
+			}
+			if got := tt.match.IsZero(); got != tt.wantZ {
+				t.Fatalf("IsZero() = %v, want %v", got, tt.wantZ)
 			}
 		})
 	}
 }
 
-func Test_validatePrompt(t *testing.T) {
+func TestNewPair(t *testing.T) {
 	validPrompt := mustPrompt(t, "prompt")
+	validMatch := mustMatch(t, "match")
 
-	type args struct {
-		prompt Prompt
-	}
 	tests := []struct {
 		name    string
-		args    args
+		prompt  Prompt
+		match   Match
+		want    Pair
 		wantErr bool
 	}{
 		{
-			name: "valid prompt",
-			args: args{
-				prompt: validPrompt,
-			},
+			name:    "valid pair",
+			prompt:  validPrompt,
+			match:   validMatch,
+			want:    Pair{prompt: validPrompt, match: validMatch},
 			wantErr: false,
 		},
-		{
-			name: "zero prompt",
-			args: args{
-				prompt: Prompt{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "prompt with nil id",
-			args: args{
-				prompt: Prompt{
-					id:   uuid.Nil,
-					text: mustText(t, "prompt"),
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "prompt with empty text",
-			args: args{
-				prompt: Prompt{
-					id:   uuid.New(),
-					text: text.Text{},
-				},
-			},
-			wantErr: true,
-		},
+		{name: "zero prompt", prompt: Prompt{}, match: validMatch, wantErr: true},
+		{name: "zero match", prompt: validPrompt, match: Match{}, wantErr: true},
+		{name: "both zero", prompt: Prompt{}, match: Match{}, wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validatePrompt(tt.args.prompt); (err != nil) != tt.wantErr {
-				t.Errorf("validatePrompt() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := New(tt.prompt, tt.match)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("New() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("New() error = %v, want wrapped ErrInvalid", err)
+				}
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("New() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPairMethods(t *testing.T) {
+	pairValue := mustPair(t, "prompt", "match")
+
+	tests := []struct {
+		name string
+		pair Pair
+		zero bool
+	}{
+		{name: "valid pair", pair: pairValue, zero: false},
+		{name: "zero prompt", pair: Pair{prompt: Prompt{}, match: pairValue.Match()}, zero: true},
+		{name: "zero match", pair: Pair{prompt: pairValue.Prompt(), match: Match{}}, zero: true},
+		{name: "zero pair", pair: Pair{}, zero: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.pair.IsZero(); got != tt.zero {
+				t.Fatalf("IsZero() = %v, want %v", got, tt.zero)
+			}
+
+			if !tt.zero {
+				if got := tt.pair.PromptID(); got != tt.pair.Prompt().ID() {
+					t.Fatalf("PromptID() = %v, want %v", got, tt.pair.Prompt().ID())
+				}
+				if got := tt.pair.MatchID(); got != tt.pair.Match().ID() {
+					t.Fatalf("MatchID() = %v, want %v", got, tt.pair.Match().ID())
+				}
+			}
+		})
+	}
+}
+
+func TestValidatorHelpers(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func() error
+		want bool
+	}{
+		{name: "validateRequired valid", run: func() error { return validateRequired("abc") }, want: false},
+		{name: "validateRequired empty", run: func() error { return validateRequired("") }, want: true},
+		{name: "validateCharsLimit valid unicode", run: func() error { return validateCharsLimit(strings.Repeat("ж", ValueCharsLimit)) }, want: false},
+		{name: "validateCharsLimit over unicode", run: func() error { return validateCharsLimit(strings.Repeat("ж", ValueCharsLimit+1)) }, want: true},
+		{name: "validateIDRequired valid", run: func() error { return validateIDRequired(uuid.New()) }, want: false},
+		{name: "validateIDRequired nil", run: func() error { return validateIDRequired(uuid.Nil) }, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.run()
+			if (err != nil) != tt.want {
+				t.Fatalf("validator error = %v, wantErr %v", err, tt.want)
+			}
+			if tt.want && !errors.Is(err, ErrInvalid) {
+				t.Fatalf("validator error = %v, want wrapped ErrInvalid", err)
+			}
+		})
+	}
+}
+
+func Test_validatePromptAndMatch(t *testing.T) {
+	validPrompt := mustPrompt(t, "prompt")
+	validMatch := mustMatch(t, "match")
+
+	tests := []struct {
+		name    string
+		run     func() error
+		wantErr bool
+	}{
+		{name: "validatePrompt valid", run: func() error { return validatePrompt(validPrompt) }, wantErr: false},
+		{name: "validatePrompt zero", run: func() error { return validatePrompt(Prompt{}) }, wantErr: true},
+		{name: "validateMatch valid", run: func() error { return validateMatch(validMatch) }, wantErr: false},
+		{name: "validateMatch zero", run: func() error { return validateMatch(Match{}) }, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.run()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validation error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

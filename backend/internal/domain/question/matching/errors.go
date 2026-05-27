@@ -3,5 +3,6 @@ package matching
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	// ErrInvalid сигнализирует о нарушении доменных инвариантов вопроса matching.
+	ErrInvalid = errors.New("некорректное значение")
 )

@@ -1,2 +1,2 @@
-// Package grading contains question grading services and score calculation helpers.
+// Package grading содержит application-usecase-ы оценки и валидации ответов на вопросы.
 package grading

@@ -2,15 +2,17 @@ package short
 
 import (
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
-	question2 "gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/short"
 	"gitflic.ru/lms/backend/internal/domain/question/short/answer"
 )
 
+// Checker проверяет короткие текстовые ответы с опциональной нормализацией.
 type Checker struct {
 	normalizers []normalizer
 }
 
+// New создает checker коротких ответов и применяет переданные опции.
 func New(opts ...Option) Checker {
 	c := Checker{}
 
@@ -23,7 +25,8 @@ func New(opts ...Option) Checker {
 	return c
 }
 
-func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, error) {
+// Check возвращает 1, если нормализованный ответ совпал с любым вариантом вопроса.
+func (c Checker) Check(q question.Question, a question.Answer) (score.Score, error) {
 	castQ, ok := q.(*short.Question)
 	if !ok {
 		return score.Score{}, ErrInvalidQuestionType
@@ -38,18 +41,16 @@ func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, e
 	studentAnswer := applyNormalizers(castA.Value(), c.normalizers...)
 
 	for i := range variants {
-		nVariant := applyNormalizers(variants[i].Text().Value(), c.normalizers...)
-
+		nVariant := applyNormalizers(variants[i].Value(), c.normalizers...)
 		if nVariant == studentAnswer {
-			s, _ := score.New(1)
-			return s, nil
+			return score.New(1)
 		}
 	}
 
-	s, _ := score.New(0)
-	return s, nil
+	return score.New(0)
 }
 
-func (c Checker) Supports(t question2.Type) bool {
-	return t == question2.TypeShort
+// Supports сообщает, поддерживается ли тип вопроса checker-ом.
+func (c Checker) Supports(t question.Type) bool {
+	return t == question.TypeShort
 }

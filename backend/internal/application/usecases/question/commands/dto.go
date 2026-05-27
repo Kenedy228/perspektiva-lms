@@ -1,30 +1,23 @@
 package commands
 
-type AttachmentInput struct {
-	MediaType string
-	FileName  string
-	SizeBytes int64
-}
-
+// SelectableOptionInput описывает вариант ответа для вопроса с выбором.
 type SelectableOptionInput struct {
 	Text      string
 	IsCorrect bool
 }
 
+// SequenceOptionInput описывает вариант шага для вопроса на последовательность.
 type SequenceOptionInput struct {
 	Text string
 }
 
+// MatchingPairInput описывает пару для вопроса на сопоставление.
 type MatchingPairInput struct {
 	Prompt string
 	Match  string
 }
 
-type TypedBlankInput struct {
-	Placeholder string
-	Variants    []string
-}
-
+// ShortVariantInput описывает допустимый вариант для короткого ответа.
 type ShortVariantInput struct {
 	Text string
 }

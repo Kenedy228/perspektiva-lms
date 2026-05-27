@@ -7,14 +7,16 @@ import (
 	questports "gitflic.ru/lms/backend/internal/application/ports/question"
 	"gitflic.ru/lms/backend/internal/application/usecases/question/common"
 	"gitflic.ru/lms/backend/internal/domain/question"
+	questiontitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/role"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
 )
 
+// CreateUseCase создает новый вопрос выбранного типа.
 type CreateUseCase struct {
 	r questports.Repository
 }
 
+// NewCreateUseCase создает CreateUseCase.
 func NewCreateUseCase(r questports.Repository) *CreateUseCase {
 	if r == nil {
 		panic("question create usecase requires repository")
@@ -22,52 +24,45 @@ func NewCreateUseCase(r questports.Repository) *CreateUseCase {
 	return &CreateUseCase{r: r}
 }
 
+// CreateInput описывает входные данные для создания вопроса.
 type CreateInput struct {
 	ActorRole         role.Role
 	Type              string
 	Title             string
-	Attachment        *AttachmentInput
 	SelectableOptions []SelectableOptionInput
 	SequenceOptions   []SequenceOptionInput
 	MatchingPairs     []MatchingPairInput
-	TypedBlanks       []TypedBlankInput
 	ShortVariants     []ShortVariantInput
 }
 
+// Output содержит результат выполнения команды.
 type Output struct {
 	ID string
 }
 
+// Execute создает вопрос и сохраняет его в репозитории.
 func (uc *CreateUseCase) Execute(ctx context.Context, in CreateInput) (*Output, error) {
 	if err := common.RequireAuthor(in.ActorRole); err != nil {
 		return nil, err
 	}
 
-	qType, err := question.ParseType(in.Type)
-	if err != nil {
-		return nil, fmt.Errorf("parse question type: %w", err)
+	qType := question.Type(in.Type)
+	if !qType.IsValid() {
+		return nil, fmt.Errorf("%w: некорректный тип вопроса", common.ErrInvalidInput)
 	}
 
-	t, err := title.New(in.Title)
+	t, err := questiontitle.New(in.Title)
 	if err != nil {
-		return nil, fmt.Errorf("create question title: %w", err)
+		return nil, fmt.Errorf("создание заголовка вопроса: %w", err)
 	}
 
 	q, err := createQuestion(qType, t, in)
 	if err != nil {
-		return nil, fmt.Errorf("create question aggregate: %w", err)
-	}
-
-	if in.Attachment != nil {
-		att, err := buildAttachment(*in.Attachment)
-		if err != nil {
-			return nil, err
-		}
-		q.ChangeAttachment(att)
+		return nil, fmt.Errorf("создание агрегата вопроса: %w", err)
 	}
 
 	if err := uc.r.Save(ctx, q); err != nil {
-		return nil, fmt.Errorf("save question: %w", err)
+		return nil, fmt.Errorf("сохранение вопроса: %w", err)
 	}
 
 	return &Output{ID: q.ID().String()}, nil

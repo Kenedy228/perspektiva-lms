@@ -1,2 +1,2 @@
-// Package item defines immutable attempt item snapshots.
+// Package item содержит снимок вопроса в составе попытки.
 package item

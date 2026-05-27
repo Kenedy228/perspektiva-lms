@@ -51,7 +51,7 @@ func New(params Params, at time.Time) (*Attempt, error) {
 	if !params.TimeLimit.IsInfinite() {
 		d, ok := params.TimeLimit.TryDuration()
 		if !ok {
-			return nil, fmt.Errorf("%w: invalid value", ErrInvalid)
+			return nil, fmt.Errorf("%w: не удалось вычислить ограничение времени", ErrInvalid)
 		}
 		deadlineAt = at.Add(d)
 	}
@@ -79,7 +79,7 @@ func New(params Params, at time.Time) (*Attempt, error) {
 
 func Restore(id uuid.UUID, params RestoreParams) (*Attempt, error) {
 	if id == uuid.Nil {
-		return nil, fmt.Errorf("%w: invalid value", ErrInvalid)
+		return nil, fmt.Errorf("%w: идентификатор попытки обязателен", ErrInvalid)
 	}
 
 	if err := validateEnrollmentID(params.EnrollmentID); err != nil {
@@ -121,15 +121,17 @@ func Restore(id uuid.UUID, params RestoreParams) (*Attempt, error) {
 
 	answers := maps.Clone(params.Answers)
 	for questionID, entry := range answers {
-		itm, ok := findItem(items, questionID)
+		_, ok := findItem(items, questionID)
 		if !ok {
-			return nil, fmt.Errorf("%w: ID %s", ErrNotFound, questionID)
+			return nil, fmt.Errorf("%w: вопрос с идентификатором %s не найден в попытке", ErrNotFound, questionID)
 		}
 		if entry.QuestionID() != questionID {
-			return nil, fmt.Errorf("%w: invalid value", ErrInvalid)
-		}
-		if err := validateAnswerForQuestion(itm.Snapshot(), entry.Answer()); err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"%w: ключ ответа %s не совпадает с questionID записи %s",
+				ErrInvalid,
+				questionID,
+				entry.QuestionID(),
+			)
 		}
 	}
 
@@ -196,25 +198,20 @@ func (a *Attempt) CanModify() bool {
 
 func (a *Attempt) AddAnswer(qID uuid.UUID, ans question.Answer, at time.Time) error {
 	if !a.CanModify() {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: попытку нельзя изменить в статусе %s", ErrStateConflict, a.status)
 	}
 
 	if err := a.ensureBeforeDeadline(at); err != nil {
 		return err
 	}
 
-	itm, ok := findItem(a.items, qID)
-	if !ok {
-		return fmt.Errorf("%w: ID %s", ErrNotFound, qID)
-	}
-
-	if err := validateAnswerForQuestion(itm.Snapshot(), ans); err != nil {
-		return err
+	if _, ok := findItem(a.items, qID); !ok {
+		return fmt.Errorf("%w: вопрос с идентификатором %s не найден в попытке", ErrNotFound, qID)
 	}
 
 	entry, err := answer.New(qID, ans, at)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalid, err)
+		return fmt.Errorf("%w: не удалось добавить ответ: %w", ErrInvalid, err)
 	}
 
 	a.answers[qID] = entry
@@ -223,15 +220,15 @@ func (a *Attempt) AddAnswer(qID uuid.UUID, ans question.Answer, at time.Time) er
 
 func (a *Attempt) Finish(at time.Time) error {
 	if a.status != StatusInProgress {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: попытку нельзя завершить в статусе %s", ErrStateConflict, a.status)
 	}
 
 	if at.IsZero() {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время завершения попытки обязательно", ErrInvalid)
 	}
 
 	if at.Before(a.startedAt) {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время завершения не может быть раньше времени начала", ErrInvalid)
 	}
 
 	if err := a.ensureBeforeDeadline(at); err != nil {
@@ -245,19 +242,19 @@ func (a *Attempt) Finish(at time.Time) error {
 
 func (a *Attempt) SetExpired(at time.Time) error {
 	if a.status != StatusInProgress {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: попытку нельзя пометить просроченной в статусе %s", ErrStateConflict, a.status)
 	}
 
 	if at.IsZero() {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время установки статуса просрочено обязательно", ErrInvalid)
 	}
 
 	if a.deadlineAt.IsZero() {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: невозможно установить просрочку без дедлайна", ErrStateConflict)
 	}
 
 	if at.Before(a.deadlineAt) {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: попытка не достигла дедлайна", ErrStateConflict)
 	}
 
 	a.status = StatusExpired
@@ -267,15 +264,15 @@ func (a *Attempt) SetExpired(at time.Time) error {
 
 func (a *Attempt) Interrupt(at time.Time) error {
 	if a.status != StatusInProgress {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: попытку нельзя прервать в статусе %s", ErrStateConflict, a.status)
 	}
 
 	if at.IsZero() {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время прерывания попытки обязательно", ErrInvalid)
 	}
 
 	if at.Before(a.startedAt) {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время прерывания не может быть раньше времени начала", ErrInvalid)
 	}
 
 	a.status = StatusInterrupted
@@ -285,15 +282,15 @@ func (a *Attempt) Interrupt(at time.Time) error {
 
 func (a *Attempt) Cancel(at time.Time) error {
 	if a.status != StatusInProgress {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: попытку нельзя отменить в статусе %s", ErrStateConflict, a.status)
 	}
 
 	if at.IsZero() {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время отмены попытки обязательно", ErrInvalid)
 	}
 
 	if at.Before(a.startedAt) {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: время отмены не может быть раньше времени начала", ErrInvalid)
 	}
 
 	a.status = StatusCancelled
@@ -307,7 +304,7 @@ func (a *Attempt) ensureBeforeDeadline(at time.Time) error {
 	}
 
 	if at.After(a.deadlineAt) {
-		return fmt.Errorf("%w: invalid value", ErrStateConflict)
+		return fmt.Errorf("%w: момент %s позже дедлайна %s", ErrStateConflict, at, a.deadlineAt)
 	}
 
 	return nil

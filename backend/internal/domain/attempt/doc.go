@@ -1,2 +1,3 @@
-// Package attempt models quiz attempts, answers, attempt state transitions, and attempt use cases.
+// Package attempt содержит агрегат попытки прохождения теста,
+// его ответы и правила жизненного цикла.
 package attempt

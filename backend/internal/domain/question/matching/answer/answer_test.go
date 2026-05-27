@@ -1,6 +1,7 @@
 package answer
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -9,722 +10,345 @@ import (
 	"github.com/google/uuid"
 )
 
-func mustPromptID(t *testing.T, id uuid.UUID) PromptID {
-	t.Helper()
-
-	got, err := NewPromptID(id)
-	if err != nil {
-		t.Fatalf("NewPromptID() error = %v", err)
-	}
-
-	return got
-}
-
-func mustMatchID(t *testing.T, id uuid.UUID) MatchID {
-	t.Helper()
-
-	got, err := NewMatchID(id)
-	if err != nil {
-		t.Fatalf("NewMatchID() error = %v", err)
-	}
-
-	return got
-}
-
-func makeValidPair(t *testing.T) Pair {
-	t.Helper()
-
+func makeValidPair() Pair {
 	return Pair{
-		PromptID: mustPromptID(t, uuid.New()),
-		MatchID:  mustMatchID(t, uuid.New()),
+		PromptID: uuid.New(),
+		MatchID:  uuid.New(),
 	}
 }
 
-func makeValidPairs(t *testing.T, n int) []Pair {
-	t.Helper()
-
+func makeValidPairs(n int) []Pair {
 	pairs := make([]Pair, 0, n)
 	for i := 0; i < n; i++ {
-		pairs = append(pairs, makeValidPair(t))
+		pairs = append(pairs, makeValidPair())
 	}
-
 	return pairs
 }
 
-func TestAnswer_AsMap(t *testing.T) {
-	promptID1 := mustPromptID(t, uuid.New())
-	matchID1 := mustMatchID(t, uuid.New())
-	promptID2 := mustPromptID(t, uuid.New())
-	matchID2 := mustMatchID(t, uuid.New())
+func TestNew(t *testing.T) {
+	pair1 := makeValidPair()
+	pair2 := makeValidPair()
 
-	type fields struct {
-		pairs []Pair
-	}
+	dupPrompt := uuid.New()
+	dupMatchLeft := uuid.New()
+	dupMatchRight := uuid.New()
+
+	dupMatch := uuid.New()
+	dupPromptLeft := uuid.New()
+	dupPromptRight := uuid.New()
+
 	tests := []struct {
-		name   string
-		fields fields
-		want   map[PromptID]MatchID
+		name    string
+		pairs   []Pair
+		want    Answer
+		wantErr bool
 	}{
 		{
-			name: "returns empty map for empty pairs",
-			fields: fields{
-				pairs: []Pair{},
-			},
-			want: map[PromptID]MatchID{},
+			name:    "valid empty answer",
+			pairs:   []Pair{},
+			want:    Answer{pairs: []Pair{}},
+			wantErr: false,
 		},
 		{
-			name: "returns map with all pairs",
-			fields: fields{
-				pairs: []Pair{
-					{PromptID: promptID1, MatchID: matchID1},
-					{PromptID: promptID2, MatchID: matchID2},
-				},
+			name:    "valid answer with pairs",
+			pairs:   []Pair{pair1, pair2},
+			want:    Answer{pairs: []Pair{pair1, pair2}},
+			wantErr: false,
+		},
+		{
+			name: "invalid duplicate prompt id",
+			pairs: []Pair{
+				{PromptID: dupPrompt, MatchID: dupMatchLeft},
+				{PromptID: dupPrompt, MatchID: dupMatchRight},
 			},
-			want: map[PromptID]MatchID{
-				promptID1: matchID1,
-				promptID2: matchID2,
+			wantErr: true,
+		},
+		{
+			name: "invalid duplicate match id",
+			pairs: []Pair{
+				{PromptID: dupPromptLeft, MatchID: dupMatch},
+				{PromptID: dupPromptRight, MatchID: dupMatch},
 			},
+			wantErr: true,
+		},
+		{
+			name: "invalid nil prompt id",
+			pairs: []Pair{
+				{PromptID: uuid.Nil, MatchID: uuid.New()},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid nil match id",
+			pairs: []Pair{
+				{PromptID: uuid.New(), MatchID: uuid.Nil},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "invalid too many pairs",
+			pairs:   makeValidPairs(matching.MaxPairs + 1),
+			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := Answer{
-				pairs: tt.fields.pairs,
+			got, err := New(tt.pairs)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("New() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if got := a.AsMap(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AsMap() = %v, want %v", got, tt.want)
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("New() error = %v, want wrapped ErrInvalid", err)
+				}
+				return
 			}
-		})
-	}
-}
-
-func TestAnswer_Clone(t *testing.T) {
-	promptID1 := mustPromptID(t, uuid.New())
-	matchID1 := mustMatchID(t, uuid.New())
-	promptID2 := mustPromptID(t, uuid.New())
-	matchID2 := mustMatchID(t, uuid.New())
-
-	type fields struct {
-		pairs []Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   question.Answer
-	}{
-		{
-			name: "clone empty answer",
-			fields: fields{
-				pairs: []Pair{},
-			},
-			want: Answer{
-				pairs: []Pair{},
-			},
-		},
-		{
-			name: "clone answer with pairs",
-			fields: fields{
-				pairs: []Pair{
-					{PromptID: promptID1, MatchID: matchID1},
-					{PromptID: promptID2, MatchID: matchID2},
-				},
-			},
-			want: Answer{
-				pairs: []Pair{
-					{PromptID: promptID1, MatchID: matchID1},
-					{PromptID: promptID2, MatchID: matchID2},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := Answer{
-				pairs: tt.fields.pairs,
-			}
-			if got := a.Clone(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Clone() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAnswer_IsEmpty(t *testing.T) {
-	type fields struct {
-		pairs []Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "empty answer",
-			fields: fields{
-				pairs: []Pair{},
-			},
-			want: true,
-		},
-		{
-			name: "non empty answer",
-			fields: fields{
-				pairs: []Pair{
-					makeValidPair(t),
-				},
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := Answer{
-				pairs: tt.fields.pairs,
-			}
-			if got := a.IsEmpty(); got != tt.want {
-				t.Errorf("IsEmpty() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("New() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func TestAnswer_Pairs(t *testing.T) {
-	pair1 := makeValidPair(t)
-	pair2 := makeValidPair(t)
-
-	type fields struct {
+	tests := []struct {
+		name  string
 		pairs []Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   []Pair
 	}{
-		{
-			name: "returns empty slice",
-			fields: fields{
-				pairs: []Pair{},
-			},
-			want: []Pair{},
-		},
-		{
-			name: "returns cloned pairs",
-			fields: fields{
-				pairs: []Pair{pair1, pair2},
-			},
-			want: []Pair{pair1, pair2},
-		},
+		{name: "empty", pairs: []Pair{}},
+		{name: "non-empty", pairs: makeValidPairs(2)},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := Answer{
-				pairs: tt.fields.pairs,
+			a := Answer{pairs: tt.pairs}
+			got := a.Pairs()
+
+			if !reflect.DeepEqual(got, tt.pairs) {
+				t.Fatalf("Pairs() = %v, want %v", got, tt.pairs)
 			}
-			if got := a.Pairs(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Pairs() = %v, want %v", got, tt.want)
+
+			if len(got) > 0 {
+				got[0] = Pair{PromptID: uuid.New(), MatchID: uuid.New()}
+				if reflect.DeepEqual(got, a.pairs) {
+					t.Fatalf("Pairs() must return a cloned slice")
+				}
 			}
 		})
 	}
 }
 
-func TestMatchID_ID(t *testing.T) {
-	id1 := uuid.New()
-	id2 := uuid.New()
+func TestAnswer_AsMap(t *testing.T) {
+	pair1 := makeValidPair()
+	pair2 := makeValidPair()
 
-	type fields struct {
-		id uuid.UUID
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
-	}{
-		{
-			name: "returns id",
-			fields: fields{
-				id: id1,
-			},
-			want: id1,
-		},
-		{
-			name: "returns another id",
-			fields: fields{
-				id: id2,
-			},
-			want: id2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := MatchID{
-				id: tt.fields.id,
-			}
-			if got := m.ID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNew(t *testing.T) {
-	pair1 := makeValidPair(t)
-	pair2 := makeValidPair(t)
-
-	dupPrompt := mustPromptID(t, uuid.New())
-	dupMatch1 := mustMatchID(t, uuid.New())
-	dupMatch2 := mustMatchID(t, uuid.New())
-
-	dupMatch := mustMatchID(t, uuid.New())
-	dupPrompt1 := mustPromptID(t, uuid.New())
-	dupPrompt2 := mustPromptID(t, uuid.New())
-
-	type args struct {
+		name  string
 		pairs []Pair
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    Answer
-		wantErr bool
+		want  map[uuid.UUID]uuid.UUID
 	}{
 		{
-			name: "valid empty answer",
-			args: args{
-				pairs: []Pair{},
-			},
-			want: Answer{
-				pairs: []Pair{},
-			},
-			wantErr: false,
+			name:  "empty pairs",
+			pairs: []Pair{},
+			want:  map[uuid.UUID]uuid.UUID{},
 		},
 		{
-			name: "valid answer with pairs",
-			args: args{
-				pairs: []Pair{pair1, pair2},
+			name:  "non-empty pairs",
+			pairs: []Pair{pair1, pair2},
+			want: map[uuid.UUID]uuid.UUID{
+				pair1.PromptID: pair1.MatchID,
+				pair2.PromptID: pair2.MatchID,
 			},
-			want: Answer{
-				pairs: []Pair{pair1, pair2},
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid duplicate prompt ids",
-			args: args{
-				pairs: []Pair{
-					{PromptID: dupPrompt, MatchID: dupMatch1},
-					{PromptID: dupPrompt, MatchID: dupMatch2},
-				},
-			},
-			want:    Answer{},
-			wantErr: true,
-		},
-		{
-			name: "invalid duplicate match ids",
-			args: args{
-				pairs: []Pair{
-					{PromptID: dupPrompt1, MatchID: dupMatch},
-					{PromptID: dupPrompt2, MatchID: dupMatch},
-				},
-			},
-			want:    Answer{},
-			wantErr: true,
-		},
-		{
-			name: "invalid nil prompt id",
-			args: args{
-				pairs: []Pair{
-					{
-						PromptID: PromptID{},
-						MatchID:  mustMatchID(t, uuid.New()),
-					},
-				},
-			},
-			want:    Answer{},
-			wantErr: true,
-		},
-		{
-			name: "invalid nil match id",
-			args: args{
-				pairs: []Pair{
-					{
-						PromptID: mustPromptID(t, uuid.New()),
-						MatchID:  MatchID{},
-					},
-				},
-			},
-			want:    Answer{},
-			wantErr: true,
-		},
-		{
-			name: "invalid too many pairs",
-			args: args{
-				pairs: makeValidPairs(t, matching.MaxPairs+1),
-			},
-			want:    Answer{},
-			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.pairs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			a := Answer{pairs: tt.pairs}
+			got := a.AsMap()
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("New() got = %v, want %v", got, tt.want)
+				t.Fatalf("AsMap() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewMatchID(t *testing.T) {
-	validID := uuid.New()
-
-	type args struct {
-		id uuid.UUID
-	}
+func TestAnswer_IsEmpty(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    args
-		want    MatchID
-		wantErr bool
+		name  string
+		pairs []Pair
+		want  bool
 	}{
-		{
-			name: "valid id",
-			args: args{
-				id: validID,
-			},
-			want: MatchID{
-				id: validID,
-			},
-			wantErr: false,
-		},
-		{
-			name: "nil id",
-			args: args{
-				id: uuid.Nil,
-			},
-			want:    MatchID{},
-			wantErr: true,
-		},
+		{name: "empty", pairs: []Pair{}, want: true},
+		{name: "non-empty", pairs: []Pair{makeValidPair()}, want: false},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewMatchID(tt.args.id)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewMatchID() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewMatchID() got = %v, want %v", got, tt.want)
+			a := Answer{pairs: tt.pairs}
+			if got := a.IsEmpty(); got != tt.want {
+				t.Fatalf("IsEmpty() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewPromptID(t *testing.T) {
-	validID := uuid.New()
+func TestAnswer_Clone(t *testing.T) {
+	pairs := makeValidPairs(2)
+	a := Answer{pairs: pairs}
 
-	type args struct {
-		id uuid.UUID
+	got, ok := a.Clone().(Answer)
+	if !ok {
+		t.Fatalf("Clone() type = %T, want Answer", a.Clone())
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    PromptID
-		wantErr bool
-	}{
-		{
-			name: "valid id",
-			args: args{
-				id: validID,
-			},
-			want: PromptID{
-				id: validID,
-			},
-			wantErr: false,
-		},
-		{
-			name: "nil id",
-			args: args{
-				id: uuid.Nil,
-			},
-			want:    PromptID{},
-			wantErr: true,
-		},
+	if !reflect.DeepEqual(got, a) {
+		t.Fatalf("Clone() = %v, want %v", got, a)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewPromptID(tt.args.id)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewPromptID() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewPromptID() got = %v, want %v", got, tt.want)
-			}
-		})
+	if len(got.pairs) > 0 {
+		got.pairs[0] = Pair{PromptID: uuid.New(), MatchID: uuid.New()}
+		if reflect.DeepEqual(got, a) {
+			t.Fatalf("Clone() must return an independent copy")
+		}
 	}
-}
 
-func TestPromptID_ID(t *testing.T) {
-	id1 := uuid.New()
-	id2 := uuid.New()
-
-	type fields struct {
-		id uuid.UUID
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
-	}{
-		{
-			name: "returns id",
-			fields: fields{
-				id: id1,
-			},
-			want: id1,
-		},
-		{
-			name: "returns another id",
-			fields: fields{
-				id: id2,
-			},
-			want: id2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := PromptID{
-				id: tt.fields.id,
-			}
-			if got := p.ID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	var _ question.Answer = got
 }
 
 func Test_validateAnswerPairs(t *testing.T) {
-	dupPrompt := mustPromptID(t, uuid.New())
-	dupMatch1 := mustMatchID(t, uuid.New())
-	dupMatch2 := mustMatchID(t, uuid.New())
+	dupPrompt := uuid.New()
+	dupMatchLeft := uuid.New()
+	dupMatchRight := uuid.New()
 
-	type args struct {
-		pairs []Pair
-	}
 	tests := []struct {
 		name    string
-		args    args
+		pairs   []Pair
 		wantErr bool
 	}{
+		{name: "valid pairs", pairs: makeValidPairs(2), wantErr: false},
+		{name: "empty pairs", pairs: []Pair{}, wantErr: false},
 		{
-			name: "valid pairs",
-			args: args{
-				pairs: makeValidPairs(t, 2),
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty pairs valid",
-			args: args{
-				pairs: []Pair{},
-			},
-			wantErr: false,
-		},
-		{
-			name: "invalid nil prompt",
-			args: args{
-				pairs: []Pair{
-					{
-						PromptID: PromptID{},
-						MatchID:  mustMatchID(t, uuid.New()),
-					},
-				},
+			name: "nil prompt id",
+			pairs: []Pair{
+				{PromptID: uuid.Nil, MatchID: uuid.New()},
 			},
 			wantErr: true,
 		},
 		{
-			name: "invalid duplicate prompt",
-			args: args{
-				pairs: []Pair{
-					{PromptID: dupPrompt, MatchID: dupMatch1},
-					{PromptID: dupPrompt, MatchID: dupMatch2},
-				},
+			name: "duplicate prompt id",
+			pairs: []Pair{
+				{PromptID: dupPrompt, MatchID: dupMatchLeft},
+				{PromptID: dupPrompt, MatchID: dupMatchRight},
 			},
 			wantErr: true,
 		},
 		{
-			name: "invalid max count exceeded",
-			args: args{
-				pairs: makeValidPairs(t, matching.MaxPairs+1),
-			},
+			name:    "max count exceeded",
+			pairs:   makeValidPairs(matching.MaxPairs + 1),
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validateAnswerPairs(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validateAnswerPairs() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validateAnswerPairs(tt.pairs); (err != nil) != tt.wantErr {
+				t.Fatalf("validateAnswerPairs() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func Test_validateAnswerPairsMaxCount(t *testing.T) {
-	type args struct {
-		pairs []Pair
-	}
 	tests := []struct {
 		name    string
-		args    args
+		pairs   []Pair
 		wantErr bool
 	}{
-		{
-			name: "empty pairs",
-			args: args{
-				pairs: []Pair{},
-			},
-			wantErr: false,
-		},
-		{
-			name: "exact max count",
-			args: args{
-				pairs: makeValidPairs(t, matching.MaxPairs),
-			},
-			wantErr: false,
-		},
-		{
-			name: "more than max count",
-			args: args{
-				pairs: makeValidPairs(t, matching.MaxPairs+1),
-			},
-			wantErr: true,
-		},
+		{name: "empty", pairs: []Pair{}, wantErr: false},
+		{name: "exact max", pairs: makeValidPairs(matching.MaxPairs), wantErr: false},
+		{name: "above max", pairs: makeValidPairs(matching.MaxPairs + 1), wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validateAnswerPairsMaxCount(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validateAnswerPairsMaxCount() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validateAnswerPairsMaxCount(tt.pairs); (err != nil) != tt.wantErr {
+				t.Fatalf("validateAnswerPairsMaxCount() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func Test_validatePairIDsNotEmpty(t *testing.T) {
-	type args struct {
-		pairs []Pair
-	}
 	tests := []struct {
 		name    string
-		args    args
+		pairs   []Pair
 		wantErr bool
 	}{
-		{
-			name: "valid ids",
-			args: args{
-				pairs: makeValidPairs(t, 2),
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty slice",
-			args: args{
-				pairs: []Pair{},
-			},
-			wantErr: false,
-		},
+		{name: "valid ids", pairs: makeValidPairs(2), wantErr: false},
+		{name: "empty slice", pairs: []Pair{}, wantErr: false},
 		{
 			name: "nil prompt id",
-			args: args{
-				pairs: []Pair{
-					{
-						PromptID: PromptID{},
-						MatchID:  mustMatchID(t, uuid.New()),
-					},
-				},
+			pairs: []Pair{
+				{PromptID: uuid.Nil, MatchID: uuid.New()},
 			},
 			wantErr: true,
 		},
 		{
 			name: "nil match id",
-			args: args{
-				pairs: []Pair{
-					{
-						PromptID: mustPromptID(t, uuid.New()),
-						MatchID:  MatchID{},
-					},
-				},
+			pairs: []Pair{
+				{PromptID: uuid.New(), MatchID: uuid.Nil},
 			},
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validatePairIDsNotEmpty(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validatePairIDsNotEmpty() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validatePairIDsNotEmpty(tt.pairs); (err != nil) != tt.wantErr {
+				t.Fatalf("validatePairIDsNotEmpty() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func Test_validatePairsDuplicates(t *testing.T) {
-	dupPrompt := mustPromptID(t, uuid.New())
-	dupMatch1 := mustMatchID(t, uuid.New())
-	dupMatch2 := mustMatchID(t, uuid.New())
+	dupPrompt := uuid.New()
+	dupMatchLeft := uuid.New()
+	dupMatchRight := uuid.New()
 
-	dupMatch := mustMatchID(t, uuid.New())
-	dupPrompt1 := mustPromptID(t, uuid.New())
-	dupPrompt2 := mustPromptID(t, uuid.New())
+	dupMatch := uuid.New()
+	dupPromptLeft := uuid.New()
+	dupPromptRight := uuid.New()
 
-	type args struct {
-		pairs []Pair
-	}
 	tests := []struct {
 		name    string
-		args    args
+		pairs   []Pair
 		wantErr bool
 	}{
-		{
-			name: "valid unique pairs",
-			args: args{
-				pairs: makeValidPairs(t, 2),
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty slice",
-			args: args{
-				pairs: []Pair{},
-			},
-			wantErr: false,
-		},
+		{name: "valid unique pairs", pairs: makeValidPairs(2), wantErr: false},
+		{name: "empty slice", pairs: []Pair{}, wantErr: false},
 		{
 			name: "duplicate prompt ids",
-			args: args{
-				pairs: []Pair{
-					{PromptID: dupPrompt, MatchID: dupMatch1},
-					{PromptID: dupPrompt, MatchID: dupMatch2},
-				},
+			pairs: []Pair{
+				{PromptID: dupPrompt, MatchID: dupMatchLeft},
+				{PromptID: dupPrompt, MatchID: dupMatchRight},
 			},
 			wantErr: true,
 		},
 		{
 			name: "duplicate match ids",
-			args: args{
-				pairs: []Pair{
-					{PromptID: dupPrompt1, MatchID: dupMatch},
-					{PromptID: dupPrompt2, MatchID: dupMatch},
-				},
+			pairs: []Pair{
+				{PromptID: dupPromptLeft, MatchID: dupMatch},
+				{PromptID: dupPromptRight, MatchID: dupMatch},
 			},
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validatePairsDuplicates(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validatePairsDuplicates() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validatePairsDuplicates(tt.pairs); (err != nil) != tt.wantErr {
+				t.Fatalf("validatePairsDuplicates() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

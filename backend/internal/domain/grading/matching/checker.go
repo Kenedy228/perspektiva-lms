@@ -2,21 +2,23 @@ package matching
 
 import (
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
-	question2 "gitflic.ru/lms/backend/internal/domain/question"
-	qmatching "gitflic.ru/lms/backend/internal/domain/question/matching"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question/matching"
 	"gitflic.ru/lms/backend/internal/domain/question/matching/answer"
 	"github.com/google/uuid"
 )
 
-type Checker struct {
-}
+// Checker проверяет ответы для вопросов на сопоставление пар.
+type Checker struct{}
 
+// New создает checker для вопросов типа matching.
 func New() Checker {
 	return Checker{}
 }
 
-func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, error) {
-	qCast, ok := q.(*qmatching.Question)
+// Check возвращает 1 только когда все пары вопроса присутствуют в ответе.
+func (c Checker) Check(q question.Question, a question.Answer) (score.Score, error) {
+	qCast, ok := q.(*matching.Question)
 	if !ok {
 		return score.Score{}, ErrInvalidQuestionType
 	}
@@ -30,28 +32,26 @@ func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, e
 	studentAnswers := aCast.Pairs()
 
 	if len(studentAnswers) > len(pairs) {
-		s, _ := score.New(0)
-		return s, nil
+		return score.New(0)
 	}
 
 	for i := range pairs {
 		if !containsPair(studentAnswers, pairs[i].PromptID(), pairs[i].MatchID()) {
-			s, _ := score.New(0)
-			return s, nil
+			return score.New(0)
 		}
 	}
 
-	s, _ := score.New(1)
-	return s, nil
+	return score.New(1)
 }
 
-func (c Checker) Supports(qType question2.Type) bool {
-	return qType == question2.TypeMatching
+// Supports сообщает, поддерживается ли тип вопроса checker-ом.
+func (c Checker) Supports(qType question.Type) bool {
+	return qType == question.TypeMatching
 }
 
 func containsPair(pairs []answer.Pair, promptID, matchID uuid.UUID) bool {
 	for i := range pairs {
-		if pairs[i].PromptID.ID() == promptID && pairs[i].MatchID.ID() == matchID {
+		if pairs[i].PromptID == promptID && pairs[i].MatchID == matchID {
 			return true
 		}
 	}

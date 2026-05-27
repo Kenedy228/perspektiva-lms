@@ -1,2 +1,2 @@
-// Package selectable contains selectable-question domain or grading behavior.
+// Package selectable содержит checker для проверки ответов на вопросы с выбором вариантов.
 package selectable

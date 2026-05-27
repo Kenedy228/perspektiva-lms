@@ -16,7 +16,7 @@ func validateQuestion(q question.Question) error {
 
 func validateRequired(q question.Question) error {
 	if q == nil {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: снимок вопроса обязателен", ErrInvalid)
 	}
 
 	return nil

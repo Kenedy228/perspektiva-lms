@@ -31,7 +31,7 @@ func marshalAnswer(ans questdomain.Answer) ([]byte, error) {
 	switch typed := ans.(type) {
 	case selectableanswer.Answer:
 		for _, id := range typed.OptionIDs() {
-			payload.SelectableOptionIDs = append(payload.SelectableOptionIDs, id.ID().String())
+			payload.SelectableOptionIDs = append(payload.SelectableOptionIDs, id.String())
 		}
 	case sequenceanswer.Answer:
 		for _, id := range typed.OptionIDs() {
@@ -40,8 +40,8 @@ func marshalAnswer(ans questdomain.Answer) ([]byte, error) {
 	case matchinganswer.Answer:
 		for _, p := range typed.Pairs() {
 			payload.MatchingPairs = append(payload.MatchingPairs, answerPairPayload{
-				PromptID: p.PromptID.ID().String(),
-				MatchID:  p.MatchID.ID().String(),
+				PromptID: p.PromptID.String(),
+				MatchID:  p.MatchID.String(),
 			})
 		}
 	case typedanswer.Answer:
@@ -66,17 +66,13 @@ func unmarshalAnswer(qType questdomain.Type, raw []byte) (questdomain.Answer, er
 
 	switch qType {
 	case questdomain.TypeSelectable:
-		ids := make([]selectableanswer.OptionID, 0, len(payload.SelectableOptionIDs))
+		ids := make([]uuid.UUID, 0, len(payload.SelectableOptionIDs))
 		for _, rawID := range payload.SelectableOptionIDs {
 			id, err := uuid.Parse(rawID)
 			if err != nil {
 				return nil, err
 			}
-			optionID, err := selectableanswer.NewOptionID(id)
-			if err != nil {
-				return nil, err
-			}
-			ids = append(ids, optionID)
+			ids = append(ids, id)
 		}
 		return selectableanswer.New(ids)
 	case questdomain.TypeSequence:
@@ -104,15 +100,7 @@ func unmarshalAnswer(qType questdomain.Type, raw []byte) (questdomain.Answer, er
 			if err != nil {
 				return nil, err
 			}
-			prompt, err := matchinganswer.NewPromptID(promptID)
-			if err != nil {
-				return nil, err
-			}
-			match, err := matchinganswer.NewMatchID(matchID)
-			if err != nil {
-				return nil, err
-			}
-			pairs = append(pairs, matchinganswer.Pair{PromptID: prompt, MatchID: match})
+			pairs = append(pairs, matchinganswer.Pair{PromptID: promptID, MatchID: matchID})
 		}
 		return matchinganswer.New(pairs)
 	case questdomain.TypeTyped:

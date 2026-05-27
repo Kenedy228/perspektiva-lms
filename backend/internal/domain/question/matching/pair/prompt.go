@@ -2,25 +2,21 @@ package pair
 
 import (
 	"fmt"
-	"unicode/utf8"
 
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
 	"gitflic.ru/lms/backend/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
 
+// Prompt хранит левую часть пары вопроса на соответствие.
 type Prompt struct {
-	id   uuid.UUID
-	text text.Text
+	id    uuid.UUID
+	value string
 }
 
-const (
-	PromptCharsLimit int = 255
-)
-
-func NewPrompt(t text.Text) (Prompt, error) {
-	if utf8.RuneCountInString(t.Value()) > PromptCharsLimit {
-		return Prompt{}, fmt.Errorf("%w: invalid value (%d)", ErrInvalid, PromptCharsLimit)
+// NewPrompt создает новый prompt и проверяет его значение.
+func NewPrompt(value string) (Prompt, error) {
+	if err := validateValue(value); err != nil {
+		return Prompt{}, fmt.Errorf("ошибка создания prompt: %w", err)
 	}
 
 	id, err := uid.New()
@@ -29,38 +25,38 @@ func NewPrompt(t text.Text) (Prompt, error) {
 	}
 
 	return Prompt{
-		id:   id,
-		text: t,
+		id:    id,
+		value: value,
 	}, nil
 }
 
-func RestorePrompt(id uuid.UUID, t text.Text) (Prompt, error) {
-	if id == uuid.Nil {
-		return Prompt{}, fmt.Errorf("%w: invalid value", ErrInvalid)
+// RestorePrompt восстанавливает prompt из сохраненного состояния.
+func RestorePrompt(id uuid.UUID, value string) (Prompt, error) {
+	if err := validateIDRequired(id); err != nil {
+		return Prompt{}, fmt.Errorf("ошибка восстановления prompt: %w", err)
 	}
 
-	if t.IsIncomplete() {
-		return Prompt{}, fmt.Errorf("%w: invalid value", ErrInvalid)
-	}
-
-	if utf8.RuneCountInString(t.Value()) > PromptCharsLimit {
-		return Prompt{}, fmt.Errorf("%w: invalid value (%d)", ErrInvalid, PromptCharsLimit)
+	if err := validateValue(value); err != nil {
+		return Prompt{}, fmt.Errorf("ошибка восстановления prompt: %w", err)
 	}
 
 	return Prompt{
-		id:   id,
-		text: t,
+		id:    id,
+		value: value,
 	}, nil
 }
 
+// ID возвращает идентификатор prompt.
 func (p Prompt) ID() uuid.UUID {
 	return p.id
 }
 
-func (p Prompt) Text() text.Text {
-	return p.text
+// Value возвращает значение prompt.
+func (p Prompt) Value() string {
+	return p.value
 }
 
-func (p Prompt) IsIncomplete() bool {
-	return p.id == uuid.Nil || len(p.text.Value()) == 0
+// IsZero сообщает, что prompt находится в нулевом/неинициализированном состоянии.
+func (p Prompt) IsZero() bool {
+	return p.id == uuid.Nil || len(p.value) == 0
 }

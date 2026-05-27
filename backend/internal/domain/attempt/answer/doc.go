@@ -1,2 +1,2 @@
-// Package answer defines answer value objects used inside parent aggregates.
+// Package answer содержит запись ответа пользователя внутри попытки.
 package answer
