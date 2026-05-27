@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"gitflic.ru/lms/backend/internal/domain/grading"
 	"gitflic.ru/lms/backend/internal/domain/grading/selectable"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
@@ -40,8 +41,8 @@ func TestChecker_Check(t *testing.T) {
 		{name: "частично правильный", question: q, answer: mustSelectableAnswer(t, opt1.ID()), wantScore: 0},
 		{name: "лишний вариант", question: q, answer: mustSelectableAnswer(t, opt1.ID(), opt2.ID(), opt3.ID()), wantScore: 0},
 		{name: "пустой ответ", question: q, answer: mustSelectableAnswer(t), wantScore: 0},
-		{name: "неверный тип вопроса", question: wrongQuestion, answer: mustSelectableAnswer(t, opt1.ID()), wantErr: selectable.ErrInvalidQuestionType},
-		{name: "неверный тип ответа", question: q, answer: wrongAnswer, wantErr: selectable.ErrInvalidAnswerType},
+		{name: "неверный тип вопроса", question: wrongQuestion, answer: mustSelectableAnswer(t, opt1.ID()), wantErr: grading.ErrInvalidQuestionType},
+		{name: "неверный тип ответа", question: q, answer: wrongAnswer, wantErr: grading.ErrInvalidAnswerType},
 	}
 
 	checker := selectable.New()

@@ -7,59 +7,73 @@ import (
 
 	questionports "gitflic.ru/lms/backend/internal/application/ports/question"
 	domaingrading "gitflic.ru/lms/backend/internal/domain/grading"
+	"gitflic.ru/lms/backend/internal/domain/grading/registry"
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"github.com/google/uuid"
 )
 
-var (
-	// ErrInvalidInput возвращается при некорректных входных данных usecase-а.
-	ErrInvalidInput = errors.New("некорректные данные для оценки ответа")
-	// ErrUnsupportedChecker возвращается, когда для типа вопроса не найден подходящий checker.
-	ErrUnsupportedChecker = errors.New("проверяющий для типа вопроса не найден")
-)
+var ErrInvalidInput = errors.New("некорректные данные для оценки ответа")
 
-// GradeUseCase оркестрирует сценарий оценки ответа пользователя.
 type GradeUseCase struct {
-	r        questionports.Repository
-	checkers []domaingrading.Checker
+	r          questionports.Repository
+	registry   *registry.Registry
+	validators map[question.Type]domaingrading.AnswerValidator
 }
 
-// NewGradeUseCase создает usecase оценки ответа и требует repository и минимум один checker.
-func NewGradeUseCase(r questionports.Repository, checkers ...domaingrading.Checker) *GradeUseCase {
+func NewGradeUseCase(
+	r questionports.Repository,
+	reg *registry.Registry,
+	validators map[question.Type]domaingrading.AnswerValidator,
+) *GradeUseCase {
 	if r == nil {
 		panic("question grade usecase requires repository")
 	}
-	if len(checkers) == 0 {
-		panic("question grade usecase requires checkers")
+	if reg == nil {
+		panic("question grade usecase requires checker registry")
+	}
+	if len(validators) == 0 {
+		panic("question grade usecase requires validators")
 	}
 
 	return &GradeUseCase{
-		r:        r,
-		checkers: append([]domaingrading.Checker(nil), checkers...),
+		r:          r,
+		registry:   reg,
+		validators: validators,
 	}
 }
 
-// GradeInput описывает входные данные для оценки ответа.
 type GradeInput struct {
 	QuestionID string
 	Answer     question.Answer
 }
 
-// GradeOutput содержит вычисленный score ответа.
 type GradeOutput struct {
 	Score score.Score
 }
 
-// Execute загружает вопрос, выбирает checker по типу и возвращает оценку ответа.
 func (uc *GradeUseCase) Execute(ctx context.Context, in GradeInput) (*GradeOutput, error) {
-	if err := validateGradeInput(in); err != nil {
+	if err := validateInput(in); err != nil {
 		return nil, err
 	}
 
-	q, checker, err := uc.loadQuestionAndChecker(ctx, in.QuestionID)
+	q, err := uc.loadQuestion(ctx, in.QuestionID)
 	if err != nil {
 		return nil, err
+	}
+
+	v, ok := uc.validators[q.Type()]
+	if !ok {
+		return nil, fmt.Errorf("валидатор для типа вопроса %s не найден", q.Type())
+	}
+
+	if err := v.Validate(q, in.Answer); err != nil {
+		return nil, fmt.Errorf("валидация ответа: %w", err)
+	}
+
+	checker, err := uc.registry.Get(q.Type())
+	if err != nil {
+		return nil, fmt.Errorf("поиск проверяющего: %w", err)
 	}
 
 	s, err := checker.Check(q, in.Answer)
@@ -70,27 +84,84 @@ func (uc *GradeUseCase) Execute(ctx context.Context, in GradeInput) (*GradeOutpu
 	return &GradeOutput{Score: s}, nil
 }
 
-func (uc *GradeUseCase) loadQuestionAndChecker(ctx context.Context, questionID string) (question.Question, domaingrading.Checker, error) {
+func (uc *GradeUseCase) loadQuestion(ctx context.Context, questionID string) (question.Question, error) {
 	id, err := uuid.Parse(questionID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("разбор идентификатора вопроса: %w", err)
+		return nil, fmt.Errorf("разбор идентификатора вопроса: %w", err)
 	}
 
 	q, err := uc.r.FindByID(ctx, id)
 	if err != nil {
-		return nil, nil, fmt.Errorf("поиск вопроса: %w", err)
+		return nil, fmt.Errorf("поиск вопроса: %w", err)
 	}
 
-	for i := range uc.checkers {
-		if uc.checkers[i].Supports(q.Type()) {
-			return q, uc.checkers[i], nil
-		}
-	}
-
-	return nil, nil, fmt.Errorf("%w: тип вопроса %s", ErrUnsupportedChecker, q.Type())
+	return q, nil
 }
 
-func validateGradeInput(in GradeInput) error {
+type ValidateAnswerUseCase struct {
+	r          questionports.Repository
+	validators map[question.Type]domaingrading.AnswerValidator
+}
+
+func NewValidateAnswerUseCase(
+	r questionports.Repository,
+	validators map[question.Type]domaingrading.AnswerValidator,
+) *ValidateAnswerUseCase {
+	if r == nil {
+		panic("validate answer usecase requires repository")
+	}
+	if len(validators) == 0 {
+		panic("validate answer usecase requires validators")
+	}
+
+	return &ValidateAnswerUseCase{
+		r:          r,
+		validators: validators,
+	}
+}
+
+type ValidateAnswerInput struct {
+	QuestionID string
+	Answer     question.Answer
+}
+
+func (uc *ValidateAnswerUseCase) Execute(ctx context.Context, in ValidateAnswerInput) error {
+	if err := validateInput(GradeInput{QuestionID: in.QuestionID, Answer: in.Answer}); err != nil {
+		return err
+	}
+
+	q, err := uc.loadQuestion(ctx, in.QuestionID)
+	if err != nil {
+		return err
+	}
+
+	v, ok := uc.validators[q.Type()]
+	if !ok {
+		return fmt.Errorf("валидатор для типа вопроса %s не найден", q.Type())
+	}
+
+	if err := v.Validate(q, in.Answer); err != nil {
+		return fmt.Errorf("валидация ответа: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *ValidateAnswerUseCase) loadQuestion(ctx context.Context, questionID string) (question.Question, error) {
+	id, err := uuid.Parse(questionID)
+	if err != nil {
+		return nil, fmt.Errorf("разбор идентификатора вопроса: %w", err)
+	}
+
+	q, err := uc.r.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("поиск вопроса: %w", err)
+	}
+
+	return q, nil
+}
+
+func validateInput(in GradeInput) error {
 	if in.QuestionID == "" {
 		return fmt.Errorf("%w: идентификатор вопроса обязателен", ErrInvalidInput)
 	}
@@ -109,26 +180,4 @@ func validateGradeInput(in GradeInput) error {
 	}
 
 	return nil
-}
-
-// ValidateAnswerUseCase проверяет корректность ответа через сценарий оценки без возврата score.
-type ValidateAnswerUseCase struct {
-	grade *GradeUseCase
-}
-
-// NewValidateAnswerUseCase создает usecase валидации ответа на базе GradeUseCase.
-func NewValidateAnswerUseCase(r questionports.Repository, checkers ...domaingrading.Checker) *ValidateAnswerUseCase {
-	return &ValidateAnswerUseCase{grade: NewGradeUseCase(r, checkers...)}
-}
-
-// ValidateAnswerInput описывает входные данные для валидации ответа.
-type ValidateAnswerInput struct {
-	QuestionID string
-	Answer     question.Answer
-}
-
-// Execute делегирует проверку в GradeUseCase.Execute без повторной загрузки вопроса.
-func (uc *ValidateAnswerUseCase) Execute(ctx context.Context, in ValidateAnswerInput) error {
-	_, err := uc.grade.Execute(ctx, GradeInput{QuestionID: in.QuestionID, Answer: in.Answer})
-	return err
 }

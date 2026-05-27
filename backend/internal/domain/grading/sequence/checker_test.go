@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"gitflic.ru/lms/backend/internal/domain/grading"
 	"gitflic.ru/lms/backend/internal/domain/grading/sequence"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
@@ -41,8 +42,8 @@ func TestChecker_Check(t *testing.T) {
 		{name: "недостаточное количество", question: q, answer: mustSequenceAnswer(t, opt1, opt2), wantScore: 0},
 		{name: "лишние ответы", question: q, answer: mustSequenceAnswerWithIDs(t, optionID(opt1.Value()), optionID(opt2.Value()), optionID(opt3.Value()), uuid.New()), wantScore: 0},
 		{name: "пустой ответ", question: q, answer: mustSequenceAnswer(t), wantScore: 0},
-		{name: "неверный тип вопроса", question: wrongQuestion, answer: mustSequenceAnswer(t, opt1, opt2, opt3), wantErr: sequence.ErrInvalidQuestionType},
-		{name: "неверный тип ответа", question: q, answer: wrongAnswer, wantErr: sequence.ErrInvalidAnswerType},
+		{name: "неверный тип вопроса", question: wrongQuestion, answer: mustSequenceAnswer(t, opt1, opt2, opt3), wantErr: grading.ErrInvalidQuestionType},
+		{name: "неверный тип ответа", question: q, answer: wrongAnswer, wantErr: grading.ErrInvalidAnswerType},
 	}
 
 	checker := sequence.New()

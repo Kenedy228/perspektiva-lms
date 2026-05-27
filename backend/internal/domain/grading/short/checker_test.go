@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"gitflic.ru/lms/backend/internal/domain/grading"
 	"gitflic.ru/lms/backend/internal/domain/grading/short"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
@@ -36,8 +37,8 @@ func TestChecker_Check(t *testing.T) {
 		{name: "полностью неправильный", checker: short.New(), question: q, answer: answer.New("Париж"), wantScore: 0},
 		{name: "пустой ответ", checker: short.New(), question: q, answer: answer.New(""), wantScore: 0},
 		{name: "нормализация короткого ответа", checker: short.New(short.TrimSpace(), short.ToLower()), question: q, answer: answer.New("  москва  "), wantScore: 1},
-		{name: "неверный тип вопроса", checker: short.New(), question: wrongQuestion, answer: answer.New("Москва"), wantErr: short.ErrInvalidQuestionType},
-		{name: "неверный тип ответа", checker: short.New(), question: q, answer: wrongAnswer, wantErr: short.ErrInvalidAnswerType},
+		{name: "неверный тип вопроса", checker: short.New(), question: wrongQuestion, answer: answer.New("Москва"), wantErr: grading.ErrInvalidQuestionType},
+		{name: "неверный тип ответа", checker: short.New(), question: q, answer: wrongAnswer, wantErr: grading.ErrInvalidAnswerType},
 	}
 
 	for _, tt := range tests {
