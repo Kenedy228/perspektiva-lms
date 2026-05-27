@@ -1,8 +1,7 @@
 package option
 
 import (
-	"fmt"
-
+	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"gitflic.ru/lms/backend/internal/domain/shared/text"
 	"gitflic.ru/lms/backend/internal/domain/shared/uid"
 	"github.com/google/uuid"
@@ -10,12 +9,12 @@ import (
 
 type Option struct {
 	id        uuid.UUID
-	text      text.Text
+	value     string
 	isCorrect bool
 }
 
-func New(t text.Text, isCorrect bool) (Option, error) {
-	if err := validateOptionText(t); err != nil {
+func New(value string, isCorrect bool) (Option, error) {
+	if err := validateValue(value); err != nil {
 		return Option{}, err
 	}
 
@@ -26,23 +25,19 @@ func New(t text.Text, isCorrect bool) (Option, error) {
 
 	return Option{
 		id:        id,
-		text:      t,
+		value:     value,
 		isCorrect: isCorrect,
 	}, nil
 }
 
-func Restore(id uuid.UUID, t text.Text, isCorrect bool) (Option, error) {
-	if id == uuid.Nil {
-		return Option{}, fmt.Errorf("%w: invalid value", ErrInvalid)
-	}
-
-	if err := validateOptionText(t); err != nil {
+func Restore(b base.Base, id uuid.UUID, value string, isCorrect bool) (Option, error) {
+	if err := validateValue(value); err != nil {
 		return Option{}, err
 	}
 
 	return Option{
 		id:        id,
-		text:      t,
+		value:     t,
 		isCorrect: isCorrect,
 	}, nil
 }
@@ -52,7 +47,7 @@ func (o Option) ID() uuid.UUID {
 }
 
 func (o Option) Text() text.Text {
-	return o.text
+	return o.value
 }
 
 func (o Option) IsCorrect() bool {

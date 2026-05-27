@@ -1,5 +1,5 @@
 package title
 
 const (
-	valueCharsLimit int = 500
+	ValueCharsLimit int = 500
 )

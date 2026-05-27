@@ -4,11 +4,8 @@ import (
 	"slices"
 
 	"gitflic.ru/lms/backend/internal/domain/question"
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"gitflic.ru/lms/backend/internal/domain/question/short/variant"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
-	"github.com/google/uuid"
 )
 
 type Question struct {
@@ -16,13 +13,12 @@ type Question struct {
 	variants []variant.Variant
 }
 
-func New(t title.Title, variants []variant.Variant) (*Question, error) {
-	if err := validateVariants(variants); err != nil {
+func New(b *base.Base, variants []variant.Variant) (*Question, error) {
+	if err := validateBase(b); err != nil {
 		return nil, err
 	}
 
-	b, err := base.New(t)
-	if err != nil {
+	if err := validateVariants(variants); err != nil {
 		return nil, err
 	}
 
@@ -32,13 +28,12 @@ func New(t title.Title, variants []variant.Variant) (*Question, error) {
 	}, nil
 }
 
-func Restore(id uuid.UUID, t title.Title, att *attachment.Attachment, variants []variant.Variant) (*Question, error) {
-	if err := validateVariants(variants); err != nil {
+func Restore(b *base.Base, variants []variant.Variant) (*Question, error) {
+	if err := validateBase(b); err != nil {
 		return nil, err
 	}
 
-	b, err := base.Restore(id, t, att)
-	if err != nil {
+	if err := validateVariants(variants); err != nil {
 		return nil, err
 	}
 

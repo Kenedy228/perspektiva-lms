@@ -24,8 +24,8 @@ func validateTitle(t title.Title) error {
 }
 
 func validateQuestions(questions []uuid.UUID) error {
-	if len(questions) > maxQuestionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, maxQuestionsCount)
+	if len(questions) > MaxQuestionsCount {
+		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, MaxQuestionsCount)
 	}
 
 	for i := range questions {
@@ -44,8 +44,8 @@ func validateQuestions(questions []uuid.UUID) error {
 func validateQuestionsForAdding(questions []uuid.UUID, add []uuid.UUID) error {
 	totalLen := len(questions) + len(add)
 
-	if totalLen > maxQuestionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, maxQuestionsCount)
+	if totalLen > MaxQuestionsCount {
+		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, MaxQuestionsCount)
 	}
 
 	for i := range add {

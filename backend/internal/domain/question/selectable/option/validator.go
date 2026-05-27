@@ -3,21 +3,33 @@ package option
 import (
 	"fmt"
 	"unicode/utf8"
-
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
 )
 
-func validateOptionText(t text.Text) error {
-	if err := validateOptionTextCharsLimit(t); err != nil {
+func validateValue(value string) error {
+	if err := validateRequired(value); err != nil {
+		return err
+	}
+
+	if err := validateCharsLimit(value); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func validateOptionTextCharsLimit(t text.Text) error {
-	if utf8.RuneCountInString(t.Value()) > TextCharsLimit {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, TextCharsLimit)
+func validateRequired(value string) error {
+	if value == "" {
+		return fmt.Errorf("%w: значение не может быть пустым", ErrInvalid)
+	}
+
+	return nil
+}
+
+func validateCharsLimit(value string) error {
+	rc := utf8.RuneCountInString(value)
+
+	if rc > ValueCharsLimit {
+		return fmt.Errorf("%w: значение не может прешывать %d символов (текущее количество символов - %d)", ErrInvalid, ValueCharsLimit, rc)
 	}
 
 	return nil

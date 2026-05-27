@@ -1,53 +1,25 @@
 package option
 
-import (
-	"fmt"
-
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
-	"gitflic.ru/lms/backend/internal/domain/shared/uid"
-	"github.com/google/uuid"
-)
-
 type Option struct {
-	id   uuid.UUID
-	text text.Text
+	value string
 }
 
-func New(t text.Text) (Option, error) {
-	if err := validateText(t); err != nil {
-		return Option{}, err
-	}
+func New(value string) (Option, error) {
+	value = normalizeValue(value)
 
-	id, err := uid.New()
-	if err != nil {
+	if err := validateValue(value); err != nil {
 		return Option{}, err
 	}
 
 	return Option{
-		id:   id,
-		text: t,
+		value: value,
 	}, nil
 }
 
-func Restore(id uuid.UUID, t text.Text) (Option, error) {
-	if id == uuid.Nil {
-		return Option{}, fmt.Errorf("%w: invalid value", ErrInvalid)
-	}
-
-	if err := validateText(t); err != nil {
-		return Option{}, err
-	}
-
-	return Option{
-		id:   id,
-		text: t,
-	}, nil
+func (o Option) Value() string {
+	return o.value
 }
 
-func (o Option) ID() uuid.UUID {
-	return o.id
-}
-
-func (o Option) Text() text.Text {
-	return o.text
+func (o Option) IsZero() bool {
+	return o.value == ""
 }

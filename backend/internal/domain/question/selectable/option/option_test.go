@@ -23,7 +23,7 @@ func mustText(t *testing.T, v string) text.Text {
 
 func TestNew(t *testing.T) {
 	validText := mustText(t, "option")
-	longText := mustText(t, strings.Repeat("а", TextCharsLimit+1))
+	longText := mustText(t, strings.Repeat("а", ValueCharsLimit+1))
 
 	type args struct {
 		t         text.Text
@@ -119,7 +119,7 @@ func TestOption_ID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := Option{
 				id:        tt.fields.id,
-				text:      tt.fields.text,
+				value:     tt.fields.text,
 				isCorrect: tt.fields.isCorrect,
 			}
 			if got := o.ID(); !reflect.DeepEqual(got, tt.want) {
@@ -165,7 +165,7 @@ func TestOption_IsCorrect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := Option{
 				id:        tt.fields.id,
-				text:      tt.fields.text,
+				value:     tt.fields.text,
 				isCorrect: tt.fields.isCorrect,
 			}
 			if got := o.IsCorrect(); got != tt.want {
@@ -202,7 +202,7 @@ func TestOption_Text(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := Option{
 				id:        tt.fields.id,
-				text:      tt.fields.text,
+				value:     tt.fields.text,
 				isCorrect: tt.fields.isCorrect,
 			}
 			if got := o.Text(); !reflect.DeepEqual(got, tt.want) {
@@ -231,7 +231,7 @@ func Test_validateOptionText(t *testing.T) {
 		{
 			name: "too long text",
 			args: args{
-				t: mustText(t, strings.Repeat("а", TextCharsLimit+1)),
+				t: mustText(t, strings.Repeat("а", ValueCharsLimit+1)),
 			},
 			wantErr: true,
 		},
@@ -257,14 +257,14 @@ func Test_validateOptionTextCharsLimit(t *testing.T) {
 		{
 			name: "text within limit",
 			args: args{
-				t: mustText(t, strings.Repeat("а", TextCharsLimit)),
+				t: mustText(t, strings.Repeat("а", ValueCharsLimit)),
 			},
 			wantErr: false,
 		},
 		{
 			name: "text exceeds limit",
 			args: args{
-				t: mustText(t, strings.Repeat("а", TextCharsLimit+1)),
+				t: mustText(t, strings.Repeat("а", ValueCharsLimit+1)),
 			},
 			wantErr: true,
 		},

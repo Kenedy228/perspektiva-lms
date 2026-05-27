@@ -1,5 +1,5 @@
 package bank
 
 const (
-	maxQuestionsCount int = 1e5
+	MaxQuestionsCount int = 1e5
 )

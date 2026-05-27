@@ -1,21 +1,35 @@
 @startuml
-title Серверная часть СДО - зависимости между слоями
+title Архитектура серверной части системы дистанционного обучения
 
 skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Times New Roman
+skinparam defaultFontSize 14
+skinparam ArrowColor black
+skinparam PackageBorderColor black
+skinparam PackageFontColor black
+skinparam PackageBackgroundColor white
 
-package http
-package usecases
-package ports
+package "Транспортный слой" as http {
+}
 
-package domain
+package "Прикладной слой" as usecases {
+}
 
-package infra
+package "Слой портов" as ports {
+}
 
-http --> usecases
-http --> ports
-usecases --> ports
-usecases --> domain
-ports --> domain
-infra ..|> ports
+package "Доменный слой" as domain {
+}
+
+package "Инфраструктурный слой" as infra {
+}
+
+http --> usecases : вызывает
+http --> ports : использует DTO/контракты
+usecases --> ports : использует интерфейсы
+usecases --> domain : управляет доменной моделью
+ports --> domain : описывает контракты через доменные типы
+infra ..|> ports : реализует интерфейсы
 
 @enduml

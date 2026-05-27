@@ -3,8 +3,25 @@ package short
 import (
 	"fmt"
 
+	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"gitflic.ru/lms/backend/internal/domain/question/short/variant"
 )
+
+func validateBase(b *base.Base) error {
+	if err := validateRequiredBase(b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateRequiredBase(b *base.Base) error {
+	if b == nil {
+		return fmt.Errorf("%w: база вопросов обязательна", ErrInvalid)
+	}
+
+	return nil
+}
 
 func validateVariants(variants []variant.Variant) error {
 	if err := validateVariantsCount(variants); err != nil {

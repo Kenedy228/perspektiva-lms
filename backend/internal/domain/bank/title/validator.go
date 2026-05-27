@@ -2,12 +2,11 @@ package title
 
 import (
 	"fmt"
-	"strings"
 	"unicode/utf8"
 )
 
 func validateValue(value string) error {
-	if err := validateNotEmpty(value); err != nil {
+	if err := validateRequired(value); err != nil {
 		return err
 	}
 
@@ -18,17 +17,19 @@ func validateValue(value string) error {
 	return nil
 }
 
-func validateNotEmpty(value string) error {
-	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+func validateRequired(value string) error {
+	if value == "" {
+		return fmt.Errorf("%w: значение не может быть пустым", ErrInvalid)
 	}
 
 	return nil
 }
 
 func validateValueCharsLimit(value string) error {
-	if utf8.RuneCountInString(value) > valueCharsLimit {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, valueCharsLimit)
+	rc := utf8.RuneCountInString(value)
+
+	if utf8.RuneCountInString(value) > ValueCharsLimit {
+		return fmt.Errorf("%w: значение не может превышать %d символов (текущее количество символов - %d)", ErrInvalid, ValueCharsLimit, rc)
 	}
 
 	return nil

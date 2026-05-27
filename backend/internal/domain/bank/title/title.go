@@ -5,6 +5,8 @@ type Title struct {
 }
 
 func New(value string) (Title, error) {
+	value = normalizeValue(value)
+
 	if err := validateValue(value); err != nil {
 		return Title{}, err
 	}
