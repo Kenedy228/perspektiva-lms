@@ -83,9 +83,9 @@ func marshalQuestion(q questdomain.Question) ([]byte, error) {
 		for _, p := range typed.Pairs() {
 			payload.Matching = append(payload.Matching, pairPayload{
 				PromptID:   p.PromptID().String(),
-				PromptText: p.Prompt().Text().Value(),
+				PromptText: p.Prompt().Value(),
 				MatchID:    p.MatchID().String(),
-				MatchText:  p.Match().Text().Value(),
+				MatchText:  p.Match().Value(),
 			})
 		}
 	case *shortquestion.Question:
@@ -241,19 +241,11 @@ func restorePairs(payloads []pairPayload) ([]matchingpair.Pair, error) {
 		if err != nil {
 			return nil, err
 		}
-		promptText, err := text.New(payload.PromptText)
+		prompt, err := matchingpair.RestorePrompt(promptID, payload.PromptText)
 		if err != nil {
 			return nil, err
 		}
-		matchText, err := text.New(payload.MatchText)
-		if err != nil {
-			return nil, err
-		}
-		prompt, err := matchingpair.RestorePrompt(promptID, promptText)
-		if err != nil {
-			return nil, err
-		}
-		match, err := matchingpair.RestoreMatch(matchID, matchText)
+		match, err := matchingpair.RestoreMatch(matchID, payload.MatchText)
 		if err != nil {
 			return nil, err
 		}

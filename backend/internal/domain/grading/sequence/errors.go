@@ -3,6 +3,8 @@ package sequence
 import "errors"
 
 var (
-	ErrInvalidQuestionType = errors.New("invalid value")
-	ErrInvalidAnswerType   = errors.New("invalid value")
+	// ErrInvalidQuestionType возвращается, когда checker получил вопрос неподдерживаемого типа.
+	ErrInvalidQuestionType = errors.New("неверный тип вопроса")
+	// ErrInvalidAnswerType возвращается, когда checker получил ответ неподдерживаемого типа.
+	ErrInvalidAnswerType = errors.New("неверный тип ответа")
 )

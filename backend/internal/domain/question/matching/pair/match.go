@@ -2,25 +2,21 @@ package pair
 
 import (
 	"fmt"
-	"unicode/utf8"
 
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
 	"gitflic.ru/lms/backend/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
 
+// Match хранит правую часть пары вопроса на соответствие.
 type Match struct {
-	id   uuid.UUID
-	text text.Text
+	id    uuid.UUID
+	value string
 }
 
-const (
-	MatchCharsLimit int = 255
-)
-
-func NewMatch(t text.Text) (Match, error) {
-	if utf8.RuneCountInString(t.Value()) > MatchCharsLimit {
-		return Match{}, fmt.Errorf("%w: invalid value (%d)", ErrInvalid, MatchCharsLimit)
+// NewMatch создает новый match и проверяет его значение.
+func NewMatch(value string) (Match, error) {
+	if err := validateValue(value); err != nil {
+		return Match{}, fmt.Errorf("ошибка создания match: %w", err)
 	}
 
 	id, err := uid.New()
@@ -29,38 +25,38 @@ func NewMatch(t text.Text) (Match, error) {
 	}
 
 	return Match{
-		id:   id,
-		text: t,
+		id:    id,
+		value: value,
 	}, nil
 }
 
-func RestoreMatch(id uuid.UUID, t text.Text) (Match, error) {
-	if id == uuid.Nil {
-		return Match{}, fmt.Errorf("%w: invalid value", ErrInvalid)
+// RestoreMatch восстанавливает match из сохраненного состояния.
+func RestoreMatch(id uuid.UUID, value string) (Match, error) {
+	if err := validateIDRequired(id); err != nil {
+		return Match{}, fmt.Errorf("ошибка восстановления match: %w", err)
 	}
 
-	if t.IsIncomplete() {
-		return Match{}, fmt.Errorf("%w: invalid value", ErrInvalid)
-	}
-
-	if utf8.RuneCountInString(t.Value()) > MatchCharsLimit {
-		return Match{}, fmt.Errorf("%w: invalid value (%d)", ErrInvalid, MatchCharsLimit)
+	if err := validateValue(value); err != nil {
+		return Match{}, fmt.Errorf("ошибка восстановления match: %w", err)
 	}
 
 	return Match{
-		id:   id,
-		text: t,
+		id:    id,
+		value: value,
 	}, nil
 }
 
+// ID возвращает идентификатор match.
 func (m Match) ID() uuid.UUID {
 	return m.id
 }
 
-func (m Match) Text() text.Text {
-	return m.text
+// Value возвращает значение match.
+func (m Match) Value() string {
+	return m.value
 }
 
-func (m Match) IsIncomplete() bool {
-	return m.id == uuid.Nil || len(m.text.Value()) == 0
+// IsZero сообщает, что match находится в нулевом/неинициализированном состоянии.
+func (m Match) IsZero() bool {
+	return m.id == uuid.Nil || len(m.value) == 0
 }

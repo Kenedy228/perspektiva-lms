@@ -3,12 +3,9 @@ package matching
 import (
 	"slices"
 
-	question2 "gitflic.ru/lms/backend/internal/domain/question"
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
-	"github.com/google/uuid"
 )
 
 type Question struct {
@@ -16,13 +13,13 @@ type Question struct {
 	pairs []pair.Pair
 }
 
-func New(t title.Title, pairs []pair.Pair) (*Question, error) {
-	if err := validatePairs(pairs); err != nil {
+// New создает новый вопрос на соответствие и валидирует базовые данные и пары.
+func New(b *base.Base, pairs []pair.Pair) (*Question, error) {
+	if err := validateBase(b); err != nil {
 		return nil, err
 	}
 
-	b, err := base.New(t)
-	if err != nil {
+	if err := validatePairs(pairs); err != nil {
 		return nil, err
 	}
 
@@ -32,13 +29,13 @@ func New(t title.Title, pairs []pair.Pair) (*Question, error) {
 	}, nil
 }
 
-func Restore(id uuid.UUID, t title.Title, att *attachment.Attachment, pairs []pair.Pair) (*Question, error) {
-	if err := validatePairs(pairs); err != nil {
+// Restore восстанавливает вопрос на соответствие из существующего состояния.
+func Restore(b *base.Base, pairs []pair.Pair) (*Question, error) {
+	if err := validateBase(b); err != nil {
 		return nil, err
 	}
 
-	b, err := base.Restore(id, t, att)
-	if err != nil {
+	if err := validatePairs(pairs); err != nil {
 		return nil, err
 	}
 
@@ -48,18 +45,22 @@ func Restore(id uuid.UUID, t title.Title, att *attachment.Attachment, pairs []pa
 	}, nil
 }
 
+// Instruction возвращает стандартную инструкцию для вопроса matching.
 func (q *Question) Instruction() string {
 	return q.Type().DefaultInstruction()
 }
 
+// Pairs возвращает копию пар вопроса.
 func (q *Question) Pairs() []pair.Pair {
 	return slices.Clone(q.pairs)
 }
 
-func (q *Question) Type() question2.Type {
-	return question2.TypeMatching
+// Type возвращает тип вопроса.
+func (q *Question) Type() question.Type {
+	return question.TypeMatching
 }
 
+// ChangePairs заменяет пары вопроса после валидации.
 func (q *Question) ChangePairs(pairs []pair.Pair) error {
 	if err := validatePairs(pairs); err != nil {
 		return err
@@ -69,7 +70,8 @@ func (q *Question) ChangePairs(pairs []pair.Pair) error {
 	return nil
 }
 
-func (q *Question) Clone() question2.Question {
+// Clone создает полную копию вопроса.
+func (q *Question) Clone() question.Question {
 	return &Question{
 		Base:  q.Base.Clone(),
 		pairs: slices.Clone(q.pairs),

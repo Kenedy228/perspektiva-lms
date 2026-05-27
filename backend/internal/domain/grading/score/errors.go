@@ -3,5 +3,6 @@ package score
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	// ErrInvalid возвращается при недопустимом значении score.
+	ErrInvalid = errors.New("некорректное значение")
 )

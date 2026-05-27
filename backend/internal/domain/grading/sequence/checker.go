@@ -2,20 +2,23 @@ package sequence
 
 import (
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
-	question2 "gitflic.ru/lms/backend/internal/domain/question"
-	qsequence "gitflic.ru/lms/backend/internal/domain/question/sequence"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question/sequence"
 	"gitflic.ru/lms/backend/internal/domain/question/sequence/answer"
+	"github.com/google/uuid"
 )
 
-type Checker struct {
-}
+// Checker проверяет ответы для вопросов с упорядочиванием последовательности.
+type Checker struct{}
 
+// New создает checker для вопросов типа sequence.
 func New() Checker {
 	return Checker{}
 }
 
-func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, error) {
-	qCast, ok := q.(*qsequence.Question)
+// Check возвращает 1 только при полном совпадении длины и порядка элементов.
+func (c Checker) Check(q question.Question, a question.Answer) (score.Score, error) {
+	qCast, ok := q.(*sequence.Question)
 	if !ok {
 		return score.Score{}, ErrInvalidQuestionType
 	}
@@ -29,21 +32,23 @@ func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, e
 	studentAnswers := aCast.OptionIDs()
 
 	if len(seq) != len(studentAnswers) {
-		s, _ := score.New(0)
-		return s, nil
+		return score.New(0)
 	}
 
 	for i := range seq {
-		if seq[i].ID() != studentAnswers[i].ID() {
-			s, _ := score.New(0)
-			return s, nil
+		if optionIDFromValue(seq[i].Value()) != studentAnswers[i].ID() {
+			return score.New(0)
 		}
 	}
 
-	s, _ := score.New(1)
-	return s, nil
+	return score.New(1)
 }
 
-func (c Checker) Supports(qType question2.Type) bool {
-	return qType == question2.TypeSequence
+// Supports сообщает, поддерживается ли тип вопроса checker-ом.
+func (c Checker) Supports(qType question.Type) bool {
+	return qType == question.TypeSequence
+}
+
+func optionIDFromValue(value string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceOID, []byte(value))
 }

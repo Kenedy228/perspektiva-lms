@@ -3,34 +3,33 @@ package matching_test
 import (
 	"testing"
 
+	"gitflic.ru/lms/backend/internal/domain/question/base"
+	basetitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/question/matching"
 	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNew_RejectsDuplicatePairs(t *testing.T) {
-	t1, err := title.New("Вопрос")
+func TestNew_AllowsDuplicatePairs(t *testing.T) {
+	t1, err := basetitle.New("Вопрос")
 	require.NoError(t, err)
+
+	b, err := base.New(t1)
+	require.NoError(t, err)
+
 	p := mustPair(t, "a", "1")
 
-	_, err = matching.New(t1, []pair.Pair{p, p})
-	assert.ErrorIs(t, err, matching.ErrInvalid)
+	q, err := matching.New(b, []pair.Pair{p, p})
+	require.NoError(t, err)
+	require.Len(t, q.Pairs(), 2)
 }
 
 func mustPair(t *testing.T, promptValue, matchValue string) pair.Pair {
 	t.Helper()
 
-	promptText, err := text.New(promptValue)
+	prompt, err := pair.NewPrompt(promptValue)
 	require.NoError(t, err)
-	matchText, err := text.New(matchValue)
-	require.NoError(t, err)
-
-	prompt, err := pair.NewPrompt(promptText)
-	require.NoError(t, err)
-	match, err := pair.NewMatch(matchText)
+	match, err := pair.NewMatch(matchValue)
 	require.NoError(t, err)
 
 	p, err := pair.New(prompt, match)

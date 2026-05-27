@@ -1,2 +1,2 @@
-// Package commands contains state-changing application use cases.
+// Package commands содержит application-сценарии изменения вопросов.
 package commands

@@ -1,2 +1,2 @@
-// Package matching contains matching-question domain or grading behavior.
+// Package matching содержит доменную модель вопроса на соответствие.
 package matching

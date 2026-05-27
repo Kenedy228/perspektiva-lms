@@ -16,7 +16,7 @@ func validateValue(value float64) error {
 
 func validateNegativeValue(value float64) error {
 	if value < 0 {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: значение меньше нуля", ErrInvalid)
 	}
 
 	return nil
@@ -24,7 +24,7 @@ func validateNegativeValue(value float64) error {
 
 func validateMaxValue(value float64) error {
 	if value > 1 {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: значение больше единицы", ErrInvalid)
 	}
 
 	return nil

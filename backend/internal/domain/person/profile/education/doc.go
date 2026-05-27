@@ -1,2 +1,2 @@
-// Package value contains the optional value description value object.
+// Package education содержит правила валидации и нормализации сведений об образовании человека.
 package education

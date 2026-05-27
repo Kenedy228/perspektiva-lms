@@ -1,11 +1,12 @@
 package education
 
-// Education is an optional normalized value description.
+// Education — VO сведений об образовании человека, хранит нормализованное значение.
 type Education struct {
 	value string
 }
 
-// New creates an value value object.
+// New создаёт новый VO, в котором хранится нормализованное и валидированное
+// значение сырой строки сведения об образовании.
 func New(value string) (Education, error) {
 	value = normalizeValue(value)
 
@@ -18,12 +19,12 @@ func New(value string) (Education, error) {
 	}, nil
 }
 
-// Value returns the normalized value description.
+// Value возвращает нормализованную строку сведений об образовании.
 func (e Education) Value() string {
 	return e.value
 }
 
-// IsZero reports whether the optional value description is empty.
+// IsZero возвращает true, если Education не был инициализирован через New.
 func (e Education) IsZero() bool {
 	return e.value == ""
 }

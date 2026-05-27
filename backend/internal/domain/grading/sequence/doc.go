@@ -1,2 +1,2 @@
-// Package sequence contains sequence-question domain or grading behavior.
+// Package sequence содержит checker для проверки ответов на вопросы с последовательностью.
 package sequence

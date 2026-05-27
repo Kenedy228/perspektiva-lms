@@ -182,17 +182,13 @@ func (api *API) GradeQuestion(w http.ResponseWriter, r *http.Request) {
 func buildAnswer(req AttemptAnswerRequest) (questdomain.Answer, error) {
 	switch questdomain.Type(req.Type) {
 	case questdomain.TypeSelectable:
-		ids := make([]selectableanswer.OptionID, 0, len(req.OptionIDs))
+		ids := make([]uuid.UUID, 0, len(req.OptionIDs))
 		for _, raw := range req.OptionIDs {
 			id, err := uuid.Parse(raw)
 			if err != nil {
 				return nil, err
 			}
-			oid, err := selectableanswer.NewOptionID(id)
-			if err != nil {
-				return nil, err
-			}
-			ids = append(ids, oid)
+			ids = append(ids, id)
 		}
 		return selectableanswer.New(ids)
 	case questdomain.TypeSequence:
@@ -220,15 +216,7 @@ func buildAnswer(req AttemptAnswerRequest) (questdomain.Answer, error) {
 			if err != nil {
 				return nil, err
 			}
-			prompt, err := matchinganswer.NewPromptID(pid)
-			if err != nil {
-				return nil, err
-			}
-			match, err := matchinganswer.NewMatchID(mid)
-			if err != nil {
-				return nil, err
-			}
-			pairs = append(pairs, matchinganswer.Pair{PromptID: prompt, MatchID: match})
+			pairs = append(pairs, matchinganswer.Pair{PromptID: pid, MatchID: mid})
 		}
 		return matchinganswer.New(pairs)
 	case questdomain.TypeTyped:

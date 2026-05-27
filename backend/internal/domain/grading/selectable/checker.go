@@ -2,20 +2,22 @@ package selectable
 
 import (
 	"gitflic.ru/lms/backend/internal/domain/grading/score"
-	question2 "gitflic.ru/lms/backend/internal/domain/question"
-	qselectable "gitflic.ru/lms/backend/internal/domain/question/selectable"
+	"gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question/selectable"
 	"gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
 )
 
-type Checker struct {
-}
+// Checker проверяет ответы для вопросов с выбором вариантов.
+type Checker struct{}
 
+// New создает checker для вопросов типа selectable.
 func New() Checker {
 	return Checker{}
 }
 
-func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, error) {
-	qCast, ok := q.(*qselectable.Question)
+// Check возвращает 1, если выбран ровно полный набор правильных вариантов, иначе 0.
+func (c Checker) Check(q question.Question, a question.Answer) (score.Score, error) {
+	qCast, ok := q.(*selectable.Question)
 	if !ok {
 		return score.Score{}, ErrInvalidQuestionType
 	}
@@ -29,33 +31,32 @@ func (c Checker) Check(q question2.Question, a question2.Answer) (score.Score, e
 	studentAnswers := aCast.OptionIDSet()
 
 	if len(studentAnswers) > qCast.CorrectOptionsCount() {
-		s, _ := score.New(0)
-		return s, nil
+		return score.New(0)
 	}
 
 	correct := 0
 	for i := range opts {
-		_, ok := studentAnswers[opts[i].ID()]
-
-		if ok {
-			if opts[i].IsCorrect() {
-				correct++
-			} else {
-				s, _ := score.New(0)
-				return s, nil
-			}
+		_, selected := studentAnswers[opts[i].ID()]
+		if !selected {
+			continue
 		}
+
+		if opts[i].IsCorrect() {
+			correct++
+			continue
+		}
+
+		return score.New(0)
 	}
 
 	if correct != qCast.CorrectOptionsCount() {
-		s, _ := score.New(0)
-		return s, nil
+		return score.New(0)
 	}
 
-	s, _ := score.New(1)
-	return s, nil
+	return score.New(1)
 }
 
-func (c Checker) Supports(qType question2.Type) bool {
-	return qType == question2.TypeSelectable
+// Supports сообщает, поддерживается ли тип вопроса checker-ом.
+func (c Checker) Supports(qType question.Type) bool {
+	return qType == question.TypeSelectable
 }

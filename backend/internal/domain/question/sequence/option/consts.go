@@ -1,5 +1,5 @@
 package option
 
 const (
-	TextCharsLimit int = 255
+	ValueCharsLimit int = 255
 )

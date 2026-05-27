@@ -6,273 +6,118 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
 	"github.com/google/uuid"
 )
 
-func mustText(t *testing.T, v string) text.Text {
-	t.Helper()
-
-	got, err := text.New(v)
-	if err != nil {
-		t.Fatalf("text.New() error = %v", err)
-	}
-
-	return got
-}
-
 func TestNew(t *testing.T) {
-	validText := mustText(t, "option")
-	longText := mustText(t, strings.Repeat("а", TextCharsLimit+1))
-
-	type args struct {
-		t         text.Text
-		isCorrect bool
-	}
 	tests := []struct {
-		name        string
-		args        args
-		wantText    text.Text
-		wantCorrect bool
-		wantErr     bool
+		name      string
+		value     string
+		isCorrect bool
+		wantValue string
+		wantErr   bool
 	}{
-		{
-			name: "creates correct option",
-			args: args{
-				t:         validText,
-				isCorrect: true,
-			},
-			wantText:    validText,
-			wantCorrect: true,
-			wantErr:     false,
-		},
-		{
-			name: "creates incorrect option",
-			args: args{
-				t:         validText,
-				isCorrect: false,
-			},
-			wantText:    validText,
-			wantCorrect: false,
-			wantErr:     false,
-		},
-		{
-			name: "returns error for too long text",
-			args: args{
-				t:         longText,
-				isCorrect: true,
-			},
-			wantErr: true,
-		},
+		{name: "creates correct option", value: "option", isCorrect: true, wantValue: "option"},
+		{name: "creates incorrect option", value: "option", wantValue: "option"},
+		{name: "normalizes option value", value: "  option   text  ", wantValue: "option text"},
+		{name: "returns error for empty value", value: "", wantErr: true},
+		{name: "returns error for blank value", value: "   ", wantErr: true},
+		{name: "returns error for too long value", value: strings.Repeat("а", ValueCharsLimit+1), wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.t, tt.args.isCorrect)
+			got, err := New(tt.value, tt.isCorrect)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Fatalf("New() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr {
 				if !errors.Is(err, ErrInvalid) {
-					t.Errorf("New() error = %v, want wrapped ErrInvalid", err)
+					t.Fatalf("New() error = %v, want wrapped ErrInvalid", err)
 				}
 				return
 			}
 			if got.ID() == uuid.Nil {
-				t.Errorf("New() ID() = %v, want non-nil uuid", got.ID())
+				t.Fatalf("New() ID() = nil, want generated id")
 			}
-			if !reflect.DeepEqual(got.Text(), tt.wantText) {
-				t.Errorf("New() Text() = %v, want %v", got.Text(), tt.wantText)
+			if got.Value() != tt.wantValue {
+				t.Fatalf("New() Value() = %q, want %q", got.Value(), tt.wantValue)
 			}
-			if got.IsCorrect() != tt.wantCorrect {
-				t.Errorf("New() IsCorrect() = %v, want %v", got.IsCorrect(), tt.wantCorrect)
+			if got.IsCorrect() != tt.isCorrect {
+				t.Fatalf("New() IsCorrect() = %v, want %v", got.IsCorrect(), tt.isCorrect)
 			}
 		})
 	}
 }
 
-func TestOption_ID(t *testing.T) {
+func TestRestore(t *testing.T) {
 	id := uuid.New()
-	txt := mustText(t, "option")
 
-	type fields struct {
-		id        uuid.UUID
-		text      text.Text
-		isCorrect bool
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   uuid.UUID
+		name      string
+		id        uuid.UUID
+		value     string
+		isCorrect bool
+		want      Option
+		wantErr   bool
 	}{
-		{
-			name: "returns id",
-			fields: fields{
-				id:        id,
-				text:      txt,
-				isCorrect: true,
-			},
-			want: id,
-		},
+		{name: "restores option", id: id, value: " option ", isCorrect: true, want: Option{id: id, value: "option", isCorrect: true}},
+		{name: "returns error for empty id", id: uuid.Nil, value: "option", wantErr: true},
+		{name: "returns error for empty value", id: id, value: "", wantErr: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := Option{
-				id:        tt.fields.id,
-				text:      tt.fields.text,
-				isCorrect: tt.fields.isCorrect,
+			got, err := Restore(tt.id, tt.value, tt.isCorrect)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Restore() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if got := o.ID(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ID() = %v, want %v", got, tt.want)
+			if tt.wantErr {
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("Restore() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestOption_IsCorrect(t *testing.T) {
-	txt := mustText(t, "option")
+func TestOptionAccessors(t *testing.T) {
+	id := uuid.New()
+	o := Option{id: id, value: "option", isCorrect: true}
 
-	type fields struct {
-		id        uuid.UUID
-		text      text.Text
-		isCorrect bool
+	if o.ID() != id {
+		t.Fatalf("ID() = %v, want %v", o.ID(), id)
 	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "correct option",
-			fields: fields{
-				id:        uuid.New(),
-				text:      txt,
-				isCorrect: true,
-			},
-			want: true,
-		},
-		{
-			name: "incorrect option",
-			fields: fields{
-				id:        uuid.New(),
-				text:      txt,
-				isCorrect: false,
-			},
-			want: false,
-		},
+	if o.Value() != "option" {
+		t.Fatalf("Value() = %q, want %q", o.Value(), "option")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			o := Option{
-				id:        tt.fields.id,
-				text:      tt.fields.text,
-				isCorrect: tt.fields.isCorrect,
-			}
-			if got := o.IsCorrect(); got != tt.want {
-				t.Errorf("IsCorrect() = %v, want %v", got, tt.want)
-			}
-		})
+	if !o.IsCorrect() {
+		t.Fatalf("IsCorrect() = false, want true")
+	}
+	if o.IsZero() {
+		t.Fatalf("IsZero() = true, want false")
+	}
+	if !(Option{}).IsZero() {
+		t.Fatalf("zero Option must be zero")
 	}
 }
 
-func TestOption_Text(t *testing.T) {
-	txt := mustText(t, "option")
-
-	type fields struct {
-		id        uuid.UUID
-		text      text.Text
-		isCorrect bool
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   text.Text
-	}{
-		{
-			name: "returns text",
-			fields: fields{
-				id:        uuid.New(),
-				text:      txt,
-				isCorrect: true,
-			},
-			want: txt,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			o := Option{
-				id:        tt.fields.id,
-				text:      tt.fields.text,
-				isCorrect: tt.fields.isCorrect,
-			}
-			if got := o.Text(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Text() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_validateOptionText(t *testing.T) {
-	type args struct {
-		t text.Text
-	}
+func Test_validateValue(t *testing.T) {
 	tests := []struct {
 		name    string
-		args    args
+		value   string
 		wantErr bool
 	}{
-		{
-			name: "valid text",
-			args: args{
-				t: mustText(t, "option"),
-			},
-			wantErr: false,
-		},
-		{
-			name: "too long text",
-			args: args{
-				t: mustText(t, strings.Repeat("а", TextCharsLimit+1)),
-			},
-			wantErr: true,
-		},
+		{name: "valid value", value: "option"},
+		{name: "empty value", value: "", wantErr: true},
+		{name: "too long value", value: strings.Repeat("а", ValueCharsLimit+1), wantErr: true},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validateOptionText(tt.args.t); (err != nil) != tt.wantErr {
-				t.Errorf("validateOptionText() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
 
-func Test_validateOptionTextCharsLimit(t *testing.T) {
-	type args struct {
-		t text.Text
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "text within limit",
-			args: args{
-				t: mustText(t, strings.Repeat("а", TextCharsLimit)),
-			},
-			wantErr: false,
-		},
-		{
-			name: "text exceeds limit",
-			args: args{
-				t: mustText(t, strings.Repeat("а", TextCharsLimit+1)),
-			},
-			wantErr: true,
-		},
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validateOptionTextCharsLimit(tt.args.t); (err != nil) != tt.wantErr {
-				t.Errorf("validateOptionTextCharsLimit() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validateValue(tt.value); (err != nil) != tt.wantErr {
+				t.Fatalf("validateValue() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

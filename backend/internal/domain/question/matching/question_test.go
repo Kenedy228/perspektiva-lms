@@ -1,502 +1,404 @@
 package matching
 
 import (
-	"reflect"
+	"errors"
+	"strings"
 	"testing"
 
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
-	pair2 "gitflic.ru/lms/backend/internal/domain/question/matching/pair"
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
+	basetitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
+	"gitflic.ru/lms/backend/internal/domain/question/matching/pair"
 )
-
-func mustText(t *testing.T, value string) text.Text {
-	t.Helper()
-
-	got, err := text.New(value)
-	if err != nil {
-		t.Fatalf("text.New() error = %v", err)
-	}
-
-	return got
-}
-
-func mustTitle(t *testing.T, value string) title.Title {
-	t.Helper()
-
-	got, err := title.New(value)
-	if err != nil {
-		t.Fatalf("title.New() error = %v", err)
-	}
-
-	return got
-}
 
 func mustBase(t *testing.T, value string) *base.Base {
 	t.Helper()
 
-	got, err := base.New(mustTitle(t, value))
+	ttl, err := basetitle.New(value)
+	if err != nil {
+		t.Fatalf("title.New() error = %v", err)
+	}
+
+	b, err := base.New(ttl)
 	if err != nil {
 		t.Fatalf("base.New() error = %v", err)
 	}
 
-	return got
+	return b
 }
 
-func mustPair(t *testing.T, promptValue, matchValue string) pair2.Pair {
+func mustPair(t *testing.T, promptValue, matchValue string) pair.Pair {
 	t.Helper()
 
-	prompt, err := pair2.NewPrompt(mustText(t, promptValue))
+	prompt, err := pair.NewPrompt(promptValue)
 	if err != nil {
 		t.Fatalf("pair.NewPrompt() error = %v", err)
 	}
 
-	match, err := pair2.NewMatch(mustText(t, matchValue))
+	match, err := pair.NewMatch(matchValue)
 	if err != nil {
 		t.Fatalf("pair.NewMatch() error = %v", err)
 	}
 
-	got, err := pair2.New(prompt, match)
+	p, err := pair.New(prompt, match)
 	if err != nil {
 		t.Fatalf("pair.New() error = %v", err)
 	}
 
-	return got
+	return p
 }
 
-func makePairs(t *testing.T, n int) []pair2.Pair {
+func makePairs(t *testing.T, n int) []pair.Pair {
 	t.Helper()
 
-	pairs := make([]pair2.Pair, 0, n)
+	result := make([]pair.Pair, 0, n)
 	for i := 0; i < n; i++ {
-		pairs = append(pairs, mustPair(t, "prompt", "match"))
+		result = append(result, mustPair(t, "prompt", "match"))
 	}
 
-	return pairs
+	return result
 }
 
 func TestNew(t *testing.T) {
-	validTitle := mustTitle(t, "matching question")
+	validBase := mustBase(t, "matching question")
 	validPairs := makePairs(t, MinPairs)
 
-	type args struct {
-		t     title.Title
-		pairs []pair2.Pair
-	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name       string
+		base       *base.Base
+		pairs      []pair.Pair
+		wantErr    bool
+		errText    string
+		checkError bool
 	}{
 		{
-			name: "valid question",
-			args: args{
-				t:     validTitle,
-				pairs: validPairs,
-			},
+			name:    "успех",
+			base:    validBase,
+			pairs:   validPairs,
 			wantErr: false,
 		},
 		{
-			name: "invalid not enough pairs",
-			args: args{
-				t:     validTitle,
-				pairs: makePairs(t, MinPairs-1),
-			},
-			wantErr: true,
+			name:       "ошибка когда base nil",
+			base:       nil,
+			pairs:      validPairs,
+			wantErr:    true,
+			errText:    "база вопросов обязательна",
+			checkError: true,
 		},
 		{
-			name: "invalid empty pair inside",
-			args: args{
-				t: validTitle,
-				pairs: []pair2.Pair{
-					mustPair(t, "p1", "m1"),
-					pair2.Pair{},
-				},
-			},
-			wantErr: true,
+			name:       "ошибка когда пар меньше минимума",
+			base:       validBase,
+			pairs:      makePairs(t, MinPairs-1),
+			wantErr:    true,
+			errText:    "не меньше",
+			checkError: true,
 		},
 		{
-			name: "invalid too many pairs",
-			args: args{
-				t:     validTitle,
-				pairs: makePairs(t, MaxPairs+1),
+			name: "ошибка когда есть пустая пара",
+			base: validBase,
+			pairs: []pair.Pair{
+				mustPair(t, "p1", "m1"),
+				{},
 			},
-			wantErr: true,
+			wantErr:    true,
+			errText:    "под индексом 1",
+			checkError: true,
+		},
+		{
+			name:       "ошибка когда пар больше максимума",
+			base:       validBase,
+			pairs:      makePairs(t, MaxPairs+1),
+			wantErr:    true,
+			errText:    "не больше",
+			checkError: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.t, tt.args.pairs)
+			got, err := New(tt.base, tt.pairs)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Fatalf("New() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("New() error = %v, want ErrInvalid", err)
+				}
+				if tt.checkError && !strings.Contains(err.Error(), tt.errText) {
+					t.Fatalf("New() error text = %q, want contain %q", err.Error(), tt.errText)
+				}
 				return
 			}
 
 			if got == nil {
-				t.Fatalf("New() got = nil, want non-nil question")
+				t.Fatal("New() got nil question")
 			}
 			if got.Type() != question.TypeMatching {
-				t.Errorf("New() Type() = %v, want %v", got.Type(), question.TypeMatching)
+				t.Fatalf("New() Type() = %v, want %v", got.Type(), question.TypeMatching)
 			}
-			if !reflect.DeepEqual(got.Pairs(), tt.args.pairs) {
-				t.Errorf("New() Pairs() = %v, want %v", got.Pairs(), tt.args.pairs)
+			if got.Instruction() != question.TypeMatching.DefaultInstruction() {
+				t.Fatalf("New() Instruction() = %q, want %q", got.Instruction(), question.TypeMatching.DefaultInstruction())
 			}
 		})
 	}
 }
 
-func TestQuestion_ChangePairs(t *testing.T) {
+func TestRestore(t *testing.T) {
+	validBase := mustBase(t, "matching question")
+	validPairs := makePairs(t, MinPairs)
+
+	tests := []struct {
+		name    string
+		base    *base.Base
+		pairs   []pair.Pair
+		wantErr bool
+	}{
+		{
+			name:    "успех",
+			base:    validBase,
+			pairs:   validPairs,
+			wantErr: false,
+		},
+		{
+			name:    "ошибка при base nil",
+			base:    nil,
+			pairs:   validPairs,
+			wantErr: true,
+		},
+		{
+			name:    "ошибка при пустой паре",
+			base:    validBase,
+			pairs:   []pair.Pair{mustPair(t, "p1", "m1"), {}},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Restore(tt.base, tt.pairs)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Restore() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("Restore() error = %v, want ErrInvalid", err)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatal("Restore() got nil question")
+			}
+		})
+	}
+}
+
+func TestQuestionPairsIsolation(t *testing.T) {
+	q, err := New(mustBase(t, "q"), makePairs(t, MinPairs))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	got := q.Pairs()
+	got[0] = pair.Pair{}
+
+	if q.Pairs()[0].IsZero() {
+		t.Fatal("Pairs() must return a copy, but internal state was changed")
+	}
+}
+
+func TestQuestionChangePairs(t *testing.T) {
 	oldPairs := makePairs(t, MinPairs)
 	newPairs := makePairs(t, MinPairs+1)
+	q, err := New(mustBase(t, "q"), oldPairs)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
 
-	type fields struct {
-		Base  *base.Base
-		pairs []pair2.Pair
-	}
-	type args struct {
-		pairs []pair2.Pair
-	}
 	tests := []struct {
-		name      string
-		fields    fields
-		args      args
-		wantErr   bool
-		wantPairs []pair2.Pair
+		name       string
+		pairs      []pair.Pair
+		wantErr    bool
+		wantLen    int
+		keepOld    bool
+		wantErrMsg string
 	}{
 		{
-			name: "change to valid pairs",
-			fields: fields{
-				Base:  mustBase(t, "question"),
-				pairs: oldPairs,
-			},
-			args: args{
-				pairs: newPairs,
-			},
-			wantErr:   false,
-			wantPairs: newPairs,
-		},
-		{
-			name: "reject invalid pairs and keep old state",
-			fields: fields{
-				Base:  mustBase(t, "question"),
-				pairs: oldPairs,
-			},
-			args: args{
-				pairs: []pair2.Pair{pair2.Pair{}},
-			},
-			wantErr:   true,
-			wantPairs: oldPairs,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q := &Question{
-				Base:  tt.fields.Base,
-				pairs: tt.fields.pairs,
-			}
-			if err := q.ChangePairs(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("ChangePairs() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if got := q.Pairs(); !reflect.DeepEqual(got, tt.wantPairs) {
-				t.Errorf("ChangePairs() pairs = %v, want %v", got, tt.wantPairs)
-			}
-		})
-	}
-}
-
-func TestQuestion_Clone(t *testing.T) {
-	base1 := mustBase(t, "question")
-	pairs1 := makePairs(t, MinPairs)
-
-	type fields struct {
-		Base  *base.Base
-		pairs []pair2.Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		{
-			name: "clone question",
-			fields: fields{
-				Base:  base1,
-				pairs: pairs1,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q := &Question{
-				Base:  tt.fields.Base,
-				pairs: tt.fields.pairs,
-			}
-
-			got, ok := q.Clone().(*Question)
-			if !ok {
-				t.Fatalf("Clone() type = %T, want *Question", q.Clone())
-			}
-			if got == q {
-				t.Errorf("Clone() returned same pointer")
-			}
-			if got.Base == q.Base {
-				t.Errorf("Clone() Base pointer = same, want different")
-			}
-			if !reflect.DeepEqual(got.Pairs(), q.Pairs()) {
-				t.Errorf("Clone() Pairs() = %v, want %v", got.Pairs(), q.Pairs())
-			}
-			if got.Type() != q.Type() {
-				t.Errorf("Clone() Type() = %v, want %v", got.Type(), q.Type())
-			}
-		})
-	}
-}
-
-func TestQuestion_Instruction(t *testing.T) {
-	type fields struct {
-		Base  *base.Base
-		pairs []pair2.Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		{
-			name: "returns default matching instruction",
-			fields: fields{
-				Base:  mustBase(t, "question"),
-				pairs: makePairs(t, MinPairs),
-			},
-			want: question.TypeMatching.DefaultInstruction(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q := &Question{
-				Base:  tt.fields.Base,
-				pairs: tt.fields.pairs,
-			}
-			if got := q.Instruction(); got != tt.want {
-				t.Errorf("Instruction() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestQuestion_Pairs(t *testing.T) {
-	pairs1 := makePairs(t, MinPairs)
-
-	type fields struct {
-		Base  *base.Base
-		pairs []pair2.Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   []pair2.Pair
-	}{
-		{
-			name: "returns pairs",
-			fields: fields{
-				Base:  mustBase(t, "question"),
-				pairs: pairs1,
-			},
-			want: pairs1,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q := &Question{
-				Base:  tt.fields.Base,
-				pairs: tt.fields.pairs,
-			}
-			if got := q.Pairs(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Pairs() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestQuestion_Type(t *testing.T) {
-	type fields struct {
-		Base  *base.Base
-		pairs []pair2.Pair
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   question.Type
-	}{
-		{
-			name: "returns matching type",
-			fields: fields{
-				Base:  mustBase(t, "question"),
-				pairs: makePairs(t, MinPairs),
-			},
-			want: question.TypeMatching,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			q := &Question{
-				Base:  tt.fields.Base,
-				pairs: tt.fields.pairs,
-			}
-			if got := q.Type(); got != tt.want {
-				t.Errorf("Type() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_validatePairs(t *testing.T) {
-	type args struct {
-		pairs []pair2.Pair
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "valid pairs",
-			args: args{
-				pairs: makePairs(t, MinPairs),
-			},
+			name:    "успех",
+			pairs:   newPairs,
 			wantErr: false,
+			wantLen: len(newPairs),
 		},
 		{
-			name: "less than min",
-			args: args{
-				pairs: makePairs(t, MinPairs-1),
-			},
-			wantErr: true,
-		},
-		{
-			name: "contains empty pair",
-			args: args{
-				pairs: []pair2.Pair{
-					mustPair(t, "p1", "m1"),
-					pair2.Pair{},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "more than max",
-			args: args{
-				pairs: makePairs(t, MaxPairs+1),
-			},
-			wantErr: true,
+			name:       "ошибка при пустой паре",
+			pairs:      []pair.Pair{mustPair(t, "p1", "m1"), {}},
+			wantErr:    true,
+			wantLen:    len(newPairs),
+			keepOld:    true,
+			wantErrMsg: "не заполнена",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validatePairs(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validatePairs() error = %v, wantErr %v", err, tt.wantErr)
+			err := q.ChangePairs(tt.pairs)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ChangePairs() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr {
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("ChangePairs() error = %v, want ErrInvalid", err)
+				}
+				if tt.wantErrMsg != "" && !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Fatalf("ChangePairs() error text = %q, want contain %q", err.Error(), tt.wantErrMsg)
+				}
+			}
+
+			if len(q.Pairs()) != tt.wantLen {
+				t.Fatalf("ChangePairs() len = %d, want %d", len(q.Pairs()), tt.wantLen)
 			}
 		})
 	}
 }
 
-func Test_validatePairsContainsEmpty(t *testing.T) {
-	type args struct {
-		pairs []pair2.Pair
+func TestQuestionClone(t *testing.T) {
+	q, err := New(mustBase(t, "q"), makePairs(t, MinPairs))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "all pairs filled",
-			args: args{
-				pairs: makePairs(t, MinPairs),
-			},
-			wantErr: false,
-		},
-		{
-			name: "contains zero pair",
-			args: args{
-				pairs: []pair2.Pair{
-					mustPair(t, "p1", "m1"),
-					pair2.Pair{},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "empty slice",
-			args: args{
-				pairs: []pair2.Pair{},
-			},
-			wantErr: false,
-		},
+
+	cloned, ok := q.Clone().(*Question)
+	if !ok {
+		t.Fatalf("Clone() type = %T, want *Question", q.Clone())
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validatePairsContainsEmpty(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validatePairsContainsEmpty() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+	if cloned == q {
+		t.Fatal("Clone() must return new pointer")
+	}
+	if cloned.Base == q.Base {
+		t.Fatal("Clone() must clone base pointer")
+	}
+	if len(cloned.Pairs()) != len(q.Pairs()) {
+		t.Fatalf("Clone() pairs len = %d, want %d", len(cloned.Pairs()), len(q.Pairs()))
 	}
 }
 
-func Test_validatePairsCount(t *testing.T) {
-	type args struct {
-		pairs []pair2.Pair
+func TestQuestionZeroValue(t *testing.T) {
+	var q Question
+
+	if q.Type() != question.TypeMatching {
+		t.Fatalf("Type() = %v, want %v", q.Type(), question.TypeMatching)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "exact min",
-			args: args{
-				pairs: makePairs(t, MinPairs),
-			},
-			wantErr: false,
-		},
-		{
-			name: "exact max",
-			args: args{
-				pairs: makePairs(t, MaxPairs),
-			},
-			wantErr: false,
-		},
-		{
-			name: "below min",
-			args: args{
-				pairs: makePairs(t, MinPairs-1),
-			},
-			wantErr: true,
-		},
-		{
-			name: "above max",
-			args: args{
-				pairs: makePairs(t, MaxPairs+1),
-			},
-			wantErr: true,
-		},
-		{
-			name: "empty slice",
-			args: args{
-				pairs: []pair2.Pair{},
-			},
-			wantErr: true,
-		},
+	if q.Instruction() != question.TypeMatching.DefaultInstruction() {
+		t.Fatalf("Instruction() = %q, want %q", q.Instruction(), question.TypeMatching.DefaultInstruction())
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validatePairsCount(tt.args.pairs); (err != nil) != tt.wantErr {
-				t.Errorf("validatePairsCount() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+	if q.Pairs() != nil {
+		t.Fatalf("Pairs() = %v, want nil", q.Pairs())
 	}
+
+	err := q.ChangePairs(makePairs(t, MinPairs))
+	if err != nil {
+		t.Fatalf("ChangePairs() zero value error = %v", err)
+	}
+}
+
+func TestValidateFunctions(t *testing.T) {
+	validPairs := makePairs(t, MinPairs)
+
+	t.Run("validateRequiredBase", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			base    *base.Base
+			wantErr bool
+		}{
+			{name: "base есть", base: mustBase(t, "q"), wantErr: false},
+			{name: "base nil", base: nil, wantErr: true},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := validateRequiredBase(tt.base)
+				if (err != nil) != tt.wantErr {
+					t.Fatalf("validateRequiredBase() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.wantErr && !errors.Is(err, ErrInvalid) {
+					t.Fatalf("validateRequiredBase() error = %v, want ErrInvalid", err)
+				}
+			})
+		}
+	})
+
+	t.Run("validatePairsCount", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			pairs   []pair.Pair
+			wantErr bool
+		}{
+			{name: "min граница", pairs: makePairs(t, MinPairs), wantErr: false},
+			{name: "max граница", pairs: makePairs(t, MaxPairs), wantErr: false},
+			{name: "ниже min", pairs: makePairs(t, MinPairs-1), wantErr: true},
+			{name: "выше max", pairs: makePairs(t, MaxPairs+1), wantErr: true},
+			{name: "nil slice", pairs: nil, wantErr: true},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := validatePairsCount(tt.pairs)
+				if (err != nil) != tt.wantErr {
+					t.Fatalf("validatePairsCount() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.wantErr && !errors.Is(err, ErrInvalid) {
+					t.Fatalf("validatePairsCount() error = %v, want ErrInvalid", err)
+				}
+			})
+		}
+	})
+
+	t.Run("validatePairsContainsEmpty", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			pairs   []pair.Pair
+			wantErr bool
+		}{
+			{name: "все пары валидные", pairs: validPairs, wantErr: false},
+			{name: "есть zero pair", pairs: []pair.Pair{mustPair(t, "a", "1"), {}}, wantErr: true},
+			{name: "пустой slice", pairs: []pair.Pair{}, wantErr: false},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := validatePairsContainsEmpty(tt.pairs)
+				if (err != nil) != tt.wantErr {
+					t.Fatalf("validatePairsContainsEmpty() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.wantErr && !errors.Is(err, ErrInvalid) {
+					t.Fatalf("validatePairsContainsEmpty() error = %v, want ErrInvalid", err)
+				}
+			})
+		}
+	})
+
+	t.Run("validatePairs", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			pairs   []pair.Pair
+			wantErr bool
+		}{
+			{name: "валидный набор", pairs: validPairs, wantErr: false},
+			{name: "невалидный набор по count", pairs: makePairs(t, MinPairs-1), wantErr: true},
+			{name: "невалидный набор по zero pair", pairs: []pair.Pair{mustPair(t, "a", "1"), {}}, wantErr: true},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := validatePairs(tt.pairs)
+				if (err != nil) != tt.wantErr {
+					t.Fatalf("validatePairs() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				if tt.wantErr && !errors.Is(err, ErrInvalid) {
+					t.Fatalf("validatePairs() error = %v, want ErrInvalid", err)
+				}
+			})
+		}
+	})
 }

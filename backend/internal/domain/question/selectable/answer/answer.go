@@ -8,10 +8,10 @@ import (
 )
 
 type Answer struct {
-	optionIDs []OptionID
+	optionIDs []uuid.UUID
 }
 
-func New(optionIDs []OptionID) (Answer, error) {
+func New(optionIDs []uuid.UUID) (Answer, error) {
 	if err := validateOptionIDs(optionIDs); err != nil {
 		return Answer{}, err
 	}
@@ -21,7 +21,7 @@ func New(optionIDs []OptionID) (Answer, error) {
 	}, nil
 }
 
-func (a Answer) OptionIDs() []OptionID {
+func (a Answer) OptionIDs() []uuid.UUID {
 	return slices.Clone(a.optionIDs)
 }
 
@@ -29,7 +29,7 @@ func (a Answer) OptionIDSet() map[uuid.UUID]struct{} {
 	options := make(map[uuid.UUID]struct{}, len(a.optionIDs))
 
 	for i := range a.optionIDs {
-		options[a.optionIDs[i].ID()] = struct{}{}
+		options[a.optionIDs[i]] = struct{}{}
 	}
 
 	return options

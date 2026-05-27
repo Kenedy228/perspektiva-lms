@@ -16,13 +16,14 @@ import (
 	orgqueries "gitflic.ru/lms/backend/internal/application/usecases/organization/queries"
 	attemptdomain "gitflic.ru/lms/backend/internal/domain/attempt"
 	"gitflic.ru/lms/backend/internal/domain/question"
+	"gitflic.ru/lms/backend/internal/domain/question/base"
+	"gitflic.ru/lms/backend/internal/domain/question/base/title"
 	selectablequestion "gitflic.ru/lms/backend/internal/domain/question/selectable"
 	selectableanswer "gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
 	selectableoption "gitflic.ru/lms/backend/internal/domain/question/selectable/option"
 	"gitflic.ru/lms/backend/internal/domain/quiz/limit"
 	"gitflic.ru/lms/backend/internal/domain/role"
 	"gitflic.ru/lms/backend/internal/domain/shared/text"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
 	"gitflic.ru/lms/backend/internal/infrastructure/postgres"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -107,9 +108,7 @@ func TestQuestionAndAttemptRepositoryLifecycleWithPostgres(t *testing.T) {
 	}, startedAt)
 	require.NoError(t, err)
 
-	optionID, err := selectableanswer.NewOptionID(q.Options()[0].ID())
-	require.NoError(t, err)
-	ans, err := selectableanswer.New([]selectableanswer.OptionID{optionID})
+	ans, err := selectableanswer.New([]uuid.UUID{q.Options()[0].ID()})
 	require.NoError(t, err)
 	require.NoError(t, attempt.AddAnswer(q.ID(), ans, startedAt.Add(time.Minute)))
 	require.NoError(t, attemptRepo.Save(ctx, attempt))
@@ -184,15 +183,17 @@ func newSelectableQuestion(t *testing.T) *selectablequestion.Question {
 	t.Helper()
 	qTitle, err := title.New("Question title")
 	require.NoError(t, err)
+	b, err := base.New(qTitle)
+	require.NoError(t, err)
 	firstText, err := text.New("first")
 	require.NoError(t, err)
 	secondText, err := text.New("second")
 	require.NoError(t, err)
-	first, err := selectableoption.New(firstText, true)
+	first, err := selectableoption.New(firstText.Value(), true)
 	require.NoError(t, err)
-	second, err := selectableoption.New(secondText, false)
+	second, err := selectableoption.New(secondText.Value(), false)
 	require.NoError(t, err)
-	q, err := selectablequestion.New(qTitle, []selectableoption.Option{first, second})
+	q, err := selectablequestion.New(b, []selectableoption.Option{first, second})
 	require.NoError(t, err)
 	return q
 }

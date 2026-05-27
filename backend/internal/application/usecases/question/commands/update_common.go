@@ -6,14 +6,16 @@ import (
 
 	questports "gitflic.ru/lms/backend/internal/application/ports/question"
 	"gitflic.ru/lms/backend/internal/application/usecases/question/common"
+	questiontitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/role"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
 )
 
+// ChangeTitleUseCase изменяет заголовок существующего вопроса.
 type ChangeTitleUseCase struct {
 	r questports.Repository
 }
 
+// NewChangeTitleUseCase создает ChangeTitleUseCase.
 func NewChangeTitleUseCase(r questports.Repository) *ChangeTitleUseCase {
 	if r == nil {
 		panic("question change title usecase requires repository")
@@ -21,20 +23,22 @@ func NewChangeTitleUseCase(r questports.Repository) *ChangeTitleUseCase {
 	return &ChangeTitleUseCase{r: r}
 }
 
+// ChangeTitleInput описывает входные данные для изменения заголовка вопроса.
 type ChangeTitleInput struct {
 	ActorRole  role.Role
 	QuestionID string
 	Title      string
 }
 
+// Execute изменяет заголовок вопроса и сохраняет его в репозитории.
 func (uc *ChangeTitleUseCase) Execute(ctx context.Context, in ChangeTitleInput) (*Output, error) {
 	if err := common.RequireAuthor(in.ActorRole); err != nil {
 		return nil, err
 	}
 
-	t, err := title.New(in.Title)
+	t, err := questiontitle.New(in.Title)
 	if err != nil {
-		return nil, fmt.Errorf("create question title: %w", err)
+		return nil, fmt.Errorf("создание заголовка вопроса: %w", err)
 	}
 
 	q, err := loadQuestion(ctx, uc.r, in.QuestionID)
@@ -42,83 +46,11 @@ func (uc *ChangeTitleUseCase) Execute(ctx context.Context, in ChangeTitleInput) 
 		return nil, err
 	}
 
-	q.ChangeTitle(t)
+	if err := q.ChangeTitle(t); err != nil {
+		return nil, fmt.Errorf("изменение заголовка вопроса: %w", err)
+	}
 	if err := uc.r.Save(ctx, q); err != nil {
-		return nil, fmt.Errorf("save question: %w", err)
-	}
-
-	return &Output{ID: q.ID().String()}, nil
-}
-
-type ChangeAttachmentUseCase struct {
-	r questports.Repository
-}
-
-func NewChangeAttachmentUseCase(r questports.Repository) *ChangeAttachmentUseCase {
-	if r == nil {
-		panic("question change attachment usecase requires repository")
-	}
-	return &ChangeAttachmentUseCase{r: r}
-}
-
-type ChangeAttachmentInput struct {
-	ActorRole  role.Role
-	QuestionID string
-	Attachment AttachmentInput
-}
-
-func (uc *ChangeAttachmentUseCase) Execute(ctx context.Context, in ChangeAttachmentInput) (*Output, error) {
-	if err := common.RequireAuthor(in.ActorRole); err != nil {
-		return nil, err
-	}
-
-	att, err := buildAttachment(in.Attachment)
-	if err != nil {
-		return nil, err
-	}
-
-	q, err := loadQuestion(ctx, uc.r, in.QuestionID)
-	if err != nil {
-		return nil, err
-	}
-
-	q.ChangeAttachment(att)
-	if err := uc.r.Save(ctx, q); err != nil {
-		return nil, fmt.Errorf("save question: %w", err)
-	}
-
-	return &Output{ID: q.ID().String()}, nil
-}
-
-type RemoveAttachmentUseCase struct {
-	r questports.Repository
-}
-
-func NewRemoveAttachmentUseCase(r questports.Repository) *RemoveAttachmentUseCase {
-	if r == nil {
-		panic("question remove attachment usecase requires repository")
-	}
-	return &RemoveAttachmentUseCase{r: r}
-}
-
-type RemoveAttachmentInput struct {
-	ActorRole  role.Role
-	QuestionID string
-}
-
-func (uc *RemoveAttachmentUseCase) Execute(ctx context.Context, in RemoveAttachmentInput) (*Output, error) {
-	if err := common.RequireAuthor(in.ActorRole); err != nil {
-		return nil, err
-	}
-
-	q, err := loadQuestion(ctx, uc.r, in.QuestionID)
-	if err != nil {
-		return nil, err
-	}
-
-	q.RemoveAttachment()
-	if err := uc.r.Save(ctx, q); err != nil {
-		return nil, fmt.Errorf("save question: %w", err)
+		return nil, fmt.Errorf("сохранение вопроса: %w", err)
 	}
 
 	return &Output{ID: q.ID().String()}, nil

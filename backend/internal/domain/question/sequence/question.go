@@ -3,12 +3,9 @@ package sequence
 import (
 	"slices"
 
-	question2 "gitflic.ru/lms/backend/internal/domain/question"
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
+	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"gitflic.ru/lms/backend/internal/domain/question/sequence/option"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
-	"github.com/google/uuid"
 )
 
 type Question struct {
@@ -16,13 +13,12 @@ type Question struct {
 	options []option.Option
 }
 
-func New(t title.Title, options []option.Option) (*Question, error) {
-	if err := validateOptions(options); err != nil {
+func New(b *base.Base, options []option.Option) (*Question, error) {
+	if err := validateBase(b); err != nil {
 		return nil, err
 	}
 
-	b, err := base.New(t)
-	if err != nil {
+	if err := validateOptions(options); err != nil {
 		return nil, err
 	}
 
@@ -32,13 +28,12 @@ func New(t title.Title, options []option.Option) (*Question, error) {
 	}, nil
 }
 
-func Restore(id uuid.UUID, t title.Title, att *attachment.Attachment, options []option.Option) (*Question, error) {
-	if err := validateOptions(options); err != nil {
+func Restore(b *base.Base, options []option.Option) (*Question, error) {
+	if err := validateBase(b); err != nil {
 		return nil, err
 	}
 
-	b, err := base.Restore(id, t, att)
-	if err != nil {
+	if err := validateOptions(options); err != nil {
 		return nil, err
 	}
 
@@ -56,8 +51,8 @@ func (q *Question) Options() []option.Option {
 	return slices.Clone(q.options)
 }
 
-func (q *Question) Type() question2.Type {
-	return question2.TypeSequence
+func (q *Question) Type() question.Type {
+	return question.TypeSequence
 }
 
 func (q *Question) ChangeOptions(options []option.Option) error {
@@ -69,7 +64,7 @@ func (q *Question) ChangeOptions(options []option.Option) error {
 	return nil
 }
 
-func (q *Question) Clone() question2.Question {
+func (q *Question) Clone() question.Question {
 	return &Question{
 		Base:    q.Base.Clone(),
 		options: slices.Clone(q.options),

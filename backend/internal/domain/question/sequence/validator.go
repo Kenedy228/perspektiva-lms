@@ -3,9 +3,25 @@ package sequence
 import (
 	"fmt"
 
+	"gitflic.ru/lms/backend/internal/domain/question/base"
 	"gitflic.ru/lms/backend/internal/domain/question/sequence/option"
-	"github.com/google/uuid"
 )
+
+func validateBase(b *base.Base) error {
+	if err := validateBaseRequired(b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateBaseRequired(b *base.Base) error {
+	if b == nil {
+		return fmt.Errorf("%w: база вопроса должна существовать", ErrInvalid)
+	}
+
+	return nil
+}
 
 func validateOptions(options []option.Option) error {
 	if err := validateOptionsCount(options); err != nil {
@@ -16,20 +32,18 @@ func validateOptions(options []option.Option) error {
 		return err
 	}
 
-	if err := validateOptionsDuplicates(options); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func validateOptionsCount(options []option.Option) error {
-	if len(options) < MinOptionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, MinOptionsCount)
+	count := len(options)
+
+	if count < MinOptionsCount {
+		return fmt.Errorf("%w: вопрос должен содержать минимум %d опций (текущее количество опций - %d)", ErrInvalid, MinOptionsCount, count)
 	}
 
-	if len(options) > MaxOptionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, MaxOptionsCount)
+	if count > MaxOptionsCount {
+		return fmt.Errorf("%w: вопрос должен содержать максимум %d опций (текущее количество опций - %d)", ErrInvalid, MaxOptionsCount, count)
 	}
 
 	return nil
@@ -37,20 +51,8 @@ func validateOptionsCount(options []option.Option) error {
 
 func validateOptionsContainsEmpty(options []option.Option) error {
 	for i := range options {
-		if options[i].ID() == uuid.Nil {
-			return fmt.Errorf("%w: invalid value", ErrInvalid)
-		}
-	}
-
-	return nil
-}
-
-func validateOptionsDuplicates(options []option.Option) error {
-	for i := range options {
-		for j := i + 1; j < len(options); j++ {
-			if options[i].ID() == options[j].ID() {
-				return fmt.Errorf("%w: invalid value", ErrInvalid)
-			}
+		if options[i].IsZero() {
+			return fmt.Errorf("%w: вопрос не должен содержать пустых опций", ErrInvalid)
 		}
 	}
 

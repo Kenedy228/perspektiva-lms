@@ -1,41 +1,29 @@
 package answer
 
 import (
-	"errors"
-	"fmt"
-	"unicode/utf8"
-
 	"gitflic.ru/lms/backend/internal/domain/question"
 )
 
-const InputCharsLimit int = 1000
-
-var ErrInvalid = errors.New("invalid value")
-
 type Answer struct {
-	input string
+	value string
 }
 
-func New(input string) (Answer, error) {
-	if utf8.RuneCountInString(input) > InputCharsLimit {
-		return Answer{}, fmt.Errorf("%w: invalid value (%d)", ErrInvalid, InputCharsLimit)
-	}
-
+func New(value string) Answer {
 	return Answer{
-		input: input,
-	}, nil
+		value: value,
+	}
 }
 
 func (a Answer) Value() string {
-	return a.input
+	return a.value
 }
 
 func (a Answer) IsEmpty() bool {
-	return len(a.input) == 0
+	return len(a.value) == 0
 }
 
 func (a Answer) Clone() question.Answer {
 	return Answer{
-		input: a.input,
+		value: a.value,
 	}
 }

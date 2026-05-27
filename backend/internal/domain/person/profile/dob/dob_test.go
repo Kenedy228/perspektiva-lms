@@ -1,81 +1,20 @@
 package dob
 
 import (
-	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestDateOfBirth_Date(t *testing.T) {
-	type fields struct {
-		date time.Time
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   time.Time
-	}{
-		{
-			name: "возвращает дату как есть",
-			fields: fields{
-				date: time.Date(2020, 2, 22, 0, 0, 0, 0, time.UTC),
-			},
-			want: time.Date(2020, 2, 22, 0, 0, 0, 0, time.UTC),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := DateOfBirth{
-				date: tt.fields.date,
-			}
-			if got := db.Date(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Date() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDateOfBirth_IsZero(t *testing.T) {
-	type fields struct {
-		date time.Time
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "пустое значение",
-			fields: fields{
-				date: time.Time{},
-			},
-			want: true,
-		},
-		{
-			name: "непустое значение",
-			fields: fields{
-				date: time.Now(),
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := DateOfBirth{
-				date: tt.fields.date,
-			}
-			if got := db.IsZero(); got != tt.want {
-				t.Errorf("IsZero() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestNew(t *testing.T) {
+	asOf := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
+
 	type args struct {
 		date time.Time
 		asOf time.Time
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -83,60 +22,146 @@ func TestNew(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "возраст младше порогового значения",
+			name: "ровно 18 лет",
 			args: args{
-				date: time.Date(2020, 1, 12, 0, 0, 0, 0, time.UTC),
-				asOf: time.Now(),
+				date: asOf.AddDate(-MinAdultAge, 0, 0),
+				asOf: asOf,
 			},
-			want: DateOfBirth{
-				date: time.Time{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "возраст старше порогового значения",
-			args: args{
-				date: time.Date(1800, 1, 12, 0, 0, 0, 0, time.UTC),
-				asOf: time.Now(),
-			},
-			want: DateOfBirth{
-				date: time.Time{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "валидный возраст",
-			args: args{
-				date: time.Date(2004, 1, 12, 0, 0, 0, 0, time.UTC),
-				asOf: time.Now(),
-			},
-			want: DateOfBirth{
-				date: time.Date(2004, 1, 12, 0, 0, 0, 0, time.UTC),
-			},
+			want:    DateOfBirth{date: normalize(asOf.AddDate(-MinAdultAge, 0, 0))},
 			wantErr: false,
 		},
 		{
-			name: "дата рождения позднее даты получения возраста",
+			name: "17 лет и 1 день — на день младше нижней границы возраста",
 			args: args{
-				date: time.Date(2004, 1, 12, 0, 0, 0, 0, time.UTC),
-				asOf: time.Date(2002, 1, 12, 0, 0, 0, 0, time.UTC),
+				date: asOf.AddDate(-MinAdultAge, 0, 1),
+				asOf: asOf,
 			},
-			want: DateOfBirth{
+			want:    DateOfBirth{},
+			wantErr: true,
+		},
+		{
+			name: "18 лет и 1 день - на день старше нижней границы возраста",
+			args: args{
+				date: asOf.AddDate(-MinAdultAge, 0, -1),
+				asOf: asOf,
+			},
+			want:    DateOfBirth{date: normalize(asOf.AddDate(-MinAdultAge, 0, -1))},
+			wantErr: false,
+		},
+		{
+			name: "достигнута верхняя граница возраста",
+			args: args{
+				date: asOf.AddDate(-MaxAdultAge, 0, 0),
+				asOf: asOf,
+			},
+			want:    DateOfBirth{date: normalize(asOf.AddDate(-MaxAdultAge, 0, 0))},
+			wantErr: false,
+		},
+		{
+			name: "выше верхней границы возраста",
+			args: args{
+				date: asOf.AddDate(-(MaxAdultAge + 1), 0, 0),
+				asOf: asOf,
+			},
+			want:    DateOfBirth{},
+			wantErr: true,
+		},
+		{
+			name: "ниже верхней границы возраста",
+			args: args{
+				date: asOf.AddDate(-(MaxAdultAge - 1), 0, 0),
+				asOf: asOf,
+			},
+			want:    DateOfBirth{date: normalize(asOf.AddDate(-(MaxAdultAge - 1), 0, 0))},
+			wantErr: false,
+		},
+		{
+			name: "дата рождения в будущем относительно asOf",
+			args: args{
+				date: asOf.AddDate(0, 0, 1),
+				asOf: asOf,
+			},
+			want:    DateOfBirth{},
+			wantErr: true,
+		},
+		{
+			name: "дата совпадает с asOf (возраст 0)",
+			args: args{
+				date: asOf,
+				asOf: asOf,
+			},
+			want:    DateOfBirth{},
+			wantErr: true,
+		},
+		{
+			name: "нулевая дата рождения",
+			args: args{
 				date: time.Time{},
+				asOf: asOf,
 			},
+			want:    DateOfBirth{},
 			wantErr: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := New(tt.args.date, tt.args.asOf)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
-				return
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrInvalid)
+			} else {
+				assert.NoError(t, err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("New() got = %v, want %v", got, tt.want)
-			}
+
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestDateOfBirth_Date(t *testing.T) {
+	tests := []struct {
+		name string
+		date time.Time
+	}{
+		{
+			name: "возвращает дату как есть",
+			date: time.Date(2020, 2, 22, 0, 0, 0, 0, time.UTC),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := DateOfBirth{date: tt.date}
+			assert.True(t, db.Date().Equal(tt.date),
+				"Date() = %v, want %v", db.Date(), tt.date)
+		})
+	}
+}
+
+func TestDateOfBirth_IsZero(t *testing.T) {
+	tests := []struct {
+		name string
+		date time.Time
+		want bool
+	}{
+		{
+			name: "пустое значение",
+			date: time.Time{},
+			want: true,
+		},
+		{
+			name: "непустое значение",
+			date: time.Date(2020, 2, 22, 0, 0, 0, 0, time.UTC),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := DateOfBirth{date: tt.date}
+			assert.Equal(t, tt.want, db.IsZero())
 		})
 	}
 }

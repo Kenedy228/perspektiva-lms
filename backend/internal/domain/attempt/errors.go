@@ -3,7 +3,7 @@ package attempt
 import "errors"
 
 var (
-	ErrInvalid       = errors.New("invalid value")
-	ErrStateConflict = errors.New("invalid value")
-	ErrNotFound      = errors.New("invalid value")
+	ErrInvalid       = errors.New("некорректное значение")
+	ErrStateConflict = errors.New("конфликт состояния")
+	ErrNotFound      = errors.New("не найдено")
 )

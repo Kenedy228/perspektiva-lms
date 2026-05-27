@@ -1,2 +1,2 @@
-// Package score defines normalized grading scores.
+// Package score определяет нормализованный результат проверки ответа в диапазоне [0;1].
 package score

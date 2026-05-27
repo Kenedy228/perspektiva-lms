@@ -6,9 +6,8 @@ import (
 
 	"gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/question/base"
+	"gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/question/selectable/option"
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
 	"github.com/google/uuid"
 )
 
@@ -34,21 +33,10 @@ func mustBase(t *testing.T, v string) *base.Base {
 	return got
 }
 
-func mustText(t *testing.T, v string) text.Text {
-	t.Helper()
-
-	got, err := text.New(v)
-	if err != nil {
-		t.Fatalf("text.New() error = %v", err)
-	}
-
-	return got
-}
-
 func mustOption(t *testing.T, v string, isCorrect bool) option.Option {
 	t.Helper()
 
-	got, err := option.New(mustText(t, v), isCorrect)
+	got, err := option.New(v, isCorrect)
 	if err != nil {
 		t.Fatalf("option.New() error = %v", err)
 	}
@@ -71,7 +59,7 @@ func TestNew(t *testing.T) {
 	validOptions := makeOptions(t, MinOptionsCount, 1)
 
 	type args struct {
-		t       title.Title
+		b       *base.Base
 		options []option.Option
 	}
 	tests := []struct {
@@ -83,7 +71,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "creates question with valid options",
 			args: args{
-				t:       mustTitle(t, "selectable"),
+				b:       mustBase(t, "selectable"),
 				options: validOptions,
 			},
 			wantErr: false,
@@ -91,7 +79,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "returns error when options less than min",
 			args: args{
-				t:       mustTitle(t, "selectable"),
+				b:       mustBase(t, "selectable"),
 				options: makeOptions(t, MinOptionsCount-1, 1),
 			},
 			wantErr: true,
@@ -99,7 +87,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "returns error when no correct options",
 			args: args{
-				t:       mustTitle(t, "selectable"),
+				b:       mustBase(t, "selectable"),
 				options: makeOptions(t, MinOptionsCount, 0),
 			},
 			wantErr: true,
@@ -107,7 +95,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "returns error when contains empty option",
 			args: args{
-				t: mustTitle(t, "selectable"),
+				b: mustBase(t, "selectable"),
 				options: []option.Option{
 					mustOption(t, "a", true),
 					{},
@@ -118,7 +106,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "returns error when contains duplicate option id",
 			args: args{
-				t: mustTitle(t, "selectable"),
+				b: mustBase(t, "selectable"),
 				options: func() []option.Option {
 					opt := mustOption(t, "a", true)
 					return []option.Option{opt, opt}
@@ -129,7 +117,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.t, tt.args.options)
+			got, err := New(tt.args.b, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return

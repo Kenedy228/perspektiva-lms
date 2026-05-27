@@ -12,7 +12,7 @@ type OptionID struct {
 
 func NewOptionID(id uuid.UUID) (OptionID, error) {
 	if id == uuid.Nil {
-		return OptionID{}, fmt.Errorf("%w: invalid value", ErrInvalid)
+		return OptionID{}, fmt.Errorf("%w: идентификатор выбранной опции не может быть пустым", ErrInvalid)
 	}
 
 	return OptionID{id: id}, nil

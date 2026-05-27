@@ -5,11 +5,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func hasQuestion(items []item.Item, questionID uuid.UUID) bool {
-	_, ok := findItem(items, questionID)
-	return ok
-}
-
 func findItem(items []item.Item, questionID uuid.UUID) (item.Item, bool) {
 	for i := range items {
 		if items[i].ID() == questionID {

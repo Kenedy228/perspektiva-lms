@@ -1,2 +1,2 @@
-// Package short contains short-answer question domain or grading behavior.
+// Package short содержит checker для проверки коротких текстовых ответов.
 package short
