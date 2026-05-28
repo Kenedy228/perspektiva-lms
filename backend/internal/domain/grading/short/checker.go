@@ -50,8 +50,3 @@ func (c Checker) Check(q question.Question, a question.Answer) (score.Score, err
 
 	return score.New(0)
 }
-
-// Supports сообщает, поддерживается ли тип вопроса checker-ом.
-func (c Checker) Supports(t question.Type) bool {
-	return t == question.TypeShort
-}

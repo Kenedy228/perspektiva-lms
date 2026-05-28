@@ -246,7 +246,7 @@ sequenceDiagram
 
 **GradeUseCase (валидация + оценка):**
 - Загружает вопрос, валидирует ответ через `AnswerValidator`.
-- Получает `Checker` через `Registry.Get(q.Type())` — O(1) map lookup (без перебора `Supports()`).
+- Получает `Checker` через `Registry.Get(q.Type())` — O(1) map lookup.
 - Вызывает `Checker.Check(q, a)`, который выполняет **defensive type assertions** и вычисляет score.
 - Логика проверки специфична для каждого типа:
   - **selectable**: студент должен выбрать ровно все правильные варианты (без лишних);

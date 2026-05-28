@@ -61,12 +61,6 @@ func TestChecker_Check(t *testing.T) {
 	}
 }
 
-func TestChecker_Supports(t *testing.T) {
-	checker := selectable.New()
-	assert.True(t, checker.Supports(question.TypeSelectable))
-	assert.False(t, checker.Supports(question.TypeMatching))
-}
-
 func mustBase(t *testing.T) *base.Base {
 	t.Helper()
 

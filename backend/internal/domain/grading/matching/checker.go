@@ -45,11 +45,6 @@ func (c Checker) Check(q question.Question, a question.Answer) (score.Score, err
 	return score.New(1)
 }
 
-// Supports сообщает, поддерживается ли тип вопроса checker-ом.
-func (c Checker) Supports(qType question.Type) bool {
-	return qType == question.TypeMatching
-}
-
 func containsPair(pairs []answer.Pair, promptID, matchID uuid.UUID) bool {
 	for i := range pairs {
 		if pairs[i].PromptID == promptID && pairs[i].MatchID == matchID {

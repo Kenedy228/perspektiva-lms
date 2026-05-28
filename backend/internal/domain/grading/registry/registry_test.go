@@ -12,23 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type stubChecker struct {
-	supported question.Type
-}
+type stubChecker struct{}
 
 func (c stubChecker) Check(_ question.Question, _ question.Answer) (score.Score, error) {
 	return score.New(0)
 }
 
-func (c stubChecker) Supports(t question.Type) bool {
-	return c.supported == t
-}
-
 func TestNew(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		r, err := registry.New(map[question.Type]grading.Checker{
-			question.TypeSelectable: stubChecker{supported: question.TypeSelectable},
-			question.TypeMatching:   stubChecker{supported: question.TypeMatching},
+			question.TypeSelectable: stubChecker{},
+			question.TypeMatching:   stubChecker{},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, r)
@@ -53,14 +47,14 @@ func TestNew(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	r, err := registry.New(map[question.Type]grading.Checker{
-		question.TypeSelectable: stubChecker{supported: question.TypeSelectable},
+		question.TypeSelectable: stubChecker{},
 	})
 	require.NoError(t, err)
 
 	t.Run("ok", func(t *testing.T) {
 		c, err := r.Get(question.TypeSelectable)
 		require.NoError(t, err)
-		assert.True(t, c.Supports(question.TypeSelectable))
+		require.NotNil(t, c)
 	})
 
 	t.Run("not found", func(t *testing.T) {

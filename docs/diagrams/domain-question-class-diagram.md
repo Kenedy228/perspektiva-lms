@@ -24,16 +24,10 @@ classDiagram
     class Checker {
         <<interface>>
         +Check(Question, Answer) Score
-        +Supports(Type) bool
     }
     class AnswerValidator {
         <<interface>>
         +Validate(Question, Answer) error
-    }
-    class Checker {
-        <<interface>>
-        +Check(Question, Answer) Score
-        +Supports(Type) bool
     }
 
     %% ═══════════════════════════════════════════
@@ -238,20 +232,16 @@ classDiagram
     %% ═══════════════════════════════════════════
     class MatchingChecker {
         +Check(Question, Answer) Score
-        +Supports(Type) bool
     }
     class SelectableChecker {
         +Check(Question, Answer) Score
-        +Supports(Type) bool
     }
     class SequenceChecker {
         +Check(Question, Answer) Score
-        +Supports(Type) bool
     }
     class ShortChecker {
         -normalizers []normalizer
         +Check(Question, Answer) Score
-        +Supports(Type) bool
     }
 
     %% ═══════════════════════════════════════════

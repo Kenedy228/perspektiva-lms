@@ -43,8 +43,6 @@ type fakeChecker struct {
 	checkCalls int
 }
 
-func (c *fakeChecker) Supports(_ question.Type) bool { return true }
-
 func (c *fakeChecker) Check(_ question.Question, _ question.Answer) (score.Score, error) {
 	c.checkCalls++
 	if c.err != nil {
