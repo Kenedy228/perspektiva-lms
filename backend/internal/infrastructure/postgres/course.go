@@ -7,6 +7,7 @@ import (
 	"time"
 
 	courseports "gitflic.ru/lms/backend/internal/application/ports/course"
+	enrollmentports "gitflic.ru/lms/backend/internal/application/ports/enrollment"
 	coursedomain "gitflic.ru/lms/backend/internal/domain/course"
 	"gitflic.ru/lms/backend/internal/domain/course/block"
 	blocktitle "gitflic.ru/lms/backend/internal/domain/course/block/title"
@@ -23,6 +24,7 @@ var (
 	_ courseports.ElementRepository  = (*ElementRepository)(nil)
 	_ courseports.ProgressRepository = (*ProgressRepository)(nil)
 	_ courseports.EnrollmentAccess   = (*CoursePolicy)(nil)
+	_ enrollmentports.VersionPolicy  = (*CoursePolicy)(nil)
 	_ courseports.QueryService       = (*CourseQueryService)(nil)
 )
 
