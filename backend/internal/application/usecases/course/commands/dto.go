@@ -92,13 +92,15 @@ type UnmarkElementCompletedInput struct {
 }
 
 type GetProgressInput struct {
-	ActorRole    role.Role
-	EnrollmentID string
+	ActorRole         role.Role
+	EnrollmentID      string
+	TotalTrackedItems int
 }
 
 type ProgressOutput struct {
 	CompletedCount      int
 	Percent             int
+	TotalTrackedItems   int
 	CompletedElementIDs []uuid.UUID
 }
 

@@ -511,14 +511,18 @@ func TestGetProgressReturnsCompletedElementIDs(t *testing.T) {
 	repo.item = p
 
 	out, err := NewGetProgressUseCase(repo).Execute(ctx, GetProgressInput{
-		ActorRole:    role.NewStudent(),
-		EnrollmentID: p.EnrollmentID().String(),
+		ActorRole:         role.NewStudent(),
+		EnrollmentID:      p.EnrollmentID().String(),
+		TotalTrackedItems: 4,
 	})
 	if err != nil {
 		t.Fatalf("get progress: %v", err)
 	}
 	if out.CompletedCount != 1 {
 		t.Fatalf("expected 1 completed, got %d", out.CompletedCount)
+	}
+	if out.Percent != 25 {
+		t.Fatalf("expected 25%%, got %d%%", out.Percent)
 	}
 	if len(out.CompletedElementIDs) != 1 {
 		t.Fatalf("expected 1 element id, got %d", len(out.CompletedElementIDs))

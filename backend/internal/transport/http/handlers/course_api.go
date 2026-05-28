@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	coursecommands "gitflic.ru/lms/backend/internal/application/usecases/course/commands"
@@ -308,9 +309,11 @@ func (api *API) GetCourseProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	enrollmentID := r.URL.Query().Get("enrollment_id")
+	total, _ := strconv.Atoi(r.URL.Query().Get("total"))
 	out, err := api.Courses.GetProgress.Execute(r.Context(), coursecommands.GetProgressInput{
-		ActorRole:    actor.role,
-		EnrollmentID: enrollmentID,
+		ActorRole:         actor.role,
+		EnrollmentID:      enrollmentID,
+		TotalTrackedItems: total,
 	})
 	if err != nil {
 		writeHandlerError(w, r, err)
@@ -324,6 +327,7 @@ func (api *API) GetCourseProgress(w http.ResponseWriter, r *http.Request) {
 		EnrollmentID:        enrollmentID,
 		CompletedCount:      out.CompletedCount,
 		Percent:             out.Percent,
+		TotalTrackedItems:   out.TotalTrackedItems,
 		CompletedElementIDs: elementStrs,
 	}, nil)
 }

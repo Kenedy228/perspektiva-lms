@@ -170,6 +170,7 @@ func (s *stubGetProgress) Execute(_ context.Context, _ coursecommands.GetProgres
 	return &coursecommands.ProgressOutput{
 		CompletedCount:      3,
 		Percent:             75,
+		TotalTrackedItems:   4,
 		CompletedElementIDs: []uuid.UUID{uuid.New(), uuid.New(), uuid.New()},
 	}, nil
 }

@@ -111,7 +111,8 @@ func (uc *GetProgressUseCase) Execute(ctx context.Context, in GetProgressInput) 
 	}
 	return &ProgressOutput{
 		CompletedCount:      p.CompletedCount(),
-		Percent:             p.CompletionPercent(len(markers)),
+		Percent:             p.CompletionPercent(in.TotalTrackedItems),
+		TotalTrackedItems:   in.TotalTrackedItems,
 		CompletedElementIDs: elementIDs,
 	}, nil
 }

@@ -210,5 +210,6 @@ type ProgressResponse struct {
 	EnrollmentID        string   `json:"enrollment_id"`
 	CompletedCount      int      `json:"completed_count"`
 	Percent             int      `json:"percent"`
+	TotalTrackedItems   int      `json:"total_tracked_items"`
 	CompletedElementIDs []string `json:"completed_element_ids"`
 }
