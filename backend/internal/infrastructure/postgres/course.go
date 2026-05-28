@@ -289,6 +289,16 @@ func (p *CoursePolicy) CanEnrollCourse(ctx context.Context, courseID uuid.UUID) 
 	return ok, err
 }
 
+func (p *CoursePolicy) CanEnrollVersion(ctx context.Context, versionID uuid.UUID) (bool, error) {
+	var ok bool
+	err := p.db.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM course_version_links
+			WHERE version_id = $1
+		)`, versionID).Scan(&ok)
+	return ok, err
+}
+
 // CourseQueryService serves course read models and student statistics.
 type CourseQueryService struct{ db *sql.DB }
 

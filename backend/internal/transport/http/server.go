@@ -103,8 +103,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /questions/{id}", s.requireAuth(api.GetQuestion))
 	mux.HandleFunc("PATCH /questions/{id}", s.requireAuth(api.ChangeQuestionTitle))
 	mux.HandleFunc("PUT /questions/{id}/content", s.requireAuth(api.ChangeQuestionContent))
-	mux.HandleFunc("PUT /questions/{id}/attachment", s.requireAuth(api.ChangeQuestionAttachment))
-	mux.HandleFunc("DELETE /questions/{id}/attachment", s.requireAuth(api.RemoveQuestionAttachment))
 	mux.HandleFunc("POST /questions/{id}/grade", s.requireAuth(api.GradeQuestion))
 
 	mux.HandleFunc("POST /quizzes", s.requireAuth(api.CreateQuiz))

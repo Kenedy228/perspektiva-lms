@@ -9,16 +9,14 @@ import (
 	selectableanswer "gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
 	sequenceanswer "gitflic.ru/lms/backend/internal/domain/question/sequence/answer"
 	shortanswer "gitflic.ru/lms/backend/internal/domain/question/short/answer"
-	typedanswer "gitflic.ru/lms/backend/internal/domain/question/typed/answer"
 	"github.com/google/uuid"
 )
 
 type answerPayload struct {
-	SelectableOptionIDs []string                  `json:"selectable_option_ids,omitempty"`
-	SequenceOptionIDs   []string                  `json:"sequence_option_ids,omitempty"`
-	MatchingPairs       []answerPairPayload       `json:"matching_pairs,omitempty"`
-	TypedBlanks         []typedanswer.AnswerBlank `json:"typed_blanks,omitempty"`
-	ShortInput          string                    `json:"short_input,omitempty"`
+	SelectableOptionIDs []string            `json:"selectable_option_ids,omitempty"`
+	SequenceOptionIDs   []string            `json:"sequence_option_ids,omitempty"`
+	MatchingPairs       []answerPairPayload `json:"matching_pairs,omitempty"`
+	ShortInput          string              `json:"short_input,omitempty"`
 }
 
 type answerPairPayload struct {
@@ -44,8 +42,6 @@ func marshalAnswer(ans questdomain.Answer) ([]byte, error) {
 				MatchID:  p.MatchID.String(),
 			})
 		}
-	case typedanswer.Answer:
-		payload.TypedBlanks = typed.Blanks()
 	case shortanswer.Answer:
 		payload.ShortInput = typed.Value()
 	default:
@@ -103,10 +99,8 @@ func unmarshalAnswer(qType questdomain.Type, raw []byte) (questdomain.Answer, er
 			pairs = append(pairs, matchinganswer.Pair{PromptID: promptID, MatchID: matchID})
 		}
 		return matchinganswer.New(pairs)
-	case questdomain.TypeTyped:
-		return typedanswer.New(payload.TypedBlanks)
 	case questdomain.TypeShort:
-		return shortanswer.New(payload.ShortInput)
+		return shortanswer.New(payload.ShortInput), nil
 	default:
 		return nil, fmt.Errorf("%w: unsupported answer question type %q", ErrUnsupported, qType)
 	}

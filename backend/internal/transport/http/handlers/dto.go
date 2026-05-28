@@ -87,7 +87,6 @@ type QuestionRequest struct {
 	SelectableOptions []SelectableOptionInput `json:"selectable_options,omitempty"`
 	SequenceOptions   []SequenceOptionInput   `json:"sequence_options,omitempty"`
 	MatchingPairs     []MatchingPairInput     `json:"matching_pairs,omitempty"`
-	TypedBlanks       []TypedBlankInput       `json:"typed_blanks,omitempty"`
 	ShortVariants     []ShortVariantInput     `json:"short_variants,omitempty"`
 }
 
@@ -110,11 +109,6 @@ type SequenceOptionInput struct {
 type MatchingPairInput struct {
 	Prompt string `json:"prompt"`
 	Match  string `json:"match"`
-}
-
-type TypedBlankInput struct {
-	Placeholder string   `json:"placeholder"`
-	Variants    []string `json:"variants"`
 }
 
 type ShortVariantInput struct {
@@ -176,7 +170,6 @@ type AttemptAnswerRequest struct {
 	Type          string            `json:"type"`
 	OptionIDs     []string          `json:"option_ids,omitempty"`
 	MatchingPairs map[string]string `json:"matching_pairs,omitempty"`
-	TypedBlanks   map[string]string `json:"typed_blanks,omitempty"`
 	ShortInput    string            `json:"short_input,omitempty"`
 }
 

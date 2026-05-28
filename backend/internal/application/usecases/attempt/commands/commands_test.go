@@ -10,14 +10,13 @@ import (
 	"gitflic.ru/lms/backend/internal/application/usecases/attempt/common"
 	attemptdomain "gitflic.ru/lms/backend/internal/domain/attempt"
 	"gitflic.ru/lms/backend/internal/domain/question"
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
+	questiontitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/quiz"
 	"gitflic.ru/lms/backend/internal/domain/quiz/limit"
 	"gitflic.ru/lms/backend/internal/domain/quiz/source"
 	"gitflic.ru/lms/backend/internal/domain/quiz/source/criteria"
 	quiztitle "gitflic.ru/lms/backend/internal/domain/quiz/title"
 	"gitflic.ru/lms/backend/internal/domain/role"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
 	attemptinfra "gitflic.ru/lms/backend/internal/infrastructure/attempt"
 	"github.com/google/uuid"
 )
@@ -206,13 +205,9 @@ type testQuestion struct {
 
 func (q testQuestion) ID() uuid.UUID { return q.id }
 
-func (q testQuestion) Title() title.Title {
-	t, _ := title.New("Question")
+func (q testQuestion) Title() questiontitle.Title {
+	t, _ := questiontitle.New("Question")
 	return t
-}
-
-func (q testQuestion) Attachment() (attachment.Attachment, bool) {
-	return attachment.Attachment{}, false
 }
 
 func (q testQuestion) Instruction() string { return q.qType.DefaultInstruction() }
@@ -220,10 +215,7 @@ func (q testQuestion) Type() question.Type { return q.qType }
 func (q testQuestion) Clone() question.Question {
 	return testQuestion{id: q.id, qType: q.qType}
 }
-func (q testQuestion) ChangeTitle(title.Title)                {}
-func (q testQuestion) ChangeAttachment(attachment.Attachment) {}
-func (q testQuestion) RemoveAttachment()                      {}
-func (q testQuestion) HasAttachment() bool                    { return false }
+func (q testQuestion) ChangeTitle(questiontitle.Title) error { return nil }
 
 func mustQuiz(t *testing.T, bankID uuid.UUID, shuffle bool, maxAttempts int, questionCount int) *quiz.Quiz {
 	t.Helper()

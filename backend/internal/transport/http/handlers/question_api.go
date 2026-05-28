@@ -11,7 +11,6 @@ import (
 	selectableanswer "gitflic.ru/lms/backend/internal/domain/question/selectable/answer"
 	sequenceanswer "gitflic.ru/lms/backend/internal/domain/question/sequence/answer"
 	shortanswer "gitflic.ru/lms/backend/internal/domain/question/short/answer"
-	typedanswer "gitflic.ru/lms/backend/internal/domain/question/typed/answer"
 	"gitflic.ru/lms/backend/internal/transport/http/response"
 	"github.com/google/uuid"
 )
@@ -28,9 +27,9 @@ func (api *API) CreateQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := api.Questions.Create.Execute(r.Context(), questioncommands.CreateInput{
-		ActorRole: actor.role, Type: req.Type, Title: req.Title, Attachment: toQuestionAttachment(req.Attachment),
+		ActorRole: actor.role, Type: req.Type, Title: req.Title,
 		SelectableOptions: toSelectableInputs(req.SelectableOptions), SequenceOptions: toSequenceInputs(req.SequenceOptions),
-		MatchingPairs: toMatchingInputs(req.MatchingPairs), TypedBlanks: toTypedInputs(req.TypedBlanks), ShortVariants: toShortInputs(req.ShortVariants),
+		MatchingPairs: toMatchingInputs(req.MatchingPairs), ShortVariants: toShortInputs(req.ShortVariants),
 	})
 	if err != nil {
 		writeHandlerError(w, r, err)
@@ -104,12 +103,6 @@ func (api *API) ChangeQuestionContent(w http.ResponseWriter, r *http.Request) {
 			id = out.ID
 		}
 		err = e
-	case questdomain.TypeTyped:
-		out, e := api.Questions.Typed.Execute(r.Context(), questioncommands.ChangeTypedContentInput{ActorRole: actor.role, QuestionID: r.PathValue("id"), Title: req.Title, Blanks: toTypedInputs(req.TypedBlanks)})
-		if e == nil {
-			id = out.ID
-		}
-		err = e
 	case questdomain.TypeShort:
 		out, e := api.Questions.Short.Execute(r.Context(), questioncommands.ChangeShortVariantsInput{ActorRole: actor.role, QuestionID: r.PathValue("id"), Variants: toShortInputs(req.ShortVariants)})
 		if e == nil {
@@ -125,39 +118,6 @@ func (api *API) ChangeQuestionContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeOK(w, r, map[string]string{"id": id}, nil)
-}
-
-func (api *API) ChangeQuestionAttachment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := actorRole(r)
-	if !ok {
-		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
-		return
-	}
-	var req AttachmentInput
-	if err := response.DecodeJSON(r, &req); err != nil {
-		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
-		return
-	}
-	out, err := api.Questions.ChangeAttachment.Execute(r.Context(), questioncommands.ChangeAttachmentInput{ActorRole: actor.role, QuestionID: r.PathValue("id"), Attachment: questioncommands.AttachmentInput(req)})
-	if err != nil {
-		writeHandlerError(w, r, err)
-		return
-	}
-	writeOK(w, r, map[string]string{"id": out.ID}, nil)
-}
-
-func (api *API) RemoveQuestionAttachment(w http.ResponseWriter, r *http.Request) {
-	actor, ok := actorRole(r)
-	if !ok {
-		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
-		return
-	}
-	out, err := api.Questions.RemoveAttachment.Execute(r.Context(), questioncommands.RemoveAttachmentInput{ActorRole: actor.role, QuestionID: r.PathValue("id")})
-	if err != nil {
-		writeHandlerError(w, r, err)
-		return
-	}
-	writeOK(w, r, map[string]string{"id": out.ID}, nil)
 }
 
 func (api *API) GradeQuestion(w http.ResponseWriter, r *http.Request) {
@@ -219,25 +179,13 @@ func buildAnswer(req AttemptAnswerRequest) (questdomain.Answer, error) {
 			pairs = append(pairs, matchinganswer.Pair{PromptID: pid, MatchID: mid})
 		}
 		return matchinganswer.New(pairs)
-	case questdomain.TypeTyped:
-		blanks := make([]typedanswer.AnswerBlank, 0, len(req.TypedBlanks))
-		for p, v := range req.TypedBlanks {
-			blanks = append(blanks, typedanswer.AnswerBlank{Placeholder: p, Variant: v})
-		}
-		return typedanswer.New(blanks)
 	case questdomain.TypeShort:
-		return shortanswer.New(req.ShortInput)
+		return shortanswer.New(req.ShortInput), nil
 	default:
 		return nil, questiongrading.ErrInvalidInput
 	}
 }
 
-func toQuestionAttachment(in *AttachmentInput) *questioncommands.AttachmentInput {
-	if in == nil {
-		return nil
-	}
-	return &questioncommands.AttachmentInput{MediaType: in.MediaType, FileName: in.FileName, SizeBytes: in.SizeBytes}
-}
 func toSelectableInputs(in []SelectableOptionInput) []questioncommands.SelectableOptionInput {
 	out := make([]questioncommands.SelectableOptionInput, len(in))
 	for i := range in {
@@ -256,13 +204,6 @@ func toMatchingInputs(in []MatchingPairInput) []questioncommands.MatchingPairInp
 	out := make([]questioncommands.MatchingPairInput, len(in))
 	for i := range in {
 		out[i] = questioncommands.MatchingPairInput{Prompt: in[i].Prompt, Match: in[i].Match}
-	}
-	return out
-}
-func toTypedInputs(in []TypedBlankInput) []questioncommands.TypedBlankInput {
-	out := make([]questioncommands.TypedBlankInput, len(in))
-	for i := range in {
-		out[i] = questioncommands.TypedBlankInput{Placeholder: in[i].Placeholder, Variants: in[i].Variants}
 	}
 	return out
 }

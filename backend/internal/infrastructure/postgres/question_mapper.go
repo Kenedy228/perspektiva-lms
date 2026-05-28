@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	questdomain "gitflic.ru/lms/backend/internal/domain/question"
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
+	"gitflic.ru/lms/backend/internal/domain/question/base"
+	questiontitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"gitflic.ru/lms/backend/internal/domain/question/matching"
 	matchingpair "gitflic.ru/lms/backend/internal/domain/question/matching/pair"
 	"gitflic.ru/lms/backend/internal/domain/question/selectable"
@@ -14,34 +15,20 @@ import (
 	sequenceoption "gitflic.ru/lms/backend/internal/domain/question/sequence/option"
 	shortquestion "gitflic.ru/lms/backend/internal/domain/question/short"
 	shortvariant "gitflic.ru/lms/backend/internal/domain/question/short/variant"
-	typedquestion "gitflic.ru/lms/backend/internal/domain/question/typed"
-	typedblank "gitflic.ru/lms/backend/internal/domain/question/typed/blank"
-	"gitflic.ru/lms/backend/internal/domain/shared/file"
-	"gitflic.ru/lms/backend/internal/domain/shared/media"
-	"gitflic.ru/lms/backend/internal/domain/shared/text"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
 	"github.com/google/uuid"
 )
 
 type questionPayload struct {
-	Title      string             `json:"title"`
-	Attachment *attachmentPayload `json:"attachment,omitempty"`
-	Selectable []optionPayload    `json:"selectable,omitempty"`
-	Sequence   []optionPayload    `json:"sequence,omitempty"`
-	Matching   []pairPayload      `json:"matching,omitempty"`
-	Short      []string           `json:"short,omitempty"`
-	Typed      []blankPayload     `json:"typed,omitempty"`
-}
-
-type attachmentPayload struct {
-	MediaType string `json:"media_type"`
-	FileName  string `json:"file_name"`
-	SizeBytes int64  `json:"size_bytes"`
+	Title      string          `json:"title"`
+	Selectable []optionPayload `json:"selectable,omitempty"`
+	Sequence   []string        `json:"sequence,omitempty"`
+	Matching   []pairPayload   `json:"matching,omitempty"`
+	Short      []string        `json:"short,omitempty"`
 }
 
 type optionPayload struct {
 	ID        string `json:"id"`
-	Text      string `json:"text"`
+	Value     string `json:"value"`
 	IsCorrect bool   `json:"is_correct,omitempty"`
 }
 
@@ -52,32 +39,21 @@ type pairPayload struct {
 	MatchText  string `json:"match_text"`
 }
 
-type blankPayload struct {
-	Placeholder string   `json:"placeholder"`
-	Variants    []string `json:"variants"`
-}
-
 func marshalQuestion(q questdomain.Question) ([]byte, error) {
 	payload := questionPayload{Title: q.Title().Value()}
-	if att, ok := q.Attachment(); ok {
-		payload.Attachment = marshalAttachment(att)
-	}
 
 	switch typed := q.(type) {
 	case *selectable.Question:
 		for _, opt := range typed.Options() {
 			payload.Selectable = append(payload.Selectable, optionPayload{
 				ID:        opt.ID().String(),
-				Text:      opt.Text().Value(),
+				Value:     opt.Value(),
 				IsCorrect: opt.IsCorrect(),
 			})
 		}
 	case *sequence.Question:
 		for _, opt := range typed.Options() {
-			payload.Sequence = append(payload.Sequence, optionPayload{
-				ID:   opt.ID().String(),
-				Text: opt.Text().Value(),
-			})
+			payload.Sequence = append(payload.Sequence, opt.Value())
 		}
 	case *matching.Question:
 		for _, p := range typed.Pairs() {
@@ -90,14 +66,7 @@ func marshalQuestion(q questdomain.Question) ([]byte, error) {
 		}
 	case *shortquestion.Question:
 		for _, v := range typed.Variants() {
-			payload.Short = append(payload.Short, v.Text().Value())
-		}
-	case *typedquestion.Question:
-		for _, b := range typed.Blanks() {
-			payload.Typed = append(payload.Typed, blankPayload{
-				Placeholder: b.Placeholder(),
-				Variants:    b.VariantsValues(),
-			})
+			payload.Short = append(payload.Short, v.Value())
 		}
 	default:
 		return nil, fmt.Errorf("%w: unsupported question type %T", ErrUnsupported, q)
@@ -116,13 +85,14 @@ func unmarshalQuestion(id uuid.UUID, qType string, raw []byte) (questdomain.Ques
 		return nil, fmt.Errorf("unmarshal question payload: %w", err)
 	}
 
-	t, err := title.New(payload.Title)
+	t, err := questiontitle.New(payload.Title)
 	if err != nil {
 		return nil, fmt.Errorf("restore question title: %w", err)
 	}
-	att, err := unmarshalAttachment(payload.Attachment)
+
+	b, err := base.Restore(id, t)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("restore question base: %w", err)
 	}
 
 	switch questdomain.Type(qType) {
@@ -131,63 +101,28 @@ func unmarshalQuestion(id uuid.UUID, qType string, raw []byte) (questdomain.Ques
 		if err != nil {
 			return nil, err
 		}
-		return selectable.Restore(id, t, att, options)
+		return selectable.Restore(b, options)
 	case questdomain.TypeSequence:
 		options, err := restoreSequenceOptions(payload.Sequence)
 		if err != nil {
 			return nil, err
 		}
-		return sequence.Restore(id, t, att, options)
+		return sequence.Restore(b, options)
 	case questdomain.TypeMatching:
 		pairs, err := restorePairs(payload.Matching)
 		if err != nil {
 			return nil, err
 		}
-		return matching.Restore(id, t, att, pairs)
+		return matching.Restore(b, pairs)
 	case questdomain.TypeShort:
 		variants, err := restoreShortVariants(payload.Short)
 		if err != nil {
 			return nil, err
 		}
-		return shortquestion.Restore(id, t, att, variants)
-	case questdomain.TypeTyped:
-		blanks, err := restoreTypedBlanks(payload.Typed)
-		if err != nil {
-			return nil, err
-		}
-		return typedquestion.Restore(id, t, att, blanks)
+		return shortquestion.Restore(b, variants)
 	default:
 		return nil, fmt.Errorf("%w: unsupported question type %q", ErrUnsupported, qType)
 	}
-}
-
-func marshalAttachment(att attachment.Attachment) *attachmentPayload {
-	m := att.Media()
-	f := m.File()
-	return &attachmentPayload{
-		MediaType: m.Type().String(),
-		FileName:  f.Name(),
-		SizeBytes: f.SizeBytes(),
-	}
-}
-
-func unmarshalAttachment(payload *attachmentPayload) (*attachment.Attachment, error) {
-	if payload == nil {
-		return nil, nil
-	}
-	f, err := file.New(payload.FileName, payload.SizeBytes)
-	if err != nil {
-		return nil, fmt.Errorf("restore attachment file: %w", err)
-	}
-	m, err := media.New(media.Type(payload.MediaType), f)
-	if err != nil {
-		return nil, fmt.Errorf("restore attachment media: %w", err)
-	}
-	att, err := attachment.New(m)
-	if err != nil {
-		return nil, fmt.Errorf("restore attachment: %w", err)
-	}
-	return &att, nil
 }
 
 func restoreSelectableOptions(payloads []optionPayload) ([]selectableoption.Option, error) {
@@ -197,11 +132,7 @@ func restoreSelectableOptions(payloads []optionPayload) ([]selectableoption.Opti
 		if err != nil {
 			return nil, err
 		}
-		txt, err := text.New(payload.Text)
-		if err != nil {
-			return nil, err
-		}
-		opt, err := selectableoption.Restore(id, txt, payload.IsCorrect)
+		opt, err := selectableoption.Restore(id, payload.Value, payload.IsCorrect)
 		if err != nil {
 			return nil, err
 		}
@@ -210,18 +141,10 @@ func restoreSelectableOptions(payloads []optionPayload) ([]selectableoption.Opti
 	return options, nil
 }
 
-func restoreSequenceOptions(payloads []optionPayload) ([]sequenceoption.Option, error) {
-	options := make([]sequenceoption.Option, 0, len(payloads))
-	for _, payload := range payloads {
-		id, err := uuid.Parse(payload.ID)
-		if err != nil {
-			return nil, err
-		}
-		txt, err := text.New(payload.Text)
-		if err != nil {
-			return nil, err
-		}
-		opt, err := sequenceoption.Restore(id, txt)
+func restoreSequenceOptions(values []string) ([]sequenceoption.Option, error) {
+	options := make([]sequenceoption.Option, 0, len(values))
+	for _, value := range values {
+		opt, err := sequenceoption.New(value)
 		if err != nil {
 			return nil, err
 		}
@@ -261,35 +184,11 @@ func restorePairs(payloads []pairPayload) ([]matchingpair.Pair, error) {
 func restoreShortVariants(values []string) ([]shortvariant.Variant, error) {
 	variants := make([]shortvariant.Variant, 0, len(values))
 	for _, value := range values {
-		txt, err := text.New(value)
-		if err != nil {
-			return nil, err
-		}
-		variant, err := shortvariant.New(txt)
+		variant, err := shortvariant.New(value)
 		if err != nil {
 			return nil, err
 		}
 		variants = append(variants, variant)
 	}
 	return variants, nil
-}
-
-func restoreTypedBlanks(payloads []blankPayload) ([]typedblank.Blank, error) {
-	blanks := make([]typedblank.Blank, 0, len(payloads))
-	for _, payload := range payloads {
-		variants := make([]text.Text, 0, len(payload.Variants))
-		for _, value := range payload.Variants {
-			txt, err := text.New(value)
-			if err != nil {
-				return nil, err
-			}
-			variants = append(variants, txt)
-		}
-		blank, err := typedblank.New(payload.Placeholder, variants)
-		if err != nil {
-			return nil, err
-		}
-		blanks = append(blanks, blank)
-	}
-	return blanks, nil
 }

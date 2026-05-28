@@ -71,11 +71,11 @@ func (r *PersonRepository) FindByID(ctx context.Context, id uuid.UUID) (*persond
 		if err != nil {
 			return nil, fmt.Errorf("restore person education: %w", err)
 		}
-		params := profile.Params{Snils: s, DateOfBirth: db, JobTitle: jt, Education: ed}
+		var orgID uuid.UUID
 		if organizationID.Valid {
-			params.OrganizationID = organizationID.UUID
+			orgID = organizationID.UUID
 		}
-		restored, err := profile.New(params)
+		restored, err := profile.New(s, db, jt, ed, orgID)
 		if err != nil {
 			return nil, fmt.Errorf("restore person profile: %w", err)
 		}

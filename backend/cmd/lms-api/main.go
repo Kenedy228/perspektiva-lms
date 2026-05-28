@@ -30,7 +30,6 @@ import (
 	selectablegrading "gitflic.ru/lms/backend/internal/domain/grading/selectable"
 	sequencegrading "gitflic.ru/lms/backend/internal/domain/grading/sequence"
 	shortgrading "gitflic.ru/lms/backend/internal/domain/grading/short"
-	typedgrading "gitflic.ru/lms/backend/internal/domain/grading/typed"
 	"gitflic.ru/lms/backend/internal/domain/question"
 	attemptinfra "gitflic.ru/lms/backend/internal/infrastructure/attempt"
 	"gitflic.ru/lms/backend/internal/infrastructure/auth"
@@ -81,7 +80,6 @@ func main() {
 		question.TypeSelectable: selectablegrading.New(),
 		question.TypeSequence:   sequencegrading.New(),
 		question.TypeMatching:   matchinggrading.New(),
-		question.TypeTyped:      typedgrading.New(),
 		question.TypeShort:      shortgrading.New(),
 	})
 	if err != nil {
@@ -151,18 +149,15 @@ func main() {
 			Get:    bankqueries.NewGetDetailsByIDQuery(bankRepo),
 		},
 		Questions: handlers.QuestionUseCases{
-			Create:           questioncommands.NewCreateUseCase(questionRepo),
-			ChangeTitle:      questioncommands.NewChangeTitleUseCase(questionRepo),
-			ChangeAttachment: questioncommands.NewChangeAttachmentUseCase(questionRepo),
-			RemoveAttachment: questioncommands.NewRemoveAttachmentUseCase(questionRepo),
-			Selectable:       questioncommands.NewChangeSelectableOptionsUseCase(questionRepo),
-			Sequence:         questioncommands.NewChangeSequenceOptionsUseCase(questionRepo),
-			Matching:         questioncommands.NewChangeMatchingPairsUseCase(questionRepo),
-			Typed:            questioncommands.NewChangeTypedContentUseCase(questionRepo),
-			Short:            questioncommands.NewChangeShortVariantsUseCase(questionRepo),
-			Grade:            questiongrading.NewGradeUseCase(questionRepo, checkerRegistry, answerValidators),
-			ValidateAnswer:   questiongrading.NewValidateAnswerUseCase(questionRepo, answerValidators),
-			Repository:       questionRepo,
+			Create:         questioncommands.NewCreateUseCase(questionRepo),
+			ChangeTitle:    questioncommands.NewChangeTitleUseCase(questionRepo),
+			Selectable:     questioncommands.NewChangeSelectableOptionsUseCase(questionRepo),
+			Sequence:       questioncommands.NewChangeSequenceOptionsUseCase(questionRepo),
+			Matching:       questioncommands.NewChangeMatchingPairsUseCase(questionRepo),
+			Short:          questioncommands.NewChangeShortVariantsUseCase(questionRepo),
+			Grade:          questiongrading.NewGradeUseCase(questionRepo, checkerRegistry, answerValidators),
+			ValidateAnswer: questiongrading.NewValidateAnswerUseCase(questionRepo, answerValidators),
+			Repository:     questionRepo,
 		},
 		Quizzes: handlers.QuizUseCases{
 			Create:        quizcommands.NewCreateUseCase(quizRepo, bankRepo),

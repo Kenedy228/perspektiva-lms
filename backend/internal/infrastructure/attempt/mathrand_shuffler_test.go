@@ -5,8 +5,7 @@ import (
 	"testing"
 
 	"gitflic.ru/lms/backend/internal/domain/question"
-	"gitflic.ru/lms/backend/internal/domain/question/attachment"
-	"gitflic.ru/lms/backend/internal/domain/shared/title"
+	questiontitle "gitflic.ru/lms/backend/internal/domain/question/base/title"
 	"github.com/google/uuid"
 )
 
@@ -47,13 +46,9 @@ type shufflerQuestion struct {
 
 func (q shufflerQuestion) ID() uuid.UUID { return q.id }
 
-func (q shufflerQuestion) Title() title.Title {
-	t, _ := title.New("Question")
+func (q shufflerQuestion) Title() questiontitle.Title {
+	t, _ := questiontitle.New("Question")
 	return t
-}
-
-func (q shufflerQuestion) Attachment() (attachment.Attachment, bool) {
-	return attachment.Attachment{}, false
 }
 
 func (q shufflerQuestion) Instruction() string { return question.TypeShort.DefaultInstruction() }
@@ -61,10 +56,7 @@ func (q shufflerQuestion) Type() question.Type { return question.TypeShort }
 func (q shufflerQuestion) Clone() question.Question {
 	return shufflerQuestion{id: q.id}
 }
-func (q shufflerQuestion) ChangeTitle(title.Title)                {}
-func (q shufflerQuestion) ChangeAttachment(attachment.Attachment) {}
-func (q shufflerQuestion) RemoveAttachment()                      {}
-func (q shufflerQuestion) HasAttachment() bool                    { return false }
+func (q shufflerQuestion) ChangeTitle(questiontitle.Title) error { return nil }
 
 func sameQuestionSet(left, right []question.Question) bool {
 	if len(left) != len(right) {

@@ -69,7 +69,7 @@ func (r *AccountRepository) Save(ctx context.Context, acc *accountdomain.Account
 			role = EXCLUDED.role,
 			status = EXCLUDED.status,
 			updated_at = now()`,
-		acc.ID(), acc.PersonID(), acc.Login().Value(), acc.PasswordHash().String(), acc.Role().Kind().String(), acc.Status().String())
+		acc.ID(), acc.PersonID(), acc.Login().Value(), acc.PasswordHash().Value(), acc.Role().Kind().String(), acc.Status().String())
 	if err != nil {
 		return fmt.Errorf("save account: %w", err)
 	}
@@ -159,13 +159,7 @@ func (r *AccountRepository) find(ctx context.Context, where string, arg any) (*a
 	if err != nil {
 		return nil, fmt.Errorf("restore account role: %w", err)
 	}
-	return accountdomain.Restore(id, accountdomain.Params{
-		Login:        l,
-		PasswordHash: h,
-		Role:         rv,
-		PersonID:     personID,
-		Status:       accountdomain.Status(statusValue),
-	})
+	return accountdomain.Restore(id, l, h, rv, personID, accountdomain.Status(statusValue))
 }
 
 func (r *AccountRepository) get(ctx context.Context, where string, arg any) (accountports.AccountView, error) {

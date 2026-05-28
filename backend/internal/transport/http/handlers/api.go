@@ -96,18 +96,15 @@ type BankUseCases struct {
 }
 
 type QuestionUseCases struct {
-	Create           *questioncommands.CreateUseCase
-	ChangeTitle      *questioncommands.ChangeTitleUseCase
-	ChangeAttachment *questioncommands.ChangeAttachmentUseCase
-	RemoveAttachment *questioncommands.RemoveAttachmentUseCase
-	Selectable       *questioncommands.ChangeSelectableOptionsUseCase
-	Sequence         *questioncommands.ChangeSequenceOptionsUseCase
-	Matching         *questioncommands.ChangeMatchingPairsUseCase
-	Typed            *questioncommands.ChangeTypedContentUseCase
-	Short            *questioncommands.ChangeShortVariantsUseCase
-	Grade            *questiongrading.GradeUseCase
-	ValidateAnswer   *questiongrading.ValidateAnswerUseCase
-	Repository       interface {
+	Create         *questioncommands.CreateUseCase
+	ChangeTitle    *questioncommands.ChangeTitleUseCase
+	Selectable     *questioncommands.ChangeSelectableOptionsUseCase
+	Sequence       *questioncommands.ChangeSequenceOptionsUseCase
+	Matching       *questioncommands.ChangeMatchingPairsUseCase
+	Short          *questioncommands.ChangeShortVariantsUseCase
+	Grade          *questiongrading.GradeUseCase
+	ValidateAnswer *questiongrading.ValidateAnswerUseCase
+	Repository     interface {
 		FindByID(rctx context.Context, id uuid.UUID) (questdomain.Question, error)
 	}
 }
