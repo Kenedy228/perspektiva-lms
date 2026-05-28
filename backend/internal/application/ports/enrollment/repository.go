@@ -18,5 +18,5 @@ type VersionPolicy interface {
 }
 
 type ProgressInitializer interface {
-	EnsureProgressForEnrollment(ctx context.Context, enrollmentID, versionID uuid.UUID) error
+	EnsureProgressForEnrollment(ctx context.Context, enrollmentID uuid.UUID) error
 }

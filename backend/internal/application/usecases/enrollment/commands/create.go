@@ -84,7 +84,7 @@ func (uc *CreateUseCase) Execute(ctx context.Context, in CreateInput) (*Output, 
 		return nil, fmt.Errorf("save enrollment: %w", err)
 	}
 	if uc.progress != nil {
-		if err := uc.progress.EnsureProgressForEnrollment(ctx, e.ID(), e.VersionID()); err != nil {
+		if err := uc.progress.EnsureProgressForEnrollment(ctx, e.ID()); err != nil {
 			return nil, fmt.Errorf("ensure enrollment progress: %w", err)
 		}
 	}

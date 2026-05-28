@@ -72,11 +72,11 @@ func (r *EnrollmentRepository) ExistsForAccountCourseVersion(ctx context.Context
 	return exists, err
 }
 
-func (r *EnrollmentRepository) EnsureProgressForEnrollment(ctx context.Context, enrollmentID, versionID uuid.UUID) error {
+func (r *EnrollmentRepository) EnsureProgressForEnrollment(ctx context.Context, enrollmentID uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO course_progress (enrollment_id, version_id)
-		VALUES ($1, $2)
-		ON CONFLICT (enrollment_id) DO NOTHING`, enrollmentID, versionID)
+		INSERT INTO course_progress (enrollment_id)
+		VALUES ($1)
+		ON CONFLICT (enrollment_id) DO NOTHING`, enrollmentID)
 	if err != nil {
 		return fmt.Errorf("ensure progress for enrollment: %w", err)
 	}

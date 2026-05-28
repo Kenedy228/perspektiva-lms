@@ -108,7 +108,7 @@ type progressInitializer struct {
 	called bool
 }
 
-func (p *progressInitializer) EnsureProgressForEnrollment(context.Context, uuid.UUID, uuid.UUID) error {
+func (p *progressInitializer) EnsureProgressForEnrollment(context.Context, uuid.UUID) error {
 	p.called = true
 	return nil
 }
