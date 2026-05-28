@@ -125,10 +125,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /courses", s.requireAuth(api.CreateCourse))
 	mux.HandleFunc("GET /courses/{id}", s.requireAuth(api.GetCourse))
 	mux.HandleFunc("PATCH /courses/{id}", s.requireAuth(api.RenameCourse))
-	mux.HandleFunc("POST /courses/{id}/versions", s.requireAuth(api.CreateCourseVersion))
-	mux.HandleFunc("POST /course-versions/{id}/blocks", s.requireAuth(api.AddCourseBlock))
-	mux.HandleFunc("POST /course-versions/{id}/publish", s.requireAuth(api.PublishCourseVersion))
-	mux.HandleFunc("POST /course-progress/{enrollmentID}/elements/{elementID}", s.requireAuth(api.MarkCourseProgress))
+	mux.HandleFunc("POST /courses/{courseID}/blocks", s.requireAuth(api.AddCourseBlock))
+	mux.HandleFunc("POST /blocks/{blockID}/elements", s.requireAuth(api.AddBlockElement))
+	mux.HandleFunc("POST /courses/{courseID}/progress", s.requireAuth(api.MarkCourseProgress))
 	mux.HandleFunc("GET /courses/{id}/ratings", s.requireAuth(api.ListCourseRatings))
 
 	mux.HandleFunc("POST /enrollments", s.requireAuth(api.CreateEnrollment))

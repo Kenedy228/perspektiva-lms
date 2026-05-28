@@ -7,9 +7,10 @@ import (
 )
 
 type Element struct {
-	id      uuid.UUID
-	t       title.Title
-	content Content
+	id             uuid.UUID
+	t              title.Title
+	content        Content
+	completionMode CompletionMode
 }
 
 func New(t title.Title, c Content) (*Element, error) {
@@ -26,13 +27,18 @@ func New(t title.Title, c Content) (*Element, error) {
 	}
 
 	return &Element{
-		id:      id,
-		t:       t,
-		content: c.Clone(),
+		id:             id,
+		t:              t,
+		content:        c.Clone(),
+		completionMode: CompletionModeNone,
 	}, nil
 }
 
 func Restore(id uuid.UUID, t title.Title, c Content) (*Element, error) {
+	return RestoreWithCompletionMode(id, t, c, CompletionModeNone)
+}
+
+func RestoreWithCompletionMode(id uuid.UUID, t title.Title, c Content, mode CompletionMode) (*Element, error) {
 	if err := validateID(id); err != nil {
 		return nil, err
 	}
@@ -42,11 +48,15 @@ func Restore(id uuid.UUID, t title.Title, c Content) (*Element, error) {
 	if err := validateContent(c); err != nil {
 		return nil, err
 	}
+	if err := validateCompletionMode(mode); err != nil {
+		return nil, err
+	}
 
 	return &Element{
-		id:      id,
-		t:       t,
-		content: c.Clone(),
+		id:             id,
+		t:              t,
+		content:        c.Clone(),
+		completionMode: mode,
 	}, nil
 }
 
@@ -82,6 +92,22 @@ func (e *Element) ChangeContent(c Content) error {
 	return nil
 }
 
+func (e *Element) CompletionMode() CompletionMode {
+	return e.completionMode
+}
+
+func (e *Element) ChangeCompletionMode(mode CompletionMode) error {
+	if err := validateCompletionMode(mode); err != nil {
+		return err
+	}
+	e.completionMode = mode
+	return nil
+}
+
+func (e *Element) IsTrackable() bool {
+	return e.completionMode == CompletionModeManual
+}
+
 func (e *Element) Replicate() (*Element, error) {
 	id, err := uid.New()
 	if err != nil {
@@ -89,17 +115,19 @@ func (e *Element) Replicate() (*Element, error) {
 	}
 
 	return &Element{
-		id:      id,
-		t:       e.t,
-		content: e.content.Clone(),
+		id:             id,
+		t:              e.t,
+		content:        e.content.Clone(),
+		completionMode: e.completionMode,
 	}, nil
 }
 
 func (e *Element) Clone() *Element {
 	return &Element{
-		id:      e.id,
-		t:       e.t,
-		content: e.content.Clone(),
+		id:             e.id,
+		t:              e.t,
+		content:        e.content.Clone(),
+		completionMode: e.completionMode,
 	}
 }
 

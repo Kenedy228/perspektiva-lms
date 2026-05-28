@@ -143,12 +143,17 @@ type CourseRequest struct {
 	Title string `json:"title"`
 }
 
-type CourseVersionRequest struct {
+type CourseBlockRequest struct {
 	Title string `json:"title"`
 }
 
-type CourseBlockRequest struct {
-	Title string `json:"title"`
+type CourseElementRequest struct {
+	Title          string `json:"title"`
+	Type           string `json:"type"`
+	FileName       string `json:"file_name,omitempty"`
+	SizeBytes      int64  `json:"size_bytes,omitempty"`
+	QuizID         string `json:"quiz_id,omitempty"`
+	CompletionMode string `json:"completion_mode,omitempty"`
 }
 
 // EnrollmentRequest creates an enrollment.
@@ -176,6 +181,8 @@ type AttemptAnswerRequest struct {
 }
 
 type MarkProgressRequest struct {
-	MarkerType string `json:"marker_type"`
-	At         string `json:"at,omitempty"`
+	EnrollmentID string `json:"enrollment_id"`
+	ElementID    string `json:"element_id"`
+	MarkerType   string `json:"marker_type"`
+	At           string `json:"at,omitempty"`
 }

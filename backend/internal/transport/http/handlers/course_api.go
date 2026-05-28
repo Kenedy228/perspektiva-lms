@@ -87,25 +87,6 @@ func (api *API) RenameCourse(w http.ResponseWriter, r *http.Request) {
 	writeOK(w, r, map[string]string{"id": r.PathValue("id")}, nil)
 }
 
-func (api *API) CreateCourseVersion(w http.ResponseWriter, r *http.Request) {
-	actor, ok := actorRole(r)
-	if !ok {
-		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
-		return
-	}
-	var req CourseVersionRequest
-	if err := response.DecodeJSON(r, &req); err != nil {
-		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
-		return
-	}
-	out, err := api.Courses.Version.Execute(r.Context(), coursecommands.CreateVersionInput{ActorRole: actor.role, CourseID: r.PathValue("id"), Title: req.Title})
-	if err != nil {
-		writeHandlerError(w, r, err)
-		return
-	}
-	writeCreated(w, "/course-versions", out.ID)
-}
-
 func (api *API) AddCourseBlock(w http.ResponseWriter, r *http.Request) {
 	actor, ok := actorRole(r)
 	if !ok {
@@ -117,7 +98,11 @@ func (api *API) AddCourseBlock(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
 		return
 	}
-	out, err := api.Courses.Block.Execute(r.Context(), coursecommands.AddBlockInput{ActorRole: actor.role, VersionID: r.PathValue("id"), Title: req.Title})
+	out, err := api.Courses.AddBlock.Execute(r.Context(), coursecommands.AddBlockToCourseInput{
+		ActorRole: actor.role,
+		CourseID:  r.PathValue("courseID"),
+		Title:     req.Title,
+	})
 	if err != nil {
 		writeHandlerError(w, r, err)
 		return
@@ -125,17 +110,34 @@ func (api *API) AddCourseBlock(w http.ResponseWriter, r *http.Request) {
 	writeCreated(w, "/course-blocks", out.ID)
 }
 
-func (api *API) PublishCourseVersion(w http.ResponseWriter, r *http.Request) {
+func (api *API) AddBlockElement(w http.ResponseWriter, r *http.Request) {
 	actor, ok := actorRole(r)
 	if !ok {
 		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
 		return
 	}
-	if err := api.Courses.Publish.Execute(r.Context(), coursecommands.VersionIDInput{ActorRole: actor.role, VersionID: r.PathValue("id")}); err != nil {
+	var req CourseElementRequest
+	if err := response.DecodeJSON(r, &req); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
+		return
+	}
+	out, err := api.Courses.AddElement.Execute(r.Context(), coursecommands.AddElementToBlockInput{
+		ActorRole: actor.role,
+		BlockID:   r.PathValue("blockID"),
+		Title:     req.Title,
+		Content: coursecommands.ElementContentInput{
+			Type:           req.Type,
+			FileName:       req.FileName,
+			SizeBytes:      req.SizeBytes,
+			QuizID:         req.QuizID,
+			CompletionMode: req.CompletionMode,
+		},
+	})
+	if err != nil {
 		writeHandlerError(w, r, err)
 		return
 	}
-	writeOK(w, r, map[string]string{"id": r.PathValue("id")}, nil)
+	writeCreated(w, "/course-elements", out.ID)
 }
 
 func (api *API) MarkCourseProgress(w http.ResponseWriter, r *http.Request) {
@@ -158,11 +160,21 @@ func (api *API) MarkCourseProgress(w http.ResponseWriter, r *http.Request) {
 		}
 		at = parsed
 	}
-	if err := api.Courses.Progress.Execute(r.Context(), coursecommands.MarkProgressInput{ActorRole: actor.role, EnrollmentID: r.PathValue("enrollmentID"), ElementID: r.PathValue("elementID"), MarkerType: progress.MarkerType(req.MarkerType), At: at}); err != nil {
+	if err := api.Courses.Progress.Execute(r.Context(), coursecommands.MarkProgressInput{
+		ActorRole:    actor.role,
+		EnrollmentID: req.EnrollmentID,
+		ElementID:    req.ElementID,
+		MarkerType:   progress.MarkerType(req.MarkerType),
+		At:           at,
+	}); err != nil {
 		writeHandlerError(w, r, err)
 		return
 	}
-	writeOK(w, r, map[string]string{"enrollment_id": r.PathValue("enrollmentID"), "element_id": r.PathValue("elementID")}, nil)
+	writeOK(w, r, map[string]string{
+		"course_id":     r.PathValue("courseID"),
+		"enrollment_id": req.EnrollmentID,
+		"element_id":    req.ElementID,
+	}, nil)
 }
 
 func (api *API) ListCourseRatings(w http.ResponseWriter, r *http.Request) {

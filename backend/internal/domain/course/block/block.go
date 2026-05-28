@@ -100,7 +100,7 @@ func (b *Block) RemoveElementID(id uuid.UUID) error {
 	return nil
 }
 
-func (b *Block) MoveFromTo(from, to int) error {
+func (b *Block) MoveElement(from, to int) error {
 	if from < 0 || from >= len(b.elementIDs) {
 		return fmt.Errorf("%w: invalid value", ErrInvalid)
 	}
@@ -117,6 +117,11 @@ func (b *Block) MoveFromTo(from, to int) error {
 	b.elementIDs = slices.Delete(b.elementIDs, from, from+1)
 	b.elementIDs = slices.Insert(b.elementIDs, to, id)
 	return nil
+}
+
+// MoveFromTo is kept for backward compatibility.
+func (b *Block) MoveFromTo(from, to int) error {
+	return b.MoveElement(from, to)
 }
 
 func (b *Block) Clone() *Block {

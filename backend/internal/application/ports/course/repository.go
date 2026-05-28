@@ -8,18 +8,12 @@ import (
 	"gitflic.ru/lms/backend/internal/domain/course/block"
 	"gitflic.ru/lms/backend/internal/domain/course/element"
 	"gitflic.ru/lms/backend/internal/domain/course/progress"
-	"gitflic.ru/lms/backend/internal/domain/course/version"
 	"github.com/google/uuid"
 )
 
 type CourseRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*coursedomain.Course, error)
 	Save(ctx context.Context, c *coursedomain.Course) error
-}
-
-type VersionRepository interface {
-	FindByID(ctx context.Context, id uuid.UUID) (*version.Version, error)
-	Save(ctx context.Context, v *version.Version) error
 }
 
 type BlockRepository interface {

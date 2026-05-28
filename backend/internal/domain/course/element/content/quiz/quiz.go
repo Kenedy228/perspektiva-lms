@@ -24,7 +24,7 @@ func (c Content) QuizID() uuid.UUID {
 }
 
 func (c Content) ContentType() element2.ContentType {
-	return element2.ContentTypeQuiz
+	return element2.ContentTypeTest
 }
 
 func (c Content) IsInteractive() bool {

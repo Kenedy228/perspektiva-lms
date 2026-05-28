@@ -10,9 +10,9 @@ import (
 )
 
 type Course struct {
-	id         uuid.UUID
-	t          title.Title
-	versionIDs []uuid.UUID
+	id       uuid.UUID
+	t        title.Title
+	blockIDs []uuid.UUID
 }
 
 func New(t title.Title) (*Course, error) {
@@ -26,27 +26,27 @@ func New(t title.Title) (*Course, error) {
 	}
 
 	return &Course{
-		id:         id,
-		t:          t,
-		versionIDs: make([]uuid.UUID, 0),
+		id:       id,
+		t:        t,
+		blockIDs: make([]uuid.UUID, 0),
 	}, nil
 }
 
-func Restore(id uuid.UUID, t title.Title, versionIDs []uuid.UUID) (*Course, error) {
+func Restore(id uuid.UUID, t title.Title, blockIDs []uuid.UUID) (*Course, error) {
 	if err := validateID(id); err != nil {
 		return nil, err
 	}
 	if err := validateTitle(t); err != nil {
 		return nil, err
 	}
-	if err := validateVersionIDs(versionIDs); err != nil {
+	if err := validateBlockIDs(blockIDs); err != nil {
 		return nil, err
 	}
 
 	return &Course{
-		id:         id,
-		t:          t,
-		versionIDs: slices.Clone(versionIDs),
+		id:       id,
+		t:        t,
+		blockIDs: slices.Clone(blockIDs),
 	}, nil
 }
 
@@ -58,8 +58,8 @@ func (c *Course) Title() title.Title {
 	return c.t
 }
 
-func (c *Course) VersionIDs() []uuid.UUID {
-	return slices.Clone(c.versionIDs)
+func (c *Course) BlockIDs() []uuid.UUID {
+	return slices.Clone(c.blockIDs)
 }
 
 func (c *Course) ChangeTitle(t title.Title) error {
@@ -70,44 +70,81 @@ func (c *Course) ChangeTitle(t title.Title) error {
 	return nil
 }
 
-func (c *Course) AddVersionID(versionID uuid.UUID) error {
-	if err := validateRequiredVersionID(versionID); err != nil {
+func (c *Course) AddBlockID(blockID uuid.UUID) error {
+	if err := validateRequiredBlockID(blockID); err != nil {
 		return err
 	}
 
-	if err := validateVersionIDsLimit(c.versionIDs); err != nil {
+	if err := validateBlockIDsLimit(c.blockIDs); err != nil {
 		return err
 	}
 
-	if err := validateVersionIDsDuplication(versionID, c.versionIDs); err != nil {
+	if err := validateBlockIDsDuplication(blockID, c.blockIDs); err != nil {
 		return err
 	}
 
-	c.versionIDs = append(c.versionIDs, versionID)
+	c.blockIDs = append(c.blockIDs, blockID)
 	return nil
 }
 
-func (c *Course) RemoveVersionID(versionID uuid.UUID) error {
-	if err := validateRequiredVersionID(versionID); err != nil {
+func (c *Course) RemoveBlockID(blockID uuid.UUID) error {
+	if err := validateRequiredBlockID(blockID); err != nil {
 		return err
 	}
-	if !slices.Contains(c.versionIDs, versionID) {
-		return fmt.Errorf("%w: invalid value (%s)", ErrInvalid, versionID)
+	if !slices.Contains(c.blockIDs, blockID) {
+		return fmt.Errorf("%w: invalid value (%s)", ErrInvalid, blockID)
 	}
-	c.versionIDs = slices.DeleteFunc(c.versionIDs, func(current uuid.UUID) bool {
-		return current == versionID
+	c.blockIDs = slices.DeleteFunc(c.blockIDs, func(current uuid.UUID) bool {
+		return current == blockID
 	})
 	return nil
 }
 
-func (c *Course) HasVersion(versionID uuid.UUID) bool {
-	return slices.Contains(c.versionIDs, versionID)
+func (c *Course) MoveBlock(from, to int) error {
+	if from < 0 || from >= len(c.blockIDs) {
+		return fmt.Errorf("%w: invalid value", ErrInvalid)
+	}
+	if to < 0 || to >= len(c.blockIDs) {
+		return fmt.Errorf("%w: invalid value", ErrInvalid)
+	}
+	if from == to {
+		return nil
+	}
+
+	id := c.blockIDs[from]
+	c.blockIDs = slices.Delete(c.blockIDs, from, from+1)
+	c.blockIDs = slices.Insert(c.blockIDs, to, id)
+	return nil
 }
 
 func (c *Course) Clone() *Course {
 	return &Course{
-		id:         c.id,
-		t:          c.t,
-		versionIDs: slices.Clone(c.versionIDs),
+		id:       c.id,
+		t:        c.t,
+		blockIDs: slices.Clone(c.blockIDs),
 	}
+}
+
+// VersionIDs is kept as a compatibility adapter while use-cases and repositories
+// still use version-centric naming.
+func (c *Course) VersionIDs() []uuid.UUID {
+	return c.BlockIDs()
+}
+
+// AddVersionID is kept as a compatibility adapter while use-cases and repositories
+// still use version-centric naming.
+func (c *Course) AddVersionID(versionID uuid.UUID) error {
+	return c.AddBlockID(versionID)
+}
+
+// RemoveVersionID is kept as a compatibility adapter while use-cases and repositories
+// still use version-centric naming.
+func (c *Course) RemoveVersionID(versionID uuid.UUID) error {
+	return c.RemoveBlockID(versionID)
+}
+
+// HasVersion is kept as a compatibility adapter while use-cases and repositories
+// still use version-centric naming.
+func (c *Course) HasVersion(versionID uuid.UUID) bool {
+	return slices.Contains(c.blockIDs, versionID)
 }

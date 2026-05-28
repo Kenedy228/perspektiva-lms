@@ -14,14 +14,11 @@ import (
 	elementtitle "gitflic.ru/lms/backend/internal/domain/course/element/title"
 	"gitflic.ru/lms/backend/internal/domain/course/progress"
 	coursetitle "gitflic.ru/lms/backend/internal/domain/course/title"
-	"gitflic.ru/lms/backend/internal/domain/course/version"
-	versiontitle "gitflic.ru/lms/backend/internal/domain/course/version/title"
 	"github.com/google/uuid"
 )
 
 var (
 	_ courseports.CourseRepository   = (*CourseRepository)(nil)
-	_ courseports.VersionRepository  = (*VersionRepository)(nil)
 	_ courseports.BlockRepository    = (*BlockRepository)(nil)
 	_ courseports.ElementRepository  = (*ElementRepository)(nil)
 	_ courseports.ProgressRepository = (*ProgressRepository)(nil)
@@ -39,24 +36,28 @@ func (r *CourseRepository) FindByID(ctx context.Context, id uuid.UUID) (*coursed
 	if err := r.db.QueryRowContext(ctx, `SELECT title FROM courses WHERE id = $1`, id).Scan(&titleValue); err != nil {
 		return nil, err
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT version_id FROM course_version_links WHERE course_id = $1 ORDER BY position`, id)
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT block_id
+		FROM course_blocks_links
+		WHERE course_id = $1
+		ORDER BY position`, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var versionIDs []uuid.UUID
+	var blockIDs []uuid.UUID
 	for rows.Next() {
-		var versionID uuid.UUID
-		if err := rows.Scan(&versionID); err != nil {
+		var blockID uuid.UUID
+		if err := rows.Scan(&blockID); err != nil {
 			return nil, err
 		}
-		versionIDs = append(versionIDs, versionID)
+		blockIDs = append(blockIDs, blockID)
 	}
 	t, err := coursetitle.New(titleValue)
 	if err != nil {
 		return nil, err
 	}
-	return coursedomain.Restore(id, t, versionIDs)
+	return coursedomain.Restore(id, t, blockIDs)
 }
 
 func (r *CourseRepository) Save(ctx context.Context, c *coursedomain.Course) error {
@@ -71,69 +72,14 @@ func (r *CourseRepository) Save(ctx context.Context, c *coursedomain.Course) err
 		c.ID(), c.Title().Value()); err != nil {
 		return fmt.Errorf("save course: %w", err)
 	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM course_version_links WHERE course_id = $1`, c.ID()); err != nil {
+	if _, err = tx.ExecContext(ctx, `DELETE FROM course_blocks_links WHERE course_id = $1`, c.ID()); err != nil {
 		return err
 	}
-	for idx, versionID := range c.VersionIDs() {
+	for idx, blockID := range c.BlockIDs() {
 		if _, err = tx.ExecContext(ctx, `
-			INSERT INTO course_version_links (course_id, version_id, position)
-			VALUES ($1, $2, $3)`, c.ID(), versionID, idx); err != nil {
-			return fmt.Errorf("link course version: %w", err)
-		}
-	}
-	return tx.Commit()
-}
-
-// VersionRepository persists course version aggregates.
-type VersionRepository struct{ db *sql.DB }
-
-func NewVersionRepository(db *sql.DB) *VersionRepository { return &VersionRepository{db: db} }
-
-func (r *VersionRepository) FindByID(ctx context.Context, id uuid.UUID) (*version.Version, error) {
-	var titleValue, statusValue string
-	if err := r.db.QueryRowContext(ctx, `SELECT title, status FROM course_versions WHERE id = $1`, id).Scan(&titleValue, &statusValue); err != nil {
-		return nil, err
-	}
-	rows, err := r.db.QueryContext(ctx, `SELECT block_id FROM course_version_blocks WHERE version_id = $1 ORDER BY position`, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var blockIDs []uuid.UUID
-	for rows.Next() {
-		var blockID uuid.UUID
-		if err := rows.Scan(&blockID); err != nil {
-			return nil, err
-		}
-		blockIDs = append(blockIDs, blockID)
-	}
-	t, err := versiontitle.New(titleValue)
-	if err != nil {
-		return nil, err
-	}
-	return version.Restore(id, t, version.Status(statusValue), blockIDs)
-}
-
-func (r *VersionRepository) Save(ctx context.Context, v *version.Version) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO course_versions (id, title, status, updated_at) VALUES ($1, $2, $3, now())
-		ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, updated_at = now()`,
-		v.ID(), v.Title().Value(), v.Status().String()); err != nil {
-		return fmt.Errorf("save version: %w", err)
-	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM course_version_blocks WHERE version_id = $1`, v.ID()); err != nil {
-		return err
-	}
-	for idx, blockID := range v.BlockIDs() {
-		if _, err = tx.ExecContext(ctx, `
-			INSERT INTO course_version_blocks (version_id, block_id, position)
-			VALUES ($1, $2, $3)`, v.ID(), blockID, idx); err != nil {
-			return fmt.Errorf("link version block: %w", err)
+			INSERT INTO course_blocks_links (course_id, block_id, position)
+			VALUES ($1, $2, $3)`, c.ID(), blockID, idx); err != nil {
+			return fmt.Errorf("link course block: %w", err)
 		}
 	}
 	return tx.Commit()
@@ -200,12 +146,12 @@ type ElementRepository struct{ db *sql.DB }
 func NewElementRepository(db *sql.DB) *ElementRepository { return &ElementRepository{db: db} }
 
 func (r *ElementRepository) FindByID(ctx context.Context, id uuid.UUID) (*element.Element, error) {
-	var titleValue, contentType string
+	var titleValue, contentType, completionModeValue string
 	var payload []byte
 	err := r.db.QueryRowContext(ctx, `
-		SELECT title, type, payload
+		SELECT title, type, payload, completion_mode
 		FROM course_elements
-		WHERE id = $1`, id).Scan(&titleValue, &contentType, &payload)
+		WHERE id = $1`, id).Scan(&titleValue, &contentType, &payload, &completionModeValue)
 	if err != nil {
 		return nil, err
 	}
@@ -213,15 +159,18 @@ func (r *ElementRepository) FindByID(ctx context.Context, id uuid.UUID) (*elemen
 	if err != nil {
 		return nil, err
 	}
-	content, err := unmarshalElementContent(contentType, payload)
+	content, mode, err := unmarshalElementPayload(contentType, payload)
 	if err != nil {
 		return nil, err
 	}
-	return element.Restore(id, t, content)
+	if completionModeValue != "" {
+		mode = element.CompletionMode(completionModeValue)
+	}
+	return element.RestoreWithCompletionMode(id, t, content, mode)
 }
 
 func (r *ElementRepository) Save(ctx context.Context, e *element.Element) error {
-	payload, objectKey, quizID, err := marshalElementContent(e.Content())
+	payload, objectKey, quizID, storageType, err := marshalElementPayload(e.Content(), e.CompletionMode())
 	if err != nil {
 		return err
 	}
@@ -230,17 +179,18 @@ func (r *ElementRepository) Save(ctx context.Context, e *element.Element) error 
 		quizIDValue = quizID
 	}
 	_, err = r.db.ExecContext(ctx, `
-		INSERT INTO course_elements (id, type, title, object_key, quiz_id, payload, requires_read_marker, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+		INSERT INTO course_elements (id, type, title, object_key, quiz_id, payload, completion_mode, requires_read_marker, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
 		ON CONFLICT (id) DO UPDATE SET
 			type = EXCLUDED.type,
 			title = EXCLUDED.title,
 			object_key = EXCLUDED.object_key,
 			quiz_id = EXCLUDED.quiz_id,
 			payload = EXCLUDED.payload,
+			completion_mode = EXCLUDED.completion_mode,
 			requires_read_marker = EXCLUDED.requires_read_marker,
 			updated_at = now()`,
-		e.ID(), e.Content().ContentType().String(), e.Title().Value(), nullString(objectKey), quizIDValue, payload, e.IsInteractive())
+		e.ID(), storageType, e.Title().Value(), nullString(objectKey), quizIDValue, payload, e.CompletionMode().String(), e.IsTrackable())
 	if err != nil {
 		return fmt.Errorf("save element: %w", err)
 	}
@@ -253,9 +203,13 @@ type ProgressRepository struct{ db *sql.DB }
 func NewProgressRepository(db *sql.DB) *ProgressRepository { return &ProgressRepository{db: db} }
 
 func (r *ProgressRepository) FindByEnrollmentID(ctx context.Context, enrollmentID uuid.UUID) (*progress.Progress, error) {
-	var id, versionID uuid.UUID
+	var id uuid.UUID
 	if err := r.db.QueryRowContext(ctx, `
-		SELECT id, version_id FROM course_progress WHERE enrollment_id = $1`, enrollmentID).Scan(&id, &versionID); err != nil {
+		SELECT id FROM course_progress WHERE enrollment_id = $1`, enrollmentID).Scan(&id); err != nil {
+		return nil, err
+	}
+	versionID, err := r.findEnrollmentVersionID(ctx, enrollmentID)
+	if err != nil {
 		return nil, err
 	}
 	rows, err := r.db.QueryContext(ctx, `
@@ -293,13 +247,12 @@ func (r *ProgressRepository) Save(ctx context.Context, p *progress.Progress) err
 	}
 	defer tx.Rollback()
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO course_progress (id, enrollment_id, version_id, completed_elements, updated_at)
-		VALUES ($1, $2, $3, $4, now())
+		INSERT INTO course_progress (id, enrollment_id, completed_elements, updated_at)
+		VALUES ($1, $2, $3, now())
 		ON CONFLICT (enrollment_id) DO UPDATE SET
 			completed_elements = EXCLUDED.completed_elements,
-			version_id = EXCLUDED.version_id,
 			updated_at = now()`,
-		p.ID(), p.EnrollmentID(), p.VersionID(), p.CompletedCount()); err != nil {
+		p.ID(), p.EnrollmentID(), p.CompletedCount()); err != nil {
 		return fmt.Errorf("save progress: %w", err)
 	}
 	if _, err = tx.ExecContext(ctx, `DELETE FROM course_progress_markers WHERE progress_id = $1`, p.ID()); err != nil {
@@ -313,6 +266,17 @@ func (r *ProgressRepository) Save(ctx context.Context, p *progress.Progress) err
 		}
 	}
 	return tx.Commit()
+}
+
+func (r *ProgressRepository) findEnrollmentVersionID(ctx context.Context, enrollmentID uuid.UUID) (uuid.UUID, error) {
+	var versionID uuid.UUID
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT version_id
+		FROM enrollments
+		WHERE id = $1`, enrollmentID).Scan(&versionID); err != nil {
+		return uuid.Nil, fmt.Errorf("find enrollment version id: %w", err)
+	}
+	return versionID, nil
 }
 
 // CoursePolicy implements course access checks from enrollment/version state.

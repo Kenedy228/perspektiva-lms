@@ -97,10 +97,9 @@ Errors use:
 | POST | `/courses` | Create course |
 | GET | `/courses/{id}` | Get course details |
 | PATCH | `/courses/{id}` | Rename course |
-| POST | `/courses/{id}/versions` | Create course version |
-| POST | `/course-versions/{id}/blocks` | Add block to version |
-| POST | `/course-versions/{id}/publish` | Publish version |
-| POST | `/course-progress/{enrollmentID}/elements/{elementID}` | Mark progress |
+| POST | `/courses/{courseID}/blocks` | Add block to course |
+| POST | `/blocks/{blockID}/elements` | Add element to block |
+| POST | `/courses/{courseID}/progress` | Mark course progress |
 | GET | `/courses/{id}/ratings` | List course ratings |
 | POST | `/enrollments` | Enroll student in version |
 | GET | `/statistics/students` | List student statistics |

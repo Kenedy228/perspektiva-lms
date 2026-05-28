@@ -23,21 +23,39 @@ type RenameCourseInput struct {
 	Title     string
 }
 
-type CreateVersionInput struct {
+type AddBlockToCourseInput struct {
 	ActorRole role.Role
 	CourseID  string
 	Title     string
 }
 
-type VersionIDInput struct {
+type MoveCourseBlockInput struct {
 	ActorRole role.Role
-	VersionID string
+	CourseID  string
+	From      int
+	To        int
 }
 
-type AddBlockInput struct {
+type AddElementToBlockInput struct {
 	ActorRole role.Role
-	VersionID string
+	BlockID   string
 	Title     string
+	Content   ElementContentInput
+}
+
+type MoveBlockElementInput struct {
+	ActorRole role.Role
+	BlockID   string
+	From      int
+	To        int
+}
+
+type ElementContentInput struct {
+	Type           string
+	FileName       string
+	SizeBytes      int64
+	QuizID         string
+	CompletionMode string
 }
 
 type MarkProgressInput struct {

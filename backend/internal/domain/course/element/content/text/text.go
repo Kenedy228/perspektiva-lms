@@ -24,7 +24,7 @@ func (c Content) File() file.File {
 }
 
 func (c Content) ContentType() element2.ContentType {
-	return element2.ContentTypeText
+	return element2.ContentTypeDownloadFile
 }
 
 func (c Content) IsInteractive() bool {

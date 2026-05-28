@@ -36,3 +36,12 @@ func validateRequiredContent(c Content) error {
 
 	return nil
 }
+
+func validateCompletionMode(mode CompletionMode) error {
+	switch mode {
+	case CompletionModeNone, CompletionModeManual:
+		return nil
+	default:
+		return fmt.Errorf("%w: invalid value", ErrInvalid)
+	}
+}

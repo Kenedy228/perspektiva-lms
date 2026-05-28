@@ -8,9 +8,9 @@ import (
 
 	coursedomain "gitflic.ru/lms/backend/internal/domain/course"
 	"gitflic.ru/lms/backend/internal/domain/course/block"
+	elementdomain "gitflic.ru/lms/backend/internal/domain/course/element"
 	"gitflic.ru/lms/backend/internal/domain/course/progress"
 	"gitflic.ru/lms/backend/internal/domain/course/title"
-	"gitflic.ru/lms/backend/internal/domain/course/version"
 	"gitflic.ru/lms/backend/internal/domain/role"
 	"github.com/google/uuid"
 )
@@ -25,42 +25,58 @@ func TestCreateCourseRejectsStudent(t *testing.T) {
 	}
 }
 
-func TestCreateVersionAndPublishWorkflow(t *testing.T) {
+func TestCourseBlockElementWorkflow(t *testing.T) {
 	ctx := context.Background()
 	courses := newCourseRepo()
-	versions := newVersionRepo()
 	blocks := newBlockRepo()
+	elements := newElementRepo()
 
 	courseTitle, _ := title.New("Course")
 	c, _ := coursedomain.New(courseTitle)
 	_ = courses.Save(ctx, c)
 
-	out, err := NewCreateVersionUseCase(courses, versions).Execute(ctx, CreateVersionInput{
+	blockOut, err := NewAddBlockToCourseUseCase(courses, blocks).Execute(ctx, AddBlockToCourseInput{
 		ActorRole: role.NewCreator(),
 		CourseID:  c.ID().String(),
-		Title:     "v1",
-	})
-	if err != nil {
-		t.Fatalf("create version: %v", err)
-	}
-
-	blockOut, err := NewAddBlockUseCase(versions, blocks).Execute(ctx, AddBlockInput{
-		ActorRole: role.NewAdmin(),
-		VersionID: out.ID,
 		Title:     "Block",
 	})
 	if err != nil {
-		t.Fatalf("add block: %v", err)
-	}
-	if blockOut.ID == "" {
-		t.Fatal("expected block id")
+		t.Fatalf("add block to course: %v", err)
 	}
 
-	if err := NewPublishVersionUseCase(versions).Execute(ctx, VersionIDInput{
+	if err := NewMoveCourseBlockUseCase(courses).Execute(ctx, MoveCourseBlockInput{
 		ActorRole: role.NewAdmin(),
-		VersionID: out.ID,
+		CourseID:  c.ID().String(),
+		From:      0,
+		To:        0,
 	}); err != nil {
-		t.Fatalf("publish version: %v", err)
+		t.Fatalf("move course block: %v", err)
+	}
+
+	elementOut, err := NewAddElementToBlockUseCase(blocks, elements).Execute(ctx, AddElementToBlockInput{
+		ActorRole: role.NewAdmin(),
+		BlockID:   blockOut.ID,
+		Title:     "Material",
+		Content: ElementContentInput{
+			Type:      "download_file",
+			FileName:  "notes.docx",
+			SizeBytes: 128,
+		},
+	})
+	if err != nil {
+		t.Fatalf("add element to block: %v", err)
+	}
+	if elementOut.ID == "" {
+		t.Fatal("expected element id")
+	}
+
+	if err := NewMoveBlockElementUseCase(blocks).Execute(ctx, MoveBlockElementInput{
+		ActorRole: role.NewAdmin(),
+		BlockID:   blockOut.ID,
+		From:      0,
+		To:        0,
+	}); err != nil {
+		t.Fatalf("move block element: %v", err)
 	}
 }
 
@@ -102,23 +118,6 @@ func (r *courseRepo) Save(_ context.Context, c *coursedomain.Course) error {
 	return nil
 }
 
-type versionRepo struct {
-	items map[uuid.UUID]*version.Version
-}
-
-func newVersionRepo() *versionRepo { return &versionRepo{items: make(map[uuid.UUID]*version.Version)} }
-func (r *versionRepo) FindByID(_ context.Context, id uuid.UUID) (*version.Version, error) {
-	item, ok := r.items[id]
-	if !ok {
-		return nil, errors.New("version not found")
-	}
-	return item, nil
-}
-func (r *versionRepo) Save(_ context.Context, v *version.Version) error {
-	r.items[v.ID()] = v
-	return nil
-}
-
 type blockRepo struct{ items map[uuid.UUID]*block.Block }
 
 func newBlockRepo() *blockRepo { return &blockRepo{items: make(map[uuid.UUID]*block.Block)} }
@@ -131,6 +130,25 @@ func (r *blockRepo) FindByID(_ context.Context, id uuid.UUID) (*block.Block, err
 }
 func (r *blockRepo) Save(_ context.Context, b *block.Block) error {
 	r.items[b.ID()] = b
+	return nil
+}
+
+type elementRepo struct {
+	items map[uuid.UUID]*elementdomain.Element
+}
+
+func newElementRepo() *elementRepo {
+	return &elementRepo{items: make(map[uuid.UUID]*elementdomain.Element)}
+}
+func (r *elementRepo) FindByID(_ context.Context, id uuid.UUID) (*elementdomain.Element, error) {
+	item, ok := r.items[id]
+	if !ok {
+		return nil, errors.New("element not found")
+	}
+	return item, nil
+}
+func (r *elementRepo) Save(_ context.Context, e *elementdomain.Element) error {
+	r.items[e.ID()] = e
 	return nil
 }
 

@@ -136,9 +136,8 @@ type attemptReader interface {
 type CourseUseCases struct {
 	Create     *coursecommands.CreateCourseUseCase
 	Rename     *coursecommands.RenameCourseUseCase
-	Version    *coursecommands.CreateVersionUseCase
-	Block      *coursecommands.AddBlockUseCase
-	Publish    *coursecommands.PublishVersionUseCase
+	AddBlock   *coursecommands.AddBlockToCourseUseCase
+	AddElement *coursecommands.AddElementToBlockUseCase
 	Progress   *coursecommands.MarkProgressUseCase
 	List       *coursequeries.ListQuery
 	Ratings    *coursequeries.RatingsQuery

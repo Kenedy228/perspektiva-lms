@@ -68,8 +68,8 @@ func main() {
 	attemptRepo := postgres.NewAttemptRepository(db)
 	attemptPolicy := postgres.NewAttemptPolicy(db)
 	courseRepo := postgres.NewCourseRepository(db)
-	versionRepo := postgres.NewVersionRepository(db)
 	blockRepo := postgres.NewBlockRepository(db)
+	elementRepo := postgres.NewElementRepository(db)
 	progressRepo := postgres.NewProgressRepository(db)
 	coursePolicy := postgres.NewCoursePolicy(db)
 	courseQuery := postgres.NewCourseQueryService(db)
@@ -182,9 +182,8 @@ func main() {
 		Courses: handlers.CourseUseCases{
 			Create:     coursecommands.NewCreateCourseUseCase(courseRepo),
 			Rename:     coursecommands.NewRenameCourseUseCase(courseRepo),
-			Version:    coursecommands.NewCreateVersionUseCase(courseRepo, versionRepo),
-			Block:      coursecommands.NewAddBlockUseCase(versionRepo, blockRepo),
-			Publish:    coursecommands.NewPublishVersionUseCase(versionRepo),
+			AddBlock:   coursecommands.NewAddBlockToCourseUseCase(courseRepo, blockRepo),
+			AddElement: coursecommands.NewAddElementToBlockUseCase(blockRepo, elementRepo),
 			Progress:   coursecommands.NewMarkProgressUseCase(progressRepo),
 			List:       coursequeries.NewListQuery(courseQuery),
 			Ratings:    coursequeries.NewRatingsQuery(courseQuery),

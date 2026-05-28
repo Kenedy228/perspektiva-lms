@@ -3,25 +3,19 @@ package element
 type ContentType string
 
 const (
-	ContentTypeText       ContentType = "text"
-	ContentTypeSlides     ContentType = "slides"
-	ContentTypeAttachment ContentType = "document"
-	ContentTypeVideo      ContentType = "video"
-	ContentTypeQuiz       ContentType = "quiz"
+	ContentTypeTest            ContentType = "test"
+	ContentTypeLectureMaterial ContentType = "lecture_material"
+	ContentTypeDownloadFile    ContentType = "download_file"
 )
 
 func (t ContentType) Title() string {
 	switch t {
-	case ContentTypeText:
-		return "текст"
-	case ContentTypeSlides:
-		return "слайды"
-	case ContentTypeAttachment:
-		return "вложение"
-	case ContentTypeVideo:
-		return "видео"
-	case ContentTypeQuiz:
+	case ContentTypeTest:
 		return "тест"
+	case ContentTypeLectureMaterial:
+		return "лекционный материал"
+	case ContentTypeDownloadFile:
+		return "файл для скачивания"
 	default:
 		return ""
 	}
