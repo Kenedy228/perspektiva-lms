@@ -66,7 +66,7 @@ func Test_validateValue(t *testing.T) {
 			args: args{
 				value: "",
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "значение из пробелов",

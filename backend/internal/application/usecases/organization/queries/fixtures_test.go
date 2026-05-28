@@ -2,7 +2,7 @@ package queries_test
 
 import (
 	"gitflic.ru/lms/backend/internal/application/ports/organization"
-	"gitflic.ru/lms/backend/internal/domain/account"
+	"gitflic.ru/lms/backend/internal/domain/role"
 	"github.com/google/uuid"
 )
 
@@ -26,10 +26,10 @@ func organizationDetailedViewFixture() organization.OrganizationDetailedView {
 	return view
 }
 
-func adminRole() account.Role {
-	return account.NewAdminRole()
+func adminRole() role.Role {
+	return role.NewAdmin()
 }
 
-func studentRole() account.Role {
-	return account.NewStudentRole()
+func studentRole() role.Role {
+	return role.NewStudent()
 }

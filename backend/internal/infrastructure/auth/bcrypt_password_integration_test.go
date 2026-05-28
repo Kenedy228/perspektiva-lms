@@ -5,6 +5,7 @@ import (
 
 	"gitflic.ru/lms/backend/internal/domain/account"
 	"gitflic.ru/lms/backend/internal/domain/account/login"
+	"gitflic.ru/lms/backend/internal/domain/role"
 	"gitflic.ru/lms/backend/internal/infrastructure/auth"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -18,15 +19,12 @@ func TestBcryptPasswordComparer_AccountIntegration(t *testing.T) {
 	hash, err := comparer.Hash("student-password")
 	require.NoError(t, err)
 
-	l, err := login.New("student2026")
+	l, err := login.New("student26")
 	require.NoError(t, err)
 
-	acc, err := account.New(account.Params{
-		Login:        l,
-		PasswordHash: hash,
-		Role:         account.NewStudentRole(),
-		PersonID:     uuid.New(),
-	})
+	personID := uuid.New()
+
+	acc, err := account.New(l, hash, role.NewStudent(), personID)
 	require.NoError(t, err)
 
 	assert.True(t, comparer.Compare(acc.PasswordHash(), "student-password"))

@@ -36,7 +36,7 @@ type CreateInput struct {
 	ActorRole role.Role
 	Login     string
 	Password  string
-	Role      accountdomain.Role
+	Role      role.Role
 	PersonID  string
 }
 
@@ -72,12 +72,7 @@ func (uc *CreateUseCase) Execute(ctx context.Context, in CreateInput) (*CreateOu
 		return nil, fmt.Errorf("hash account password: %w", err)
 	}
 
-	acc, err := accountdomain.New(accountdomain.Params{
-		Login:        l,
-		PasswordHash: hash,
-		Role:         in.Role,
-		PersonID:     personID,
-	})
+	acc, err := accountdomain.New(l, hash, in.Role, personID)
 	if err != nil {
 		return nil, fmt.Errorf("create account aggregate: %w", err)
 	}

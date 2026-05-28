@@ -56,13 +56,7 @@ func profileFixture(orgID uuid.UUID) profile.Profile {
 		panic(err)
 	}
 
-	prof, err := profile.New(profile.Params{
-		Snils:          s,
-		DateOfBirth:    db,
-		JobTitle:       jt,
-		Education:      edu,
-		OrganizationID: orgID,
-	})
+	prof, err := profile.New(s, db, jt, edu, orgID)
 	if err != nil {
 		panic(err)
 	}

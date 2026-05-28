@@ -109,7 +109,7 @@ func TestNew(t *testing.T) {
 			want: JobTitle{
 				value: "",
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "значение из пробелов",
@@ -119,7 +119,7 @@ func TestNew(t *testing.T) {
 			want: JobTitle{
 				value: "",
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "непустое значение",

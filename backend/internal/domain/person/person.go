@@ -1,8 +1,14 @@
 package person
 
 import (
+	"fmt"
+
 	"gitflic.ru/lms/backend/internal/domain/person/name"
 	"gitflic.ru/lms/backend/internal/domain/person/profile"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/dob"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/education"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/jobtitle"
+	"gitflic.ru/lms/backend/internal/domain/person/profile/snils"
 	"gitflic.ru/lms/backend/internal/domain/shared/uid"
 	"github.com/google/uuid"
 )
@@ -114,4 +120,87 @@ func (p *Person) ChangeName(n name.Name) error {
 
 	p.name = n
 	return nil
+}
+
+// ChangeSnils changes the SNILS field of the attached profile.
+func (p *Person) ChangeSnils(s snils.SNILS) error {
+	prof, ok := p.Profile()
+	if !ok {
+		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+	}
+	newProf, err := profile.New(s, prof.DateOfBirth(), prof.JobTitle(), prof.Education(), prof.OrganizationID())
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return p.AttachOrReplaceProfile(newProf)
+}
+
+// ChangeDateOfBirth changes the date of birth field of the attached profile.
+func (p *Person) ChangeDateOfBirth(d dob.DateOfBirth) error {
+	prof, ok := p.Profile()
+	if !ok {
+		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+	}
+	newProf, err := profile.New(prof.SNILS(), d, prof.JobTitle(), prof.Education(), prof.OrganizationID())
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return p.AttachOrReplaceProfile(newProf)
+}
+
+// ChangeJobTitle changes the job title field of the attached profile.
+func (p *Person) ChangeJobTitle(jt jobtitle.JobTitle) error {
+	prof, ok := p.Profile()
+	if !ok {
+		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+	}
+	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), jt, prof.Education(), prof.OrganizationID())
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return p.AttachOrReplaceProfile(newProf)
+}
+
+// ChangeEducation changes the education field of the attached profile.
+func (p *Person) ChangeEducation(e education.Education) error {
+	prof, ok := p.Profile()
+	if !ok {
+		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+	}
+	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), prof.JobTitle(), e, prof.OrganizationID())
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return p.AttachOrReplaceProfile(newProf)
+}
+
+// AssignOrganization assigns an organization to the attached profile.
+func (p *Person) AssignOrganization(orgID uuid.UUID) error {
+	prof, ok := p.Profile()
+	if !ok {
+		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+	}
+	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), prof.JobTitle(), prof.Education(), orgID)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return p.AttachOrReplaceProfile(newProf)
+}
+
+// RemoveOrganization removes the organization from the attached profile.
+func (p *Person) RemoveOrganization() error {
+	prof, ok := p.Profile()
+	if !ok {
+		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+	}
+	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), prof.JobTitle(), prof.Education(), uuid.Nil)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	return p.AttachOrReplaceProfile(newProf)
+}
+
+// ReplaceProfile replaces the entire profile.
+func (p *Person) ReplaceProfile(prof profile.Profile) error {
+	return p.AttachOrReplaceProfile(prof)
 }

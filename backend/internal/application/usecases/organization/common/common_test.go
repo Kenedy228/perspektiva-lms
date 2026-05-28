@@ -4,15 +4,15 @@ import (
 	"testing"
 
 	"gitflic.ru/lms/backend/internal/application/usecases/organization/common"
-	"gitflic.ru/lms/backend/internal/domain/account"
+	"gitflic.ru/lms/backend/internal/domain/role"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRequireAdmin(t *testing.T) {
-	require.NoError(t, common.RequireAdmin(account.NewAdminRole()))
+	require.NoError(t, common.RequireAdmin(role.NewAdmin()))
 
-	err := common.RequireAdmin(account.NewStudentRole())
+	err := common.RequireAdmin(role.NewStudent())
 	require.Error(t, err)
 	assert.ErrorIs(t, err, common.ErrForbidden)
 }

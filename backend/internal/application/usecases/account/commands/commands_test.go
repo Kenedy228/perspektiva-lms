@@ -24,9 +24,9 @@ func TestCreateUseCase_AdminUniquenessAndAudit(t *testing.T) {
 
 		out, err := uc.Execute(context.Background(), commands.CreateInput{
 			ActorRole: role.NewStudent(),
-			Login:     "student2026",
+			Login:     "stud2026",
 			Password:  "secret",
-			Role:      accountdomain.NewStudentRole(),
+			Role:      role.NewStudent(),
 			PersonID:  uuid.NewString(),
 		})
 
@@ -47,9 +47,9 @@ func TestCreateUseCase_AdminUniquenessAndAudit(t *testing.T) {
 
 		out, err := uc.Execute(context.Background(), commands.CreateInput{
 			ActorRole: role.NewAdmin(),
-			Login:     "student2026",
+			Login:     "stud2026",
 			Password:  "secret",
-			Role:      accountdomain.NewStudentRole(),
+			Role:      role.NewStudent(),
 			PersonID:  personID.String(),
 		})
 
@@ -77,9 +77,9 @@ func TestCreateUseCase_AdminUniquenessAndAudit(t *testing.T) {
 
 		out, err := uc.Execute(context.Background(), commands.CreateInput{
 			ActorRole: role.NewAdmin(),
-			Login:     "student2026",
+			Login:     "stud2026",
 			Password:  "secret",
-			Role:      accountdomain.NewStudentRole(),
+			Role:      role.NewStudent(),
 			PersonID:  personID.String(),
 		})
 
@@ -105,7 +105,7 @@ func TestChangeUseCases_AdminOnly(t *testing.T) {
 		out, err := uc.Execute(context.Background(), commands.ChangeLoginInput{
 			ActorRole: role.NewAdmin(),
 			AccountID: acc.ID().String(),
-			Login:     "new.login",
+			Login:     "newlogin",
 		})
 
 		require.NoError(t, err)
@@ -151,7 +151,7 @@ func TestChangeUseCases_AdminOnly(t *testing.T) {
 		out, err := uc.Execute(context.Background(), commands.ChangeRoleInput{
 			ActorRole:   role.NewAdmin(),
 			AccountID:   acc.ID().String(),
-			AccountRole: accountdomain.NewCreatorRole(),
+			AccountRole: role.NewCreator(),
 		})
 
 		require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestLifecycleUseCases(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, acc.ID().String(), out.ID)
-		assert.True(t, acc.IsBlocked())
+		assert.True(t, acc.IsDeleted())
 
 		activate := commands.NewActivateUseCase(&r, &a)
 		r.On("FindByID", mock.Anything, acc.ID()).Return(acc, nil).Once()

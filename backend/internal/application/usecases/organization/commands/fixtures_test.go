@@ -1,10 +1,10 @@
 package commands_test
 
 import (
-	"gitflic.ru/lms/backend/internal/domain/account"
 	"gitflic.ru/lms/backend/internal/domain/organization"
 	inn2 "gitflic.ru/lms/backend/internal/domain/organization/inn"
 	"gitflic.ru/lms/backend/internal/domain/organization/name"
+	"gitflic.ru/lms/backend/internal/domain/role"
 )
 
 func organizationFixture() *organization.Organization {
@@ -14,10 +14,10 @@ func organizationFixture() *organization.Organization {
 	return org
 }
 
-func adminRole() account.Role {
-	return account.NewAdminRole()
+func adminRole() role.Role {
+	return role.NewAdmin()
 }
 
-func studentRole() account.Role {
-	return account.NewStudentRole()
+func studentRole() role.Role {
+	return role.NewStudent()
 }

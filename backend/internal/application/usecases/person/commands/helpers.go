@@ -56,13 +56,7 @@ func buildProfile(in profileInput, now time.Time) (profile.Profile, snils.SNILS,
 		return profile.Profile{}, snils.SNILS{}, err
 	}
 
-	prof, err := profile.New(profile.Params{
-		Snils:          s,
-		DateOfBirth:    db,
-		JobTitle:       jt,
-		Education:      edu,
-		OrganizationID: orgID,
-	})
+	prof, err := profile.New(s, db, jt, edu, orgID)
 	if err != nil {
 		return profile.Profile{}, snils.SNILS{}, fmt.Errorf("create person profile: %w", err)
 	}

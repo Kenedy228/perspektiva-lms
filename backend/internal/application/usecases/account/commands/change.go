@@ -6,7 +6,6 @@ import (
 
 	accountports "gitflic.ru/lms/backend/internal/application/ports/account"
 	"gitflic.ru/lms/backend/internal/application/usecases/account/common"
-	accountdomain "gitflic.ru/lms/backend/internal/domain/account"
 	"gitflic.ru/lms/backend/internal/domain/account/login"
 	"gitflic.ru/lms/backend/internal/domain/role"
 )
@@ -160,7 +159,7 @@ func NewChangeRoleUseCase(r accountports.Repository, audit accountports.AuditRec
 type ChangeRoleInput struct {
 	ActorRole   role.Role
 	AccountID   string
-	AccountRole accountdomain.Role
+	AccountRole role.Role
 }
 
 type ChangeRoleOutput struct {

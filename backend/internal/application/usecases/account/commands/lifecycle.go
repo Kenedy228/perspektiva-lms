@@ -129,7 +129,9 @@ func (uc *DeleteUseCase) Execute(ctx context.Context, in DeleteInput) error {
 		return err
 	}
 
-	acc.Delete()
+	if err := acc.Delete(); err != nil {
+		return fmt.Errorf("delete account aggregate: %w", err)
+	}
 
 	if err := uc.r.Save(ctx, acc); err != nil {
 		return fmt.Errorf("save account: %w", err)

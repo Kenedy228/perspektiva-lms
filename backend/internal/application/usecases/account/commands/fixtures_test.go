@@ -1,14 +1,15 @@
 package commands_test
 
 import (
-	accountdomain "gitflic.ru/lms/backend/internal/domain/account"
+	"gitflic.ru/lms/backend/internal/domain/account"
 	"gitflic.ru/lms/backend/internal/domain/account/login"
 	"gitflic.ru/lms/backend/internal/domain/account/passhash"
+	"gitflic.ru/lms/backend/internal/domain/role"
 	"github.com/google/uuid"
 )
 
 func loginFixture() login.Login {
-	l, err := login.New("student2026")
+	l, err := login.New("stud26")
 	if err != nil {
 		panic(err)
 	}
@@ -25,13 +26,9 @@ func hashFixture() passhash.Hash {
 	return h
 }
 
-func accountFixture() *accountdomain.Account {
-	acc, err := accountdomain.New(accountdomain.Params{
-		Login:        loginFixture(),
-		PasswordHash: hashFixture(),
-		Role:         accountdomain.NewStudentRole(),
-		PersonID:     uuid.New(),
-	})
+func accountFixture() *account.Account {
+	personID := uuid.New()
+	acc, err := account.New(loginFixture(), hashFixture(), role.NewStudent(), personID)
 	if err != nil {
 		panic(err)
 	}

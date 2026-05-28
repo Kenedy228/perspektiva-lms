@@ -49,7 +49,7 @@ func (q *ListQuery) Execute(ctx context.Context, in ListInput) (*ListOutput, err
 		return nil, fmt.Errorf("%w: role filter is invalid", common.ErrInvalidInput)
 	}
 
-	if !in.Status.IsZero() && !in.Status.IsValid() {
+	if in.Status != "" && !in.Status.IsValid() {
 		return nil, fmt.Errorf("%w: status filter is invalid", common.ErrInvalidInput)
 	}
 

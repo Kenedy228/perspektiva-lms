@@ -178,3 +178,18 @@ func (a *Account) Delete() error {
 	a.status = StatusDeleted
 	return nil
 }
+
+// Block блокирует аккаунт (помечает как удаленный).
+func (a *Account) Block() error {
+	return a.Delete()
+}
+
+// Activate восстанавливает аккаунт из удаленного состояния.
+func (a *Account) Activate() error {
+	if !a.IsDeleted() {
+		return ErrAlreadyActive
+	}
+
+	a.status = StatusActive
+	return nil
+}

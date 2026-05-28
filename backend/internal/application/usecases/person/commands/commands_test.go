@@ -98,6 +98,7 @@ func TestAttachAndReplaceProfileUseCases(t *testing.T) {
 			DateOfBirth: validDOB(),
 			PersonID:    personID.String(),
 			Snils:       validSNILS(),
+			Education:   "высшее",
 		})
 
 		assert.ErrorIs(t, err, common.ErrConflict)
