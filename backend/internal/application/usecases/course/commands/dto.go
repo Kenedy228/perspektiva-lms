@@ -78,21 +78,24 @@ type ElementContentInput struct {
 }
 
 type MarkProgressInput struct {
-	ActorRole    role.Role
-	EnrollmentID string
-	ElementID    string
-	MarkerType   progress.MarkerType
-	At           time.Time
+	ActorRole     role.Role
+	ActorPersonID string
+	EnrollmentID  string
+	ElementID     string
+	MarkerType    progress.MarkerType
+	At            time.Time
 }
 
 type UnmarkElementCompletedInput struct {
-	ActorRole    role.Role
-	EnrollmentID string
-	ElementID    string
+	ActorRole     role.Role
+	ActorPersonID string
+	EnrollmentID  string
+	ElementID     string
 }
 
 type GetProgressInput struct {
 	ActorRole         role.Role
+	ActorPersonID     string
 	EnrollmentID      string
 	TotalTrackedItems int
 }

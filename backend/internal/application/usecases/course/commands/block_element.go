@@ -268,7 +268,7 @@ func (uc *ChangeElementCompletionModeUseCase) Execute(ctx context.Context, in Ch
 	switch mode {
 	case elementdomain.CompletionModeNone, elementdomain.CompletionModeManual:
 	default:
-		return fmt.Errorf("%w: unknown completion mode %q", common.ErrInvalidInput, in.CompletionMode)
+		return fmt.Errorf("%w: неизвестный режим отслеживания %q", common.ErrInvalidInput, in.CompletionMode)
 	}
 	e, err := uc.elements.FindByID(ctx, elementID)
 	if err != nil {

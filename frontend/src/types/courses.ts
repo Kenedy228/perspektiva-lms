@@ -2,7 +2,7 @@ export type CourseShortView = {
   ID: string
   Title: string
   Published: boolean
-  VersionsCount: number
+  BlocksCount: number
 }
 
 export type CourseVersionView = {

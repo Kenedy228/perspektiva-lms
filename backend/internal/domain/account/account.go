@@ -1,6 +1,8 @@
 package account
 
 import (
+	"fmt"
+
 	"gitflic.ru/lms/backend/internal/domain/account/login"
 	"gitflic.ru/lms/backend/internal/domain/account/passhash"
 	"gitflic.ru/lms/backend/internal/domain/role"
@@ -122,6 +124,11 @@ func (a *Account) IsActive() bool {
 	return a.status == StatusActive
 }
 
+// IsBlocked сигнализирует, заблокирован ли аккаунт.
+func (a *Account) IsBlocked() bool {
+	return a.status == StatusBlocked
+}
+
 // IsDeleted сигнализирует, удален ли аккаунт.
 func (a *Account) IsDeleted() bool {
 	return a.status == StatusDeleted
@@ -179,17 +186,27 @@ func (a *Account) Delete() error {
 	return nil
 }
 
-// Block блокирует аккаунт (помечает как удаленный).
+// Block блокирует аккаунт, запрещая аутентификацию без удаления данных.
 func (a *Account) Block() error {
-	return a.Delete()
+	if err := ensureNotDeleted(a); err != nil {
+		return err
+	}
+	if a.IsBlocked() {
+		return ErrAlreadyBlocked
+	}
+	a.status = StatusBlocked
+	return nil
 }
 
-// Activate восстанавливает аккаунт из удаленного состояния.
+// Activate снимает блокировку аккаунта.
 func (a *Account) Activate() error {
-	if !a.IsDeleted() {
+	switch a.status {
+	case StatusActive:
 		return ErrAlreadyActive
+	case StatusBlocked:
+		a.status = StatusActive
+		return nil
+	default:
+		return fmt.Errorf("%w: нельзя активировать удалённый аккаунт", ErrInvalid)
 	}
-
-	a.status = StatusActive
-	return nil
 }

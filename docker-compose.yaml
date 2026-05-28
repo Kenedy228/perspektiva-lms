@@ -1,4 +1,40 @@
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: lms-backend
+    environment:
+      HTTP_ADDR: ":8080"
+      DATABASE_URL: "postgres://lms:lms@postgres:5432/lms?sslmode=disable"
+      SESSION_SECRET: "local-development-secret-change-me"
+      SESSION_TTL: "8h"
+      MINIO_ENDPOINT: "http://minio:9000"
+      MINIO_BUCKET: "lms"
+      MINIO_PUBLIC_URL: ""
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: lms-frontend
+    environment:
+      VITE_API_PROXY_TARGET: "http://backend:8080"
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
   postgres:
     image: postgres:18
     container_name: lms-postgres

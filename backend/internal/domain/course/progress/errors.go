@@ -3,5 +3,5 @@ package progress
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректные данные прогресса")
 )

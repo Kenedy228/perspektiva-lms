@@ -14,8 +14,8 @@ const (
 )
 
 var (
-	ErrForbidden    = errors.New("bank usecase forbidden")
-	ErrInvalidInput = errors.New("bank usecase invalid input")
+	ErrForbidden    = errors.New("доступ к банку вопросов запрещён")
+	ErrInvalidInput = errors.New("некорректные параметры запроса к банку вопросов")
 )
 
 func RequireManager(actor role.Role) error {
@@ -23,13 +23,13 @@ func RequireManager(actor role.Role) error {
 	case role.TypeAdmin, role.TypeCreator:
 		return nil
 	default:
-		return fmt.Errorf("%w: only admin or creator can manage question banks", ErrForbidden)
+		return fmt.Errorf("%w: управлять банками вопросов могут только администратор и создатель", ErrForbidden)
 	}
 }
 
 func NormalizePagination(limit, offset int) (int, int, error) {
 	if offset < 0 {
-		return 0, 0, fmt.Errorf("%w: offset cannot be negative", ErrInvalidInput)
+		return 0, 0, fmt.Errorf("%w: смещение не может быть отрицательным", ErrInvalidInput)
 	}
 
 	if limit == 0 {
@@ -37,11 +37,11 @@ func NormalizePagination(limit, offset int) (int, int, error) {
 	}
 
 	if limit < 0 {
-		return 0, 0, fmt.Errorf("%w: limit cannot be negative", ErrInvalidInput)
+		return 0, 0, fmt.Errorf("%w: размер страницы не может быть отрицательным", ErrInvalidInput)
 	}
 
 	if limit > MaxLimit {
-		return 0, 0, fmt.Errorf("%w: limit cannot exceed %d", ErrInvalidInput, MaxLimit)
+		return 0, 0, fmt.Errorf("%w: размер страницы не должен превышать %d", ErrInvalidInput, MaxLimit)
 	}
 
 	return limit, offset, nil

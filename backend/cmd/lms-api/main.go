@@ -34,6 +34,7 @@ import (
 	attemptinfra "gitflic.ru/lms/backend/internal/infrastructure/attempt"
 	"gitflic.ru/lms/backend/internal/infrastructure/auth"
 	"gitflic.ru/lms/backend/internal/infrastructure/postgres"
+	"gitflic.ru/lms/backend/internal/infrastructure/storage/minio"
 	transporthttp "gitflic.ru/lms/backend/internal/transport/http"
 	"gitflic.ru/lms/backend/internal/transport/http/handlers"
 	"gitflic.ru/lms/backend/internal/transport/http/session"
@@ -70,11 +71,22 @@ func main() {
 	blockRepo := postgres.NewBlockRepository(db)
 	elementRepo := postgres.NewElementRepository(db)
 	progressRepo := postgres.NewProgressRepository(db)
-	coursePolicy := postgres.NewCoursePolicy(db)
+
 	courseQuery := postgres.NewCourseQueryService(db)
 	enrollmentRepo := postgres.NewEnrollmentRepository(db)
 
 	passwordComparer := auth.NewBcryptPasswordComparer()
+
+	objectStorage, err := minio.NewObjectStorage(minio.Config{
+		Endpoint:  cfg.minioEndpoint,
+		Bucket:    cfg.minioBucket,
+		PublicURL: cfg.minioPublicURL,
+	}, nil)
+	if err != nil {
+		logger.Error("create minio storage", "error", err)
+		os.Exit(1)
+	}
+
 	sessionManager := session.NewManager([]byte(cfg.sessionSecret), cfg.sessionTTL)
 	checkerRegistry, err := registry.New(map[question.Type]domaingrading.Checker{
 		question.TypeSelectable: selectablegrading.New(),
@@ -184,16 +196,16 @@ func main() {
 			RemoveElement:        coursecommands.NewRemoveElementFromBlockUseCase(blockRepo),
 			MoveElement:          coursecommands.NewMoveBlockElementUseCase(blockRepo),
 			ChangeCompletionMode: coursecommands.NewChangeElementCompletionModeUseCase(elementRepo),
-			Progress:             coursecommands.NewMarkProgressUseCase(progressRepo),
-			UnmarkProgress:       coursecommands.NewUnmarkElementCompletedUseCase(progressRepo),
-			GetProgress:          coursecommands.NewGetProgressUseCase(progressRepo),
+			GetProgress:          coursecommands.NewGetProgressUseCase(progressRepo, enrollmentRepo),
+			UploadContent:        coursecommands.NewUploadElementContentUseCase(elementRepo, objectStorage),
+			DownloadContent:      coursecommands.NewDownloadElementContentUseCase(elementRepo, objectStorage),
 			List:                 coursequeries.NewListQuery(courseQuery),
 			Ratings:              coursequeries.NewRatingsQuery(courseQuery),
-			Statistics:           coursequeries.NewStudentStatisticsQuery(courseQuery),
+			Statistics:           coursequeries.NewStudentStatisticsQuery(courseQuery, enrollmentRepo),
 			Query:                courseQuery,
 		},
 		Enrollments: handlers.EnrollmentUseCases{
-			Create: enrollmentcommands.NewCreateUseCase(enrollmentRepo, coursePolicy, enrollmentRepo),
+			Create: enrollmentcommands.NewCreateUseCase(enrollmentRepo, enrollmentRepo),
 		},
 	}
 
@@ -220,18 +232,24 @@ func main() {
 }
 
 type config struct {
-	httpAddr      string
-	databaseURL   string
-	sessionSecret string
-	sessionTTL    time.Duration
+	httpAddr       string
+	databaseURL    string
+	sessionSecret  string
+	sessionTTL     time.Duration
+	minioEndpoint  string
+	minioBucket    string
+	minioPublicURL string
 }
 
 func configFromEnv() config {
 	return config{
-		httpAddr:      env("HTTP_ADDR", ":8080"),
-		databaseURL:   env("DATABASE_URL", "postgres://lms:lms@localhost:5433/lms?sslmode=disable"),
-		sessionSecret: env("SESSION_SECRET", "local-development-secret-change-me"),
-		sessionTTL:    durationEnv("SESSION_TTL", 8*time.Hour),
+		httpAddr:       env("HTTP_ADDR", ":8080"),
+		databaseURL:    env("DATABASE_URL", "postgres://lms:lms@localhost:5433/lms?sslmode=disable"),
+		sessionSecret:  env("SESSION_SECRET", "local-development-secret-change-me"),
+		sessionTTL:     durationEnv("SESSION_TTL", 8*time.Hour),
+		minioEndpoint:  env("MINIO_ENDPOINT", "http://localhost:9000"),
+		minioBucket:    env("MINIO_BUCKET", "lms"),
+		minioPublicURL: env("MINIO_PUBLIC_URL", ""),
 	}
 }
 

@@ -3,5 +3,5 @@ package criteria
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректные критерии выборки")
 )

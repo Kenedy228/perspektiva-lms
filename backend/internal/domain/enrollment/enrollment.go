@@ -11,7 +11,6 @@ import (
 type Enrollment struct {
 	id            uuid.UUID
 	courseID      uuid.UUID
-	versionID     uuid.UUID
 	accountID     uuid.UUID
 	activatedAt   time.Time
 	deactivatedAt time.Time
@@ -19,17 +18,15 @@ type Enrollment struct {
 
 func New(
 	courseID uuid.UUID,
-	versionID uuid.UUID,
 	accountID uuid.UUID,
 	activatedAt time.Time,
 	deactivatedAt time.Time,
 ) (*Enrollment, error) {
-	return NewAt(courseID, versionID, accountID, activatedAt, deactivatedAt, time.Now())
+	return NewAt(courseID, accountID, activatedAt, deactivatedAt, time.Now())
 }
 
 func NewAt(
 	courseID uuid.UUID,
-	versionID uuid.UUID,
 	accountID uuid.UUID,
 	activatedAt time.Time,
 	deactivatedAt time.Time,
@@ -40,10 +37,6 @@ func NewAt(
 	now = normalizeDate(now)
 
 	if err := validateRequiredID("courseID", courseID); err != nil {
-		return nil, err
-	}
-
-	if err := validateRequiredID("versionID", versionID); err != nil {
 		return nil, err
 	}
 
@@ -63,7 +56,6 @@ func NewAt(
 	return &Enrollment{
 		id:            id,
 		courseID:      courseID,
-		versionID:     versionID,
 		accountID:     accountID,
 		activatedAt:   activatedAt,
 		deactivatedAt: deactivatedAt,
@@ -73,7 +65,6 @@ func NewAt(
 func Restore(
 	id uuid.UUID,
 	courseID uuid.UUID,
-	versionID uuid.UUID,
 	accountID uuid.UUID,
 	activatedAt time.Time,
 	deactivatedAt time.Time,
@@ -87,9 +78,6 @@ func Restore(
 	if err := validateRequiredID("courseID", courseID); err != nil {
 		return nil, err
 	}
-	if err := validateRequiredID("versionID", versionID); err != nil {
-		return nil, err
-	}
 	if err := validateRequiredID("accountID", accountID); err != nil {
 		return nil, err
 	}
@@ -100,7 +88,6 @@ func Restore(
 	return &Enrollment{
 		id:            id,
 		courseID:      courseID,
-		versionID:     versionID,
 		accountID:     accountID,
 		activatedAt:   activatedAt,
 		deactivatedAt: deactivatedAt,
@@ -113,10 +100,6 @@ func (e *Enrollment) ID() uuid.UUID {
 
 func (e *Enrollment) CourseID() uuid.UUID {
 	return e.courseID
-}
-
-func (e *Enrollment) VersionID() uuid.UUID {
-	return e.versionID
 }
 
 func (e *Enrollment) AccountID() uuid.UUID {
@@ -181,7 +164,6 @@ func (e *Enrollment) Clone() *Enrollment {
 	return &Enrollment{
 		id:            e.id,
 		courseID:      e.courseID,
-		versionID:     e.versionID,
 		accountID:     e.accountID,
 		activatedAt:   e.activatedAt,
 		deactivatedAt: e.deactivatedAt,

@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	ErrForbidden    = errors.New("quiz usecase forbidden")
-	ErrInvalidInput = errors.New("quiz usecase invalid input")
+	ErrForbidden    = errors.New("доступ к тесту запрещён")
+	ErrInvalidInput = errors.New("некорректные параметры запроса к тесту")
 )
 
 func RequireManager(actor role.Role) error {
@@ -17,6 +17,6 @@ func RequireManager(actor role.Role) error {
 	case role.TypeAdmin, role.TypeCreator:
 		return nil
 	default:
-		return fmt.Errorf("%w: only admin or creator can manage quizzes", ErrForbidden)
+		return fmt.Errorf("%w: управлять тестами могут только администратор и создатель", ErrForbidden)
 	}
 }

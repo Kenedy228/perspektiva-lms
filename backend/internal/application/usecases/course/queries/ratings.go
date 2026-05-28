@@ -33,7 +33,7 @@ type RatingsOutput struct {
 }
 
 func (q *RatingsQuery) Execute(ctx context.Context, in RatingsInput) (*RatingsOutput, error) {
-	if err := common.RequireManager(in.ActorRole); err != nil {
+	if err := common.RequireProgressAccess(in.ActorRole); err != nil {
 		return nil, err
 	}
 	limit, offset, err := common.NormalizePagination(in.Limit, in.Offset)
@@ -45,7 +45,7 @@ func (q *RatingsQuery) Execute(ctx context.Context, in RatingsInput) (*RatingsOu
 		return nil, fmt.Errorf("parse course id: %w", err)
 	}
 	if courseID == uuid.Nil {
-		return nil, fmt.Errorf("%w: course id is required", common.ErrInvalidInput)
+		return nil, fmt.Errorf("%w: идентификатор курса обязателен", common.ErrInvalidInput)
 	}
 	views, err := q.s.ListRatings(ctx, courseID, limit, offset)
 	if err != nil {

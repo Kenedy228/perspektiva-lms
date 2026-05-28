@@ -10,7 +10,7 @@ import (
 
 func TestNewAtUsesReferenceDate(t *testing.T) {
 	now := time.Date(2026, 5, 9, 10, 0, 0, 0, time.UTC)
-	_, err := NewAt(uuid.New(), uuid.New(), uuid.New(), now.AddDate(0, 0, -1), now, now)
+	_, err := NewAt(uuid.New(), uuid.New(), now.AddDate(0, 0, -1), now, now)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected invalid activation date, got %v", err)
 	}
@@ -20,7 +20,7 @@ func TestRestoreAllowsHistoricalEnrollment(t *testing.T) {
 	activatedAt := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 	deactivatedAt := time.Date(2024, 12, 31, 12, 0, 0, 0, time.UTC)
 
-	e, err := Restore(uuid.New(), uuid.New(), uuid.New(), uuid.New(), activatedAt, deactivatedAt)
+	e, err := Restore(uuid.New(), uuid.New(), uuid.New(), activatedAt, deactivatedAt)
 	if err != nil {
 		t.Fatalf("restore enrollment: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestRestoreAllowsHistoricalEnrollment(t *testing.T) {
 
 func TestDeactivate(t *testing.T) {
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
-	e, err := NewAt(uuid.New(), uuid.New(), uuid.New(), now, now.AddDate(0, 1, 0), now)
+	e, err := NewAt(uuid.New(), uuid.New(), now, now.AddDate(0, 1, 0), now)
 	if err != nil {
 		t.Fatalf("create enrollment: %v", err)
 	}

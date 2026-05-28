@@ -409,6 +409,106 @@ func TestAccount_ID(t *testing.T) {
 	}
 }
 
+func TestAccount_Block(t *testing.T) {
+	tests := []struct {
+		name        string
+		status      Status
+		wantStatus  Status
+		wantErr     assert.ErrorAssertionFunc
+		wantErrType error
+	}{
+		{
+			name:       "блокирует активный аккаунт",
+			status:     StatusActive,
+			wantStatus: StatusBlocked,
+			wantErr:    assert.NoError,
+		},
+		{
+			name:        "возвращает ошибку если аккаунт уже заблокирован",
+			status:      StatusBlocked,
+			wantStatus:  StatusBlocked,
+			wantErr:     assert.Error,
+			wantErrType: ErrAlreadyBlocked,
+		},
+		{
+			name:       "возвращает ошибку если аккаунт удалён",
+			status:     StatusDeleted,
+			wantStatus: StatusDeleted,
+			wantErr:    assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Account{status: tt.status}
+			err := a.Block()
+			tt.wantErr(t, err)
+			if tt.wantErrType != nil {
+				assert.ErrorIs(t, err, tt.wantErrType)
+			}
+			assert.Equal(t, tt.wantStatus, a.status)
+		})
+	}
+}
+
+func TestAccount_Activate(t *testing.T) {
+	tests := []struct {
+		name        string
+		status      Status
+		wantStatus  Status
+		wantErr     assert.ErrorAssertionFunc
+		wantErrType error
+	}{
+		{
+			name:       "разблокирует заблокированный аккаунт",
+			status:     StatusBlocked,
+			wantStatus: StatusActive,
+			wantErr:    assert.NoError,
+		},
+		{
+			name:        "возвращает ошибку если аккаунт уже активен",
+			status:      StatusActive,
+			wantStatus:  StatusActive,
+			wantErr:     assert.Error,
+			wantErrType: ErrAlreadyActive,
+		},
+		{
+			name:       "возвращает ошибку если аккаунт удалён",
+			status:     StatusDeleted,
+			wantStatus: StatusDeleted,
+			wantErr:    assert.Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Account{status: tt.status}
+			err := a.Activate()
+			tt.wantErr(t, err)
+			if tt.wantErrType != nil {
+				assert.ErrorIs(t, err, tt.wantErrType)
+			}
+			assert.Equal(t, tt.wantStatus, a.status)
+		})
+	}
+}
+
+func TestAccount_IsBlocked(t *testing.T) {
+	tests := []struct {
+		name   string
+		status Status
+		want   bool
+	}{
+		{name: "заблокирован", status: StatusBlocked, want: true},
+		{name: "активен", status: StatusActive, want: false},
+		{name: "удалён", status: StatusDeleted, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Account{status: tt.status}
+			assert.Equal(t, tt.want, a.IsBlocked())
+		})
+	}
+}
+
 func TestAccount_IsActive(t *testing.T) {
 	type fields struct {
 		id           uuid.UUID

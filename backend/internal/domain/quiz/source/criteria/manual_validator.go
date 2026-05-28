@@ -26,11 +26,11 @@ func validateQuestionIDs(questionIDs []uuid.UUID) error {
 
 func validateQuestionIDsBoundaries(questionIDs []uuid.UUID) error {
 	if len(questionIDs) == 0 {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: список идентификаторов вопросов не может быть пустым", ErrInvalid)
 	}
 
 	if len(questionIDs) > maxQuestionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, maxQuestionsCount)
+		return fmt.Errorf("%w: количество вопросов не должно превышать %d", ErrInvalid, maxQuestionsCount)
 	}
 
 	return nil
@@ -38,7 +38,7 @@ func validateQuestionIDsBoundaries(questionIDs []uuid.UUID) error {
 
 func validateQuestionIDsNil(questionIDs []uuid.UUID) error {
 	if slices.Contains(questionIDs, uuid.Nil) {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: список не должен содержать пустых идентификаторов вопросов", ErrInvalid)
 	}
 
 	return nil
@@ -46,7 +46,7 @@ func validateQuestionIDsNil(questionIDs []uuid.UUID) error {
 
 func validateQuestionIDsDuplicates(questionIDs []uuid.UUID) error {
 	if has := duplicates.HasUUID(questionIDs); has {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: список не должен содержать повторяющихся идентификаторов вопросов", ErrInvalid)
 	}
 
 	return nil

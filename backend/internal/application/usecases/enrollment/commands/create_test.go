@@ -11,17 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestCreateChecksVersionPolicyUniquenessAndProgress(t *testing.T) {
+func TestCreateChecksUniquenessAndProgress(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 	repo := &enrollmentRepo{}
-	versions := &versionPolicy{allowed: true}
 	progress := &progressInitializer{}
 
-	out, err := NewCreateUseCase(repo, versions, progress).Execute(ctx, CreateInput{
+	out, err := NewCreateUseCase(repo, progress).Execute(ctx, CreateInput{
 		ActorRole:     role.NewAdmin(),
 		CourseID:      uuid.New().String(),
-		VersionID:     uuid.New().String(),
 		AccountID:     uuid.New().String(),
 		ActivatedAt:   now,
 		DeactivatedAt: now.AddDate(0, 1, 0),
@@ -38,27 +36,13 @@ func TestCreateChecksVersionPolicyUniquenessAndProgress(t *testing.T) {
 	}
 }
 
-func TestCreateRejectsDeletedVersionAndDuplicateEnrollment(t *testing.T) {
+func TestCreateRejectsDuplicateEnrollment(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 5, 9, 0, 0, 0, 0, time.UTC)
 
-	_, err := NewCreateUseCase(&enrollmentRepo{}, &versionPolicy{allowed: false}, nil).Execute(ctx, CreateInput{
+	_, err := NewCreateUseCase(&enrollmentRepo{exists: true}, nil).Execute(ctx, CreateInput{
 		ActorRole:     role.NewAdmin(),
 		CourseID:      uuid.New().String(),
-		VersionID:     uuid.New().String(),
-		AccountID:     uuid.New().String(),
-		ActivatedAt:   now,
-		DeactivatedAt: now.AddDate(0, 1, 0),
-		Now:           now,
-	})
-	if err == nil {
-		t.Fatal("expected version policy rejection")
-	}
-
-	_, err = NewCreateUseCase(&enrollmentRepo{exists: true}, &versionPolicy{allowed: true}, nil).Execute(ctx, CreateInput{
-		ActorRole:     role.NewAdmin(),
-		CourseID:      uuid.New().String(),
-		VersionID:     uuid.New().String(),
 		AccountID:     uuid.New().String(),
 		ActivatedAt:   now,
 		DeactivatedAt: now.AddDate(0, 1, 0),
@@ -70,7 +54,7 @@ func TestCreateRejectsDeletedVersionAndDuplicateEnrollment(t *testing.T) {
 }
 
 func TestCreateRejectsNonAdmin(t *testing.T) {
-	_, err := NewCreateUseCase(&enrollmentRepo{}, &versionPolicy{allowed: true}, nil).Execute(context.Background(), CreateInput{
+	_, err := NewCreateUseCase(&enrollmentRepo{}, nil).Execute(context.Background(), CreateInput{
 		ActorRole: role.NewCreator(),
 	})
 	if err == nil {
@@ -92,16 +76,8 @@ func (r *enrollmentRepo) Save(_ context.Context, e *enrollmentdomain.Enrollment)
 	return nil
 }
 
-func (r *enrollmentRepo) ExistsForAccountCourseVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uuid.UUID) (bool, error) {
+func (r *enrollmentRepo) ExistsForAccountCourse(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (bool, error) {
 	return r.exists, nil
-}
-
-type versionPolicy struct {
-	allowed bool
-}
-
-func (p *versionPolicy) CanEnrollVersion(context.Context, uuid.UUID) (bool, error) {
-	return p.allowed, nil
 }
 
 type progressInitializer struct {

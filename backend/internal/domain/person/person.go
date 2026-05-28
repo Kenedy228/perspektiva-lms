@@ -126,7 +126,7 @@ func (p *Person) ChangeName(n name.Name) error {
 func (p *Person) ChangeSnils(s snils.SNILS) error {
 	prof, ok := p.Profile()
 	if !ok {
-		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+		return fmt.Errorf("%w: профиль не прикреплён", ErrInvalid)
 	}
 	newProf, err := profile.New(s, prof.DateOfBirth(), prof.JobTitle(), prof.Education(), prof.OrganizationID())
 	if err != nil {
@@ -139,7 +139,7 @@ func (p *Person) ChangeSnils(s snils.SNILS) error {
 func (p *Person) ChangeDateOfBirth(d dob.DateOfBirth) error {
 	prof, ok := p.Profile()
 	if !ok {
-		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+		return fmt.Errorf("%w: профиль не прикреплён", ErrInvalid)
 	}
 	newProf, err := profile.New(prof.SNILS(), d, prof.JobTitle(), prof.Education(), prof.OrganizationID())
 	if err != nil {
@@ -152,7 +152,7 @@ func (p *Person) ChangeDateOfBirth(d dob.DateOfBirth) error {
 func (p *Person) ChangeJobTitle(jt jobtitle.JobTitle) error {
 	prof, ok := p.Profile()
 	if !ok {
-		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+		return fmt.Errorf("%w: профиль не прикреплён", ErrInvalid)
 	}
 	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), jt, prof.Education(), prof.OrganizationID())
 	if err != nil {
@@ -165,7 +165,7 @@ func (p *Person) ChangeJobTitle(jt jobtitle.JobTitle) error {
 func (p *Person) ChangeEducation(e education.Education) error {
 	prof, ok := p.Profile()
 	if !ok {
-		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+		return fmt.Errorf("%w: профиль не прикреплён", ErrInvalid)
 	}
 	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), prof.JobTitle(), e, prof.OrganizationID())
 	if err != nil {
@@ -178,7 +178,7 @@ func (p *Person) ChangeEducation(e education.Education) error {
 func (p *Person) AssignOrganization(orgID uuid.UUID) error {
 	prof, ok := p.Profile()
 	if !ok {
-		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+		return fmt.Errorf("%w: профиль не прикреплён", ErrInvalid)
 	}
 	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), prof.JobTitle(), prof.Education(), orgID)
 	if err != nil {
@@ -191,7 +191,7 @@ func (p *Person) AssignOrganization(orgID uuid.UUID) error {
 func (p *Person) RemoveOrganization() error {
 	prof, ok := p.Profile()
 	if !ok {
-		return fmt.Errorf("%w: no profile attached", ErrInvalid)
+		return fmt.Errorf("%w: профиль не прикреплён", ErrInvalid)
 	}
 	newProf, err := profile.New(prof.SNILS(), prof.DateOfBirth(), prof.JobTitle(), prof.Education(), uuid.Nil)
 	if err != nil {

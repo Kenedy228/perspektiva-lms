@@ -10,13 +10,14 @@ import (
 type Repository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*enrollmentdomain.Enrollment, error)
 	Save(ctx context.Context, e *enrollmentdomain.Enrollment) error
-	ExistsForAccountCourseVersion(ctx context.Context, accountID, courseID, versionID uuid.UUID, excludeEnrollmentID uuid.UUID) (bool, error)
-}
-
-type VersionPolicy interface {
-	CanEnrollVersion(ctx context.Context, versionID uuid.UUID) (bool, error)
+	ExistsForAccountCourse(ctx context.Context, accountID, courseID uuid.UUID, excludeEnrollmentID uuid.UUID) (bool, error)
 }
 
 type ProgressInitializer interface {
 	EnsureProgressForEnrollment(ctx context.Context, enrollmentID uuid.UUID) error
+}
+
+type OrganizationScope interface {
+	EnrollmentBelongsToPersonOrganization(ctx context.Context, enrollmentID, personID uuid.UUID) (bool, error)
+	PersonOrganizationID(ctx context.Context, personID uuid.UUID) (uuid.UUID, error)
 }

@@ -3,5 +3,5 @@ package title
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректное название курса")
 )

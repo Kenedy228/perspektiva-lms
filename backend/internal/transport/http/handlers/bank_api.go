@@ -81,6 +81,19 @@ func (api *API) RenameBank(w http.ResponseWriter, r *http.Request) {
 	writeOK(w, r, map[string]string{"id": r.PathValue("id")}, nil)
 }
 
+func (api *API) DeleteBank(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	if err := api.Banks.Delete.Execute(r.Context(), bankcommands.BankIDInput{ActorRole: actor.role, BankID: r.PathValue("id")}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeNoContent(w)
+}
+
 func (api *API) AddBankQuestions(w http.ResponseWriter, r *http.Request) {
 	api.changeBankQuestions(w, r, api.Banks.Add.Execute)
 }

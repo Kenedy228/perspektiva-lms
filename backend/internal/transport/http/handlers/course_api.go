@@ -3,11 +3,9 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	coursecommands "gitflic.ru/lms/backend/internal/application/usecases/course/commands"
 	coursequeries "gitflic.ru/lms/backend/internal/application/usecases/course/queries"
-	"gitflic.ru/lms/backend/internal/domain/course/progress"
 	"gitflic.ru/lms/backend/internal/transport/http/response"
 	"github.com/google/uuid"
 )
@@ -243,65 +241,6 @@ func (api *API) ChangeElementCompletionMode(w http.ResponseWriter, r *http.Reque
 	writeOK(w, r, map[string]string{"element_id": r.PathValue("elementID")}, nil)
 }
 
-func (api *API) MarkCourseProgress(w http.ResponseWriter, r *http.Request) {
-	actor, ok := actorRole(r)
-	if !ok {
-		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
-		return
-	}
-	var req MarkProgressRequest
-	if err := response.DecodeJSON(r, &req); err != nil {
-		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
-		return
-	}
-	at := time.Now().UTC()
-	if req.At != "" {
-		parsed, err := parseDate(req.At)
-		if err != nil {
-			writeHandlerError(w, r, err)
-			return
-		}
-		at = parsed
-	}
-	if err := api.Courses.Progress.Execute(r.Context(), coursecommands.MarkProgressInput{
-		ActorRole:    actor.role,
-		EnrollmentID: req.EnrollmentID,
-		ElementID:    req.ElementID,
-		MarkerType:   progress.MarkerType(req.MarkerType),
-		At:           at,
-	}); err != nil {
-		writeHandlerError(w, r, err)
-		return
-	}
-	writeOK(w, r, map[string]string{
-		"course_id":     r.PathValue("courseID"),
-		"enrollment_id": req.EnrollmentID,
-		"element_id":    req.ElementID,
-	}, nil)
-}
-
-func (api *API) UnmarkCourseProgress(w http.ResponseWriter, r *http.Request) {
-	actor, ok := actorRole(r)
-	if !ok {
-		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
-		return
-	}
-	var req UnmarkProgressRequest
-	if err := response.DecodeJSON(r, &req); err != nil {
-		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
-		return
-	}
-	if err := api.Courses.UnmarkProgress.Execute(r.Context(), coursecommands.UnmarkElementCompletedInput{
-		ActorRole:    actor.role,
-		EnrollmentID: req.EnrollmentID,
-		ElementID:    req.ElementID,
-	}); err != nil {
-		writeHandlerError(w, r, err)
-		return
-	}
-	writeNoContent(w)
-}
-
 func (api *API) GetCourseProgress(w http.ResponseWriter, r *http.Request) {
 	actor, ok := actorRole(r)
 	if !ok {
@@ -312,6 +251,7 @@ func (api *API) GetCourseProgress(w http.ResponseWriter, r *http.Request) {
 	total, _ := strconv.Atoi(r.URL.Query().Get("total"))
 	out, err := api.Courses.GetProgress.Execute(r.Context(), coursecommands.GetProgressInput{
 		ActorRole:         actor.role,
+		ActorPersonID:     actor.personID,
 		EnrollmentID:      enrollmentID,
 		TotalTrackedItems: total,
 	})
@@ -345,4 +285,55 @@ func (api *API) ListCourseRatings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeOK(w, r, out.Views, response.Links{"self": {Href: r.URL.RequestURI(), Method: http.MethodGet}})
+}
+
+func (api *API) UploadElementContent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_multipart", "failed to parse multipart form"))
+		return
+	}
+	file, header, err := r.FormFile("content")
+	if err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "missing_file", "content file is required"))
+		return
+	}
+	defer file.Close()
+	if err := api.Courses.UploadContent.Execute(r.Context(), coursecommands.UploadElementContentInput{
+		ActorRole:   actor.role,
+		ElementID:   r.PathValue("elementID"),
+		ContentType: header.Header.Get("Content-Type"),
+		Body:        file,
+		Size:        header.Size,
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, map[string]string{"element_id": r.PathValue("elementID")}, nil)
+}
+
+func (api *API) DownloadElementContent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	out, err := api.Courses.DownloadContent.Execute(r.Context(), coursecommands.DownloadElementContentInput{
+		ActorRole: actor.role,
+		ElementID: r.PathValue("elementID"),
+	})
+	if err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, map[string]string{
+		"element_id":   r.PathValue("elementID"),
+		"download_url": out.DownloadURL,
+		"file_name":    out.FileName,
+		"content_type": out.ContentType,
+	}, nil)
 }

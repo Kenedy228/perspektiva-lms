@@ -26,7 +26,7 @@ var (
 func ParseType(value string) (Type, error) {
 	t := Type(strings.TrimSpace(value))
 	if !t.IsValid() {
-		return "", fmt.Errorf("%w: unknown role type %q", ErrInvalid, value)
+		return "", fmt.Errorf("%w: неизвестный тип роли %q", ErrInvalid, value)
 	}
 
 	return t, nil

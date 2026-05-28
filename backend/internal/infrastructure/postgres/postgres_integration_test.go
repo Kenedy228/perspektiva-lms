@@ -209,7 +209,7 @@ func insertAttemptDependencies(t *testing.T, ctx context.Context, db *sql.DB, qu
 	execSQL(t, ctx, db, `INSERT INTO courses (id, title) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0006', 'Course')`)
 	execSQL(t, ctx, db, `INSERT INTO course_versions (id, title, status) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0007', 'Version', 'published')`)
 	execSQL(t, ctx, db, `INSERT INTO course_version_links (course_id, version_id, position) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0007', 0)`)
-	execSQL(t, ctx, db, `INSERT INTO enrollments (id, account_id, course_id, version_id, status, enrolled_at, completed_at) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0007', 'active', '2026-01-01', '2026-12-31')`)
+	execSQL(t, ctx, db, `INSERT INTO enrollments (id, account_id, course_id, status, enrolled_at, completed_at) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0006', 'active', '2026-01-01', '2026-12-31')`)
 }
 
 func uuidFromString(value string) uuid.UUID {

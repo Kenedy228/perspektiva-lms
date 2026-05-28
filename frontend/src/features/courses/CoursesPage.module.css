@@ -11,34 +11,143 @@
   color: var(--color-muted);
 }
 
-.tableWrap {
-  overflow-x: auto;
+.error {
+  margin: 0 0 12px;
+  color: var(--color-danger);
+}
+
+.createCourse {
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.createCourse input,
+.inlineRow input,
+.inlineRow select,
+.extraInput {
+  min-height: 40px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
   background: var(--color-surface);
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+.builder {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
 
-.table th,
-.table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--color-border);
+.courseList {
+  display: grid;
+  gap: 8px;
+}
+
+.courseCard {
   text-align: left;
-  white-space: nowrap;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
 }
 
-.table th {
-  background: var(--color-surface-strong);
+.courseCard small {
   color: var(--color-muted);
-  font-size: 12px;
-  text-transform: uppercase;
 }
 
-.table tr:last-child td {
-  border-bottom: 0;
+.active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+.workspace {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--color-surface);
+}
+
+.courseHead {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.courseHead h2 {
+  margin: 0;
+}
+
+.inlineRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.blocks {
+  display: grid;
+  gap: 10px;
+}
+
+.blockCard {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+}
+
+.blockHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.elements {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.elementRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.elementRow small {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-muted);
+}
+
+.elementActions {
+  display: flex;
+  gap: 6px;
+}
+
+@media (max-width: 960px) {
+  .builder {
+    grid-template-columns: 1fr;
+  }
+
+  .inlineRow {
+    grid-template-columns: 1fr;
+  }
 }

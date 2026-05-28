@@ -37,7 +37,7 @@ type Content struct {
 
 func New(f file.File) (Content, error) {
 	if _, ok := allowedExtensions[f.Extension()]; !ok {
-		return Content{}, fmt.Errorf("%w: invalid value", element2.ErrInvalid)
+		return Content{}, fmt.Errorf("%w: недопустимое расширение файла", element2.ErrInvalid)
 	}
 	return Content{f: f}, nil
 }

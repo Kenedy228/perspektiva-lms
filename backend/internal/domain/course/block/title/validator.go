@@ -20,7 +20,7 @@ func validateValue(value string) error {
 
 func validateNotEmpty(value string) error {
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: название блока не может быть пустым", ErrInvalid)
 	}
 
 	return nil
@@ -28,7 +28,7 @@ func validateNotEmpty(value string) error {
 
 func validateValueCharsLimit(value string) error {
 	if utf8.RuneCountInString(value) > valueCharsLimit {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, valueCharsLimit)
+		return fmt.Errorf("%w: название блока не должно превышать %d символов", ErrInvalid, valueCharsLimit)
 	}
 
 	return nil

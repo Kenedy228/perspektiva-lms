@@ -3,5 +3,5 @@ package element
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректный элемент курса")
 )

@@ -154,7 +154,6 @@ type CourseElementRequest struct {
 type EnrollmentRequest struct {
 	AccountID     string `json:"account_id"`
 	CourseID      string `json:"course_id"`
-	VersionID     string `json:"version_id"`
 	ActivatedAt   string `json:"activated_at"`
 	DeactivatedAt string `json:"deactivated_at"`
 }
@@ -173,13 +172,6 @@ type AttemptAnswerRequest struct {
 	ShortInput    string            `json:"short_input,omitempty"`
 }
 
-type MarkProgressRequest struct {
-	EnrollmentID string `json:"enrollment_id"`
-	ElementID    string `json:"element_id"`
-	MarkerType   string `json:"marker_type"`
-	At           string `json:"at,omitempty"`
-}
-
 type MoveBlockRequest struct {
 	From int `json:"from"`
 	To   int `json:"to"`
@@ -192,11 +184,6 @@ type MoveElementRequest struct {
 
 type ChangeCompletionModeRequest struct {
 	CompletionMode string `json:"completion_mode"`
-}
-
-type UnmarkProgressRequest struct {
-	EnrollmentID string `json:"enrollment_id"`
-	ElementID    string `json:"element_id"`
 }
 
 type ProgressResponse struct {

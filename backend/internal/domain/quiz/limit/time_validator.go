@@ -12,11 +12,11 @@ func validateSeconds(seconds int) error {
 
 func validateBoundaries(seconds int) error {
 	if seconds < 0 {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: временное ограничение не может быть отрицательным", ErrInvalid)
 	}
 
 	if seconds > maxSecondsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, maxSecondsCount)
+		return fmt.Errorf("%w: временное ограничение не должно превышать %d секунд", ErrInvalid, maxSecondsCount)
 	}
 
 	return nil

@@ -1,4 +1,3 @@
-import { LogIn } from 'lucide-react'
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../../api/auth'
@@ -30,30 +29,35 @@ export function LoginPage() {
 
   return (
     <main className={styles.page}>
-      <section className={styles.panel}>
-        <div className={styles.heading}>
-          <LogIn aria-hidden="true" />
-          <div>
-            <h1>Вход в LMS</h1>
-            <p>Используйте учетную запись организации.</p>
-          </div>
-        </div>
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <label>
-            Логин
-            <input value={loginValue} onChange={(event) => setLoginValue(event.target.value)} autoComplete="username" />
-          </label>
-          <label>
-            Пароль
-            <input
-              value={password}
-              type="password"
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-            />
-          </label>
+      <section className={styles.shell}>
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          <h2>Вход в систему</h2>
+          <p className={styles.subtitle}>Используйте учетную запись организации</p>
+
+          <label htmlFor="login">Логин</label>
+          <input
+            id="login"
+            value={loginValue}
+            onChange={(event) => setLoginValue(event.target.value)}
+            autoComplete="username"
+            placeholder="Введите логин"
+            required
+          />
+
+          <label htmlFor="password">Пароль</label>
+          <input
+            id="password"
+            value={password}
+            type="password"
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            placeholder="Введите пароль"
+            required
+          />
+
           {error ? <p className={styles.error}>{error}</p> : null}
-          <Button type="submit" disabled={isSubmitting}>
+
+          <Button type="submit" disabled={isSubmitting} className={styles.submit}>
             {isSubmitting ? 'Выполняется вход' : 'Войти'}
           </Button>
         </form>

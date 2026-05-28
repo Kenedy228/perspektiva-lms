@@ -2,4 +2,4 @@ package role
 
 import "errors"
 
-var ErrInvalid = errors.New("invalid role")
+var ErrInvalid = errors.New("некорректная роль")

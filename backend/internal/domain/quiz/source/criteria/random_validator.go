@@ -12,11 +12,11 @@ func validateQuestionCount(count int) error {
 
 func validateQuestionCountBoundaries(count int) error {
 	if count <= 0 {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: количество вопросов должно быть положительным", ErrInvalid)
 	}
 
 	if count > maxQuestionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, maxQuestionsCount)
+		return fmt.Errorf("%w: количество вопросов не должно превышать %d", ErrInvalid, maxQuestionsCount)
 	}
 
 	return nil

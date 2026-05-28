@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	ErrForbidden    = errors.New("question usecase forbidden")
-	ErrInvalidInput = errors.New("question usecase invalid input")
+	ErrForbidden    = errors.New("доступ к вопросу запрещён")
+	ErrInvalidInput = errors.New("некорректные параметры запроса к вопросу")
 )
 
 func RequireAuthor(actor role.Role) error {
@@ -17,6 +17,6 @@ func RequireAuthor(actor role.Role) error {
 	case role.TypeAdmin, role.TypeCreator:
 		return nil
 	default:
-		return fmt.Errorf("%w: only admin or creator can manage questions", ErrForbidden)
+		return fmt.Errorf("%w: управлять вопросами могут только администратор и создатель", ErrForbidden)
 	}
 }

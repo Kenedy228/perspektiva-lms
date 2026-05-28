@@ -59,7 +59,7 @@ func (q *ListQuery) Execute(ctx context.Context, in ListInput) (*ListOutput, err
 			return nil, fmt.Errorf("parse account id: %w", err)
 		}
 		if accountID == uuid.Nil {
-			return nil, fmt.Errorf("%w: account id is required", common.ErrInvalidInput)
+			return nil, fmt.Errorf("%w: идентификатор аккаунта обязателен", common.ErrInvalidInput)
 		}
 		filter.AccountID = accountID
 		views, err := q.s.ListVisibleForStudent(ctx, filter)
@@ -68,6 +68,6 @@ func (q *ListQuery) Execute(ctx context.Context, in ListInput) (*ListOutput, err
 		}
 		return &ListOutput{Views: views}, nil
 	default:
-		return nil, fmt.Errorf("%w: unsupported role", common.ErrForbidden)
+		return nil, fmt.Errorf("%w: роль не поддерживается", common.ErrForbidden)
 	}
 }

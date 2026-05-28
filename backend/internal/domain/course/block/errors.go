@@ -3,5 +3,5 @@ package block
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректный блок курса")
 )

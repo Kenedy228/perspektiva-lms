@@ -122,12 +122,38 @@ func (p *Progress) CompletionPercent(totalTrackedItems int) int {
 	return len(p.markers) * 100 / totalTrackedItems
 }
 
+func (mt MarkerType) Title() string {
+	switch mt {
+	case MarkerRead:
+		return "прочитано"
+	case MarkerWatched:
+		return "просмотрено"
+	case MarkerDownload:
+		return "скачано"
+	case MarkerQuiz:
+		return "тест пройден"
+	default:
+		return ""
+	}
+}
+
+func (mt MarkerType) IsValid() bool {
+	switch mt {
+	case MarkerRead, MarkerWatched, MarkerDownload, MarkerQuiz:
+		return true
+	default:
+		return false
+	}
+}
+
+func (mt MarkerType) String() string { return string(mt) }
+
 func (m Marker) Type() MarkerType       { return m.mType }
 func (m Marker) CompletedAt() time.Time { return m.completedAt }
 
 func validateID(field string, id uuid.UUID) error {
 	if id == uuid.Nil {
-		return fmt.Errorf("%w: %s is required", ErrInvalid, field)
+		return fmt.Errorf("%w: поле %s обязательно", ErrInvalid, field)
 	}
 	return nil
 }
@@ -136,10 +162,10 @@ func validateMarker(markerType MarkerType, at time.Time) error {
 	switch markerType {
 	case MarkerRead, MarkerWatched, MarkerDownload, MarkerQuiz:
 	default:
-		return fmt.Errorf("%w: unknown marker type %q", ErrInvalid, markerType)
+		return fmt.Errorf("%w: неизвестный тип маркера %q", ErrInvalid, markerType)
 	}
 	if at.IsZero() {
-		return fmt.Errorf("%w: marker time is required", ErrInvalid)
+		return fmt.Errorf("%w: время маркера обязательно", ErrInvalid)
 	}
 	return nil
 }

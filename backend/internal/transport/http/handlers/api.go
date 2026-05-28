@@ -106,6 +106,7 @@ type QuestionUseCases struct {
 	ValidateAnswer *questiongrading.ValidateAnswerUseCase
 	Repository     interface {
 		FindByID(rctx context.Context, id uuid.UUID) (questdomain.Question, error)
+		DeleteByID(rctx context.Context, id uuid.UUID) error
 	}
 }
 
@@ -140,9 +141,9 @@ type CourseUseCases struct {
 	RemoveElement        *coursecommands.RemoveElementFromBlockUseCase
 	MoveElement          *coursecommands.MoveBlockElementUseCase
 	ChangeCompletionMode *coursecommands.ChangeElementCompletionModeUseCase
-	Progress             *coursecommands.MarkProgressUseCase
-	UnmarkProgress       *coursecommands.UnmarkElementCompletedUseCase
 	GetProgress          *coursecommands.GetProgressUseCase
+	UploadContent        *coursecommands.UploadElementContentUseCase
+	DownloadContent      *coursecommands.DownloadElementContentUseCase
 	List                 *coursequeries.ListQuery
 	Ratings              *coursequeries.RatingsQuery
 	Statistics           *coursequeries.StudentStatisticsQuery

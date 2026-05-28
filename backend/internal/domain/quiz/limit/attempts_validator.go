@@ -12,11 +12,11 @@ func validateAttemptsCount(count int) error {
 
 func validateAttemptsCountBoundaries(count int) error {
 	if count < 0 {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: количество попыток не может быть отрицательным", ErrInvalid)
 	}
 
 	if count > maxAttemptsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, maxAttemptsCount)
+		return fmt.Errorf("%w: количество попыток не должно превышать %d", ErrInvalid, maxAttemptsCount)
 	}
 
 	return nil

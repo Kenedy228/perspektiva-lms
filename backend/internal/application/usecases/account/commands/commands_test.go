@@ -178,7 +178,7 @@ func TestLifecycleUseCases(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, acc.ID().String(), out.ID)
-		assert.True(t, acc.IsDeleted())
+		assert.True(t, acc.IsBlocked())
 
 		activate := commands.NewActivateUseCase(&r, &a)
 		r.On("FindByID", mock.Anything, acc.ID()).Return(acc, nil).Once()

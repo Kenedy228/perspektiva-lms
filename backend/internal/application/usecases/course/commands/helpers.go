@@ -21,7 +21,7 @@ func parseRequiredUUID(value, field string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("parse %s: %w", field, err)
 	}
 	if id == uuid.Nil {
-		return uuid.Nil, fmt.Errorf("%w: %s is required", common.ErrInvalidInput, field)
+		return uuid.Nil, fmt.Errorf("%w: поле '%s' обязательно", common.ErrInvalidInput, field)
 	}
 	return id, nil
 }
@@ -83,7 +83,7 @@ func buildElementContent(in ElementContentInput) (elementdomain.Content, error) 
 		}
 		return c, nil
 	default:
-		return nil, fmt.Errorf("%w: unknown element content type %q", common.ErrInvalidInput, in.Type)
+		return nil, fmt.Errorf("%w: неизвестный тип содержимого элемента %q", common.ErrInvalidInput, in.Type)
 	}
 }
 
@@ -96,6 +96,6 @@ func completionMode(value string) (elementdomain.CompletionMode, error) {
 	case elementdomain.CompletionModeNone, elementdomain.CompletionModeManual:
 		return mode, nil
 	default:
-		return "", fmt.Errorf("%w: unknown completion mode %q", common.ErrInvalidInput, value)
+		return "", fmt.Errorf("%w: неизвестный режим отслеживания %q", common.ErrInvalidInput, value)
 	}
 }

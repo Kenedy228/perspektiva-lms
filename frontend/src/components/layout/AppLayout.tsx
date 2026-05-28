@@ -1,10 +1,10 @@
-import { BookOpen, Building2, GraduationCap, LayoutDashboard, UsersRound, UserCog } from 'lucide-react'
+import { BookOpen, Building2, Database, GraduationCap, UsersRound, UserCog } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import styles from './AppLayout.module.css'
 
 const navItems = [
-  { to: '/', label: 'Обзор', icon: LayoutDashboard },
   { to: '/courses', label: 'Курсы', icon: BookOpen },
+  { to: '/banks', label: 'Банки вопросов', icon: Database },
   { to: '/organizations', label: 'Организации', icon: Building2 },
   { to: '/people', label: 'Сотрудники', icon: UsersRound },
   { to: '/accounts', label: 'Учетные записи', icon: UserCog },

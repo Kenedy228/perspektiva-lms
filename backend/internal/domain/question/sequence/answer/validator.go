@@ -25,7 +25,7 @@ func validateOptionIDs(optionIDs []OptionID) error {
 
 func validateOptionIDsMaxCount(optionIDs []OptionID) error {
 	if len(optionIDs) > sequence.MaxOptionsCount {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, sequence.MaxOptionsCount)
+		return fmt.Errorf("%w: ответ не может содержать более %d вариантов", ErrInvalid, sequence.MaxOptionsCount)
 	}
 
 	return nil
@@ -35,7 +35,7 @@ func validateOptionIDsDuplicates(optionIDs []OptionID) error {
 	for i := range optionIDs {
 		for j := i + 1; j < len(optionIDs); j++ {
 			if optionIDs[i].ID() == optionIDs[j].ID() {
-				return fmt.Errorf("%w: invalid value", ErrInvalid)
+				return fmt.Errorf("%w: вариант в ответе не должен повторяться", ErrInvalid)
 			}
 		}
 	}
@@ -46,7 +46,7 @@ func validateOptionIDsDuplicates(optionIDs []OptionID) error {
 func validateOptionIDsContainsEmpty(optionIDs []OptionID) error {
 	for i := range optionIDs {
 		if optionIDs[i].ID() == uuid.Nil {
-			return fmt.Errorf("%w: invalid value", ErrInvalid)
+			return fmt.Errorf("%w: идентификатор варианта в ответе не может быть пустым", ErrInvalid)
 		}
 	}
 

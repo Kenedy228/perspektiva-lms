@@ -7,7 +7,6 @@ import (
 	"time"
 
 	courseports "gitflic.ru/lms/backend/internal/application/ports/course"
-	enrollmentports "gitflic.ru/lms/backend/internal/application/ports/enrollment"
 	coursedomain "gitflic.ru/lms/backend/internal/domain/course"
 	"gitflic.ru/lms/backend/internal/domain/course/block"
 	blocktitle "gitflic.ru/lms/backend/internal/domain/course/block/title"
@@ -24,7 +23,6 @@ var (
 	_ courseports.ElementRepository  = (*ElementRepository)(nil)
 	_ courseports.ProgressRepository = (*ProgressRepository)(nil)
 	_ courseports.EnrollmentAccess   = (*CoursePolicy)(nil)
-	_ enrollmentports.VersionPolicy  = (*CoursePolicy)(nil)
 	_ courseports.QueryService       = (*CourseQueryService)(nil)
 )
 
@@ -288,16 +286,6 @@ func (p *CoursePolicy) CanEnrollCourse(ctx context.Context, courseID uuid.UUID) 
 			SELECT 1 FROM courses
 			WHERE id = $1
 		)`, courseID).Scan(&ok)
-	return ok, err
-}
-
-func (p *CoursePolicy) CanEnrollVersion(ctx context.Context, versionID uuid.UUID) (bool, error) {
-	var ok bool
-	err := p.db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM course_version_links
-			WHERE version_id = $1
-		)`, versionID).Scan(&ok)
 	return ok, err
 }
 

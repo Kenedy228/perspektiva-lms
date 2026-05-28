@@ -3,5 +3,5 @@ package source
 import "errors"
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректный источник вопросов")
 )

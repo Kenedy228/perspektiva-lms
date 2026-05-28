@@ -12,11 +12,9 @@ func TestStatus_IsValid(t *testing.T) {
 		s    Status
 		want bool
 	}{
-		{
-			name: "определенное значение",
-			s:    StatusActive,
-			want: true,
-		},
+		{name: "active", s: StatusActive, want: true},
+		{name: "blocked", s: StatusBlocked, want: true},
+		{name: "deleted", s: StatusDeleted, want: true},
 		{
 			name: "неопределенное значение через приведение типов",
 			s:    Status("status"),
@@ -66,11 +64,9 @@ func TestStatus_Title(t *testing.T) {
 		s    Status
 		want string
 	}{
-		{
-			name: "для определенных значений возвращает локализованное значение",
-			s:    StatusActive,
-			want: "активный",
-		},
+		{name: "active", s: StatusActive, want: "активный"},
+		{name: "blocked", s: StatusBlocked, want: "заблокирован"},
+		{name: "deleted", s: StatusDeleted, want: "удалён"},
 		{
 			name: "для неопределенных значений возвращает пустую строку",
 			s:    Status("undefined"),

@@ -92,7 +92,7 @@ func (b *Block) RemoveElementID(id uuid.UUID) error {
 		return err
 	}
 	if !slices.Contains(b.elementIDs, id) {
-		return fmt.Errorf("%w: invalid value (%s)", ErrInvalid, id)
+		return fmt.Errorf("%w: элемент %s не найден в блоке", ErrInvalid, id)
 	}
 	b.elementIDs = slices.DeleteFunc(b.elementIDs, func(current uuid.UUID) bool {
 		return current == id
@@ -102,11 +102,11 @@ func (b *Block) RemoveElementID(id uuid.UUID) error {
 
 func (b *Block) MoveElement(from, to int) error {
 	if from < 0 || from >= len(b.elementIDs) {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: позиция 'from' выходит за границы блока", ErrInvalid)
 	}
 
 	if to < 0 || to >= len(b.elementIDs) {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: позиция 'to' выходит за границы блока", ErrInvalid)
 	}
 
 	if from == to {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	questioncommands "gitflic.ru/lms/backend/internal/application/usecases/question/commands"
+	questioncommon "gitflic.ru/lms/backend/internal/application/usecases/question/common"
 	questiongrading "gitflic.ru/lms/backend/internal/application/usecases/question/grading"
 	questdomain "gitflic.ru/lms/backend/internal/domain/question"
 	matchinganswer "gitflic.ru/lms/backend/internal/domain/question/matching/answer"
@@ -118,6 +119,28 @@ func (api *API) ChangeQuestionContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeOK(w, r, map[string]string{"id": id}, nil)
+}
+
+func (api *API) DeleteQuestion(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	if err := questioncommon.RequireAuthor(actor.role); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	if err := api.Questions.Repository.DeleteByID(r.Context(), id); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeNoContent(w)
 }
 
 func (api *API) GradeQuestion(w http.ResponseWriter, r *http.Request) {

@@ -9,6 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
+type stubOrgScope struct {
+	orgID uuid.UUID
+}
+
+func (s *stubOrgScope) EnrollmentBelongsToPersonOrganization(_ context.Context, _, _ uuid.UUID) (bool, error) {
+	return true, nil
+}
+func (s *stubOrgScope) PersonOrganizationID(_ context.Context, _ uuid.UUID) (uuid.UUID, error) {
+	return s.orgID, nil
+}
+
+func orgScopeWith(orgID uuid.UUID) *stubOrgScope { return &stubOrgScope{orgID: orgID} }
+
 func TestListUsesStudentVisibilityForStudent(t *testing.T) {
 	service := &queryService{views: []courseports.ShortView{{ID: uuid.New().String(), Title: "Course"}}}
 	accountID := uuid.New()
@@ -32,10 +45,19 @@ func TestListUsesStudentVisibilityForStudent(t *testing.T) {
 	}
 }
 
-func TestRatingsRequiresManager(t *testing.T) {
+func TestListRejectsOrganization(t *testing.T) {
+	_, err := NewListQuery(&queryService{}).Execute(context.Background(), ListInput{
+		ActorRole: role.NewOrganization(),
+	})
+	if err == nil {
+		t.Fatal("expected organization to be forbidden from listing courses")
+	}
+}
+
+func TestRatingsRejectsCreator(t *testing.T) {
 	service := &queryService{}
 	_, err := NewRatingsQuery(service).Execute(context.Background(), RatingsInput{
-		ActorRole: role.NewStudent(),
+		ActorRole: role.NewCreator(),
 		CourseID:  uuid.New().String(),
 	})
 	if err == nil {
@@ -48,7 +70,7 @@ func TestStudentStatisticsRoleFilters(t *testing.T) {
 	accountID := uuid.New()
 	organizationID := uuid.New()
 
-	_, err := NewStudentStatisticsQuery(service).Execute(context.Background(), StudentStatisticsInput{
+	_, err := NewStudentStatisticsQuery(service, orgScopeWith(uuid.Nil)).Execute(context.Background(), StudentStatisticsInput{
 		ActorRole: role.NewStudent(),
 		AccountID: accountID.String(),
 	})
@@ -59,8 +81,9 @@ func TestStudentStatisticsRoleFilters(t *testing.T) {
 		t.Fatalf("expected account filter %s, got %s", accountID, service.lastStatsFilter.AccountID)
 	}
 
-	_, err = NewStudentStatisticsQuery(service).Execute(context.Background(), StudentStatisticsInput{
+	_, err = NewStudentStatisticsQuery(service, orgScopeWith(organizationID)).Execute(context.Background(), StudentStatisticsInput{
 		ActorRole:      role.NewOrganization(),
+		ActorPersonID:  uuid.New().String(),
 		OrganizationID: organizationID.String(),
 	})
 	if err != nil {
@@ -70,7 +93,7 @@ func TestStudentStatisticsRoleFilters(t *testing.T) {
 		t.Fatalf("expected organization filter %s, got %s", organizationID, service.lastStatsFilter.OrganizationID)
 	}
 
-	_, err = NewStudentStatisticsQuery(service).Execute(context.Background(), StudentStatisticsInput{
+	_, err = NewStudentStatisticsQuery(service, orgScopeWith(uuid.Nil)).Execute(context.Background(), StudentStatisticsInput{
 		ActorRole: role.NewCreator(),
 	})
 	if err == nil {

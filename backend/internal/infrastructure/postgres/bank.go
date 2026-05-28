@@ -118,18 +118,20 @@ func (r *BankRepository) List(ctx context.Context, filter bankports.Filter) ([]b
 		filter.Limit = 50
 	}
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT b.id::text, b.title, count(bq.question_id)::int
+		SELECT b.id::text, b.title, count(q.id)::int
 		FROM question_banks b
 		LEFT JOIN question_bank_questions bq ON bq.bank_id = b.id
+		LEFT JOIN questions q ON q.id = bq.question_id AND q.deleted_at IS NULL
 		WHERE b.deleted_at IS NULL
 			AND ($1 = '' OR lower(b.title) LIKE lower('%' || $1 || '%'))
 			AND ($2::uuid IS NULL OR EXISTS (
 				SELECT 1 FROM question_bank_questions x
+				JOIN questions xq ON xq.id = x.question_id AND xq.deleted_at IS NULL
 				WHERE x.bank_id = b.id AND x.question_id = $2
 			))
 		GROUP BY b.id, b.title
-		HAVING ($3 = 0 OR count(bq.question_id) >= $3)
-			AND ($4 = 0 OR count(bq.question_id) <= $4)
+		HAVING ($3 = 0 OR count(q.id) >= $3)
+			AND ($4 = 0 OR count(q.id) <= $4)
 		ORDER BY b.title, b.id
 		LIMIT $5 OFFSET $6`,
 		filter.TitleContains, nullUUID(filter.QuestionID), filter.MinQuestions, filter.MaxQuestions, filter.Limit, filter.Offset)
@@ -152,10 +154,10 @@ func (r *BankRepository) List(ctx context.Context, filter bankports.Filter) ([]b
 func (r *BankRepository) GetDetailsByID(ctx context.Context, id uuid.UUID) (bankports.DetailedView, error) {
 	var view bankports.DetailedView
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT b.id::text, b.title, q.id::text
+		SELECT b.id::text, b.title, q.id::text, q.type, q.payload
 		FROM question_banks b
 		LEFT JOIN question_bank_questions bq ON bq.bank_id = b.id
-		LEFT JOIN questions q ON q.id = bq.question_id
+		LEFT JOIN questions q ON q.id = bq.question_id AND q.deleted_at IS NULL
 		WHERE b.id = $1 AND b.deleted_at IS NULL
 		ORDER BY bq.position`, id)
 	if err != nil {
@@ -165,11 +167,52 @@ func (r *BankRepository) GetDetailsByID(ctx context.Context, id uuid.UUID) (bank
 
 	for rows.Next() {
 		var questionID sql.NullString
-		if err := rows.Scan(&view.ID, &view.Title, &questionID); err != nil {
+		var questionType sql.NullString
+		var payload []byte
+		if err := rows.Scan(&view.ID, &view.Title, &questionID, &questionType, &payload); err != nil {
 			return bankports.DetailedView{}, err
 		}
 		if questionID.Valid {
 			view.QuestionIDs = append(view.QuestionIDs, questionID.String)
+			questionView := bankports.QuestionView{
+				ID:   questionID.String,
+				Type: questionType.String,
+			}
+
+			var p questionPayload
+			if len(payload) > 0 {
+				if err := json.Unmarshal(payload, &p); err != nil {
+					return bankports.DetailedView{}, fmt.Errorf("unmarshal bank question payload: %w", err)
+				}
+			}
+			questionView.Title = p.Title
+
+			for _, option := range p.Selectable {
+				questionView.SelectableOptions = append(questionView.SelectableOptions, bankports.SelectableOptionView{
+					ID:        option.ID,
+					Value:     option.Value,
+					IsCorrect: option.IsCorrect,
+				})
+			}
+			for _, option := range p.Sequence {
+				questionView.SequenceOptions = append(questionView.SequenceOptions, bankports.SequenceOptionView{
+					Value: option,
+				})
+			}
+			for _, pair := range p.Matching {
+				questionView.MatchingPairs = append(questionView.MatchingPairs, bankports.MatchingPairView{
+					PromptID:   pair.PromptID,
+					PromptText: pair.PromptText,
+					MatchID:    pair.MatchID,
+					MatchText:  pair.MatchText,
+				})
+			}
+			for _, variant := range p.Short {
+				questionView.ShortVariants = append(questionView.ShortVariants, bankports.ShortVariantView{
+					Value: variant,
+				})
+			}
+			view.Questions = append(view.Questions, questionView)
 		}
 	}
 	if err := rows.Err(); err != nil {

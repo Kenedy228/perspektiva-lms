@@ -5,13 +5,14 @@ type Status string
 
 const (
 	StatusActive  Status = "active"
+	StatusBlocked Status = "blocked"
 	StatusDeleted Status = "deleted"
 )
 
 // IsValid показывает, поддерживается ли в системе статус.
 func (s Status) IsValid() bool {
 	switch s {
-	case StatusActive, StatusDeleted:
+	case StatusActive, StatusBlocked, StatusDeleted:
 		return true
 	default:
 		return false
@@ -23,8 +24,10 @@ func (s Status) Title() string {
 	switch s {
 	case StatusActive:
 		return "активный"
+	case StatusBlocked:
+		return "заблокирован"
 	case StatusDeleted:
-		return "удален"
+		return "удалён"
 	default:
 		return ""
 	}

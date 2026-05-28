@@ -1,7 +1,7 @@
 package education
 
-import "fmt"
+import "errors"
 
 // ErrInvalid базовый sentinel-маркер для всех ошибок валидации сведений об образовании.
 // Используется как корневая ошибка, оборачиваемая через fmt.Errorf("%w: ...").
-var ErrInvalid = fmt.Errorf("некорректные сведения об образовании")
+var ErrInvalid = errors.New("некорректные сведения об образовании")

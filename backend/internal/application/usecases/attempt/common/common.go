@@ -8,14 +8,14 @@ import (
 )
 
 var (
-	ErrForbidden    = errors.New("attempt usecase forbidden")
-	ErrInvalidInput = errors.New("attempt usecase invalid input")
-	ErrLimitReached = errors.New("attempt usecase limit reached")
+	ErrForbidden    = errors.New("доступ к попытке запрещён")
+	ErrInvalidInput = errors.New("некорректные параметры запроса к попытке")
+	ErrLimitReached = errors.New("превышен лимит попыток")
 )
 
 func RequireStudent(actor role.Role) error {
 	if actor.Kind() != role.TypeStudent {
-		return fmt.Errorf("%w: only student can work with quiz attempts", ErrForbidden)
+		return fmt.Errorf("%w: работать с попытками теста может только студент", ErrForbidden)
 	}
 	return nil
 }

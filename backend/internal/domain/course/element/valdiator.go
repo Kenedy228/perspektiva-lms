@@ -9,14 +9,14 @@ import (
 
 func validateID(id uuid.UUID) error {
 	if id == uuid.Nil {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: идентификатор элемента обязателен", ErrInvalid)
 	}
 	return nil
 }
 
 func validateTitle(t title.Title) error {
 	if t.IsZero() {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: название элемента обязательно", ErrInvalid)
 	}
 	return nil
 }
@@ -31,7 +31,7 @@ func validateContent(content Content) error {
 
 func validateRequiredContent(c Content) error {
 	if c == nil {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: содержимое элемента обязательно", ErrInvalid)
 	}
 
 	return nil
@@ -42,6 +42,6 @@ func validateCompletionMode(mode CompletionMode) error {
 	case CompletionModeNone, CompletionModeManual:
 		return nil
 	default:
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: некорректный режим отслеживания", ErrInvalid)
 	}
 }

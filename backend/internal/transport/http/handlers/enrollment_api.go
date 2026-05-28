@@ -34,7 +34,6 @@ func (api *API) CreateEnrollment(w http.ResponseWriter, r *http.Request) {
 	out, err := api.Enrollments.Create.Execute(r.Context(), enrollmentcommands.CreateInput{
 		ActorRole:     actor.role,
 		CourseID:      req.CourseID,
-		VersionID:     req.VersionID,
 		AccountID:     req.AccountID,
 		ActivatedAt:   activatedAt,
 		DeactivatedAt: deactivatedAt,
@@ -61,6 +60,7 @@ func (api *API) ListStudentStatistics(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := api.Courses.Statistics.Execute(r.Context(), coursequeries.StudentStatisticsInput{
 		ActorRole:      actor.role,
+		ActorPersonID:  actor.personID,
 		AccountID:      accountID,
 		OrganizationID: organizationID,
 		Limit:          limit,

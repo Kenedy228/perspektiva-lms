@@ -5,95 +5,60 @@ import (
 	"fmt"
 
 	courseports "gitflic.ru/lms/backend/internal/application/ports/course"
+	enrollmentports "gitflic.ru/lms/backend/internal/application/ports/enrollment"
 	"gitflic.ru/lms/backend/internal/application/usecases/course/common"
 	"github.com/google/uuid"
 )
 
 type MarkProgressUseCase struct {
 	progress courseports.ProgressRepository
+	orgScope enrollmentports.OrganizationScope
 }
 
-func NewMarkProgressUseCase(progress courseports.ProgressRepository) *MarkProgressUseCase {
+func NewMarkProgressUseCase(progress courseports.ProgressRepository, orgScope enrollmentports.OrganizationScope) *MarkProgressUseCase {
 	if progress == nil {
 		panic("course mark progress usecase requires progress repository")
 	}
-	return &MarkProgressUseCase{progress: progress}
+	return &MarkProgressUseCase{progress: progress, orgScope: orgScope}
 }
 
-func (uc *MarkProgressUseCase) Execute(ctx context.Context, in MarkProgressInput) error {
-	if err := common.RequireStudent(in.ActorRole); err != nil {
-		return err
-	}
-	enrollmentID, err := parseRequiredUUID(in.EnrollmentID, "enrollment id")
-	if err != nil {
-		return err
-	}
-	elementID, err := parseRequiredUUID(in.ElementID, "element id")
-	if err != nil {
-		return err
-	}
-	p, err := uc.progress.FindByEnrollmentID(ctx, enrollmentID)
-	if err != nil {
-		return fmt.Errorf("find progress: %w", err)
-	}
-	if err := p.MarkElement(elementID, in.MarkerType, in.At); err != nil {
-		return fmt.Errorf("mark course progress: %w", err)
-	}
-	if err := uc.progress.Save(ctx, p); err != nil {
-		return fmt.Errorf("save progress: %w", err)
-	}
-	return nil
+func (uc *MarkProgressUseCase) Execute(_ context.Context, _ MarkProgressInput) error {
+	return fmt.Errorf("%w: изменение прогресса не разрешено", common.ErrForbidden)
 }
 
 type UnmarkElementCompletedUseCase struct {
 	progress courseports.ProgressRepository
+	orgScope enrollmentports.OrganizationScope
 }
 
-func NewUnmarkElementCompletedUseCase(progress courseports.ProgressRepository) *UnmarkElementCompletedUseCase {
+func NewUnmarkElementCompletedUseCase(progress courseports.ProgressRepository, orgScope enrollmentports.OrganizationScope) *UnmarkElementCompletedUseCase {
 	if progress == nil {
 		panic("course unmark element usecase requires progress repository")
 	}
-	return &UnmarkElementCompletedUseCase{progress: progress}
+	return &UnmarkElementCompletedUseCase{progress: progress, orgScope: orgScope}
 }
 
-func (uc *UnmarkElementCompletedUseCase) Execute(ctx context.Context, in UnmarkElementCompletedInput) error {
-	if err := common.RequireStudent(in.ActorRole); err != nil {
-		return err
-	}
-	enrollmentID, err := parseRequiredUUID(in.EnrollmentID, "enrollment id")
-	if err != nil {
-		return err
-	}
-	elementID, err := parseRequiredUUID(in.ElementID, "element id")
-	if err != nil {
-		return err
-	}
-	p, err := uc.progress.FindByEnrollmentID(ctx, enrollmentID)
-	if err != nil {
-		return fmt.Errorf("find progress: %w", err)
-	}
-	if err := p.UnmarkCompleted(elementID); err != nil {
-		return fmt.Errorf("unmark element: %w", err)
-	}
-	if err := uc.progress.Save(ctx, p); err != nil {
-		return fmt.Errorf("save progress: %w", err)
-	}
-	return nil
+func (uc *UnmarkElementCompletedUseCase) Execute(_ context.Context, _ UnmarkElementCompletedInput) error {
+	return fmt.Errorf("%w: изменение прогресса не разрешено", common.ErrForbidden)
 }
 
 type GetProgressUseCase struct {
 	progress courseports.ProgressRepository
+	orgScope enrollmentports.OrganizationScope
 }
 
-func NewGetProgressUseCase(progress courseports.ProgressRepository) *GetProgressUseCase {
+func NewGetProgressUseCase(progress courseports.ProgressRepository, orgScope enrollmentports.OrganizationScope) *GetProgressUseCase {
 	if progress == nil {
 		panic("course get progress usecase requires progress repository")
 	}
-	return &GetProgressUseCase{progress: progress}
+	return &GetProgressUseCase{progress: progress, orgScope: orgScope}
 }
 
 func (uc *GetProgressUseCase) Execute(ctx context.Context, in GetProgressInput) (*ProgressOutput, error) {
-	if err := common.RequireStudent(in.ActorRole); err != nil {
+	if err := common.RequireProgressAccess(in.ActorRole); err != nil {
+		return nil, err
+	}
+	if err := common.RequireOrganizationScope(ctx, uc.orgScope, in.ActorRole, in.ActorPersonID, in.EnrollmentID); err != nil {
 		return nil, err
 	}
 	enrollmentID, err := parseRequiredUUID(in.EnrollmentID, "enrollment id")
