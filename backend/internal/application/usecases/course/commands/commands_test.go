@@ -83,7 +83,7 @@ func TestCourseBlockElementWorkflow(t *testing.T) {
 func TestMarkProgressUseCase(t *testing.T) {
 	ctx := context.Background()
 	repo := newProgressRepo()
-	p, _ := progress.New(uuid.New(), uuid.New())
+	p, _ := progress.New(uuid.New())
 	repo.item = p
 
 	err := NewMarkProgressUseCase(repo).Execute(ctx, MarkProgressInput{

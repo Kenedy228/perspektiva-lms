@@ -55,7 +55,7 @@ func TestCourseBlockIDsWorkflow(t *testing.T) {
 	}
 }
 
-func TestCourseCompatibilityVersionMethods(t *testing.T) {
+func TestCourseBlockIDsAreImmutableView(t *testing.T) {
 	tValue, err := coursetitle.New("Course")
 	if err != nil {
 		t.Fatalf("new title: %v", err)
@@ -64,21 +64,24 @@ func TestCourseCompatibilityVersionMethods(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new course: %v", err)
 	}
-	id := uuid.New()
+	first := uuid.New()
+	second := uuid.New()
 
-	if err := c.AddVersionID(id); err != nil {
-		t.Fatalf("add version id: %v", err)
+	if err := c.AddBlockID(first); err != nil {
+		t.Fatalf("add first block id: %v", err)
 	}
-	if !c.HasVersion(id) {
-		t.Fatal("expected version to be present")
+	if err := c.AddBlockID(second); err != nil {
+		t.Fatalf("add second block id: %v", err)
 	}
-	if got := c.VersionIDs(); len(got) != 1 || got[0] != id {
-		t.Fatalf("unexpected version ids: %v", got)
+
+	got := c.BlockIDs()
+	got[0] = uuid.New()
+
+	current := c.BlockIDs()
+	if len(current) != 2 {
+		t.Fatalf("unexpected block ids count: %d", len(current))
 	}
-	if err := c.RemoveVersionID(id); err != nil {
-		t.Fatalf("remove version id: %v", err)
-	}
-	if c.HasVersion(id) {
-		t.Fatal("expected version to be removed")
+	if current[0] != first || current[1] != second {
+		t.Fatalf("block ids were mutated through getter: %v", current)
 	}
 }

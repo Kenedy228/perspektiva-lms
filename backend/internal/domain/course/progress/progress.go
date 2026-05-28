@@ -26,15 +26,11 @@ type Marker struct {
 type Progress struct {
 	id           uuid.UUID
 	enrollmentID uuid.UUID
-	versionID    uuid.UUID
 	markers      map[uuid.UUID]Marker
 }
 
-func New(enrollmentID, versionID uuid.UUID) (*Progress, error) {
+func New(enrollmentID uuid.UUID) (*Progress, error) {
 	if err := validateID("enrollmentID", enrollmentID); err != nil {
-		return nil, err
-	}
-	if err := validateID("versionID", versionID); err != nil {
 		return nil, err
 	}
 
@@ -46,19 +42,15 @@ func New(enrollmentID, versionID uuid.UUID) (*Progress, error) {
 	return &Progress{
 		id:           id,
 		enrollmentID: enrollmentID,
-		versionID:    versionID,
 		markers:      make(map[uuid.UUID]Marker),
 	}, nil
 }
 
-func Restore(id, enrollmentID, versionID uuid.UUID, markers map[uuid.UUID]Marker) (*Progress, error) {
+func Restore(id, enrollmentID uuid.UUID, markers map[uuid.UUID]Marker) (*Progress, error) {
 	if err := validateID("id", id); err != nil {
 		return nil, err
 	}
 	if err := validateID("enrollmentID", enrollmentID); err != nil {
-		return nil, err
-	}
-	if err := validateID("versionID", versionID); err != nil {
 		return nil, err
 	}
 	for elementID, marker := range markers {
@@ -73,14 +65,12 @@ func Restore(id, enrollmentID, versionID uuid.UUID, markers map[uuid.UUID]Marker
 	return &Progress{
 		id:           id,
 		enrollmentID: enrollmentID,
-		versionID:    versionID,
 		markers:      maps.Clone(markers),
 	}, nil
 }
 
 func (p *Progress) ID() uuid.UUID           { return p.id }
 func (p *Progress) EnrollmentID() uuid.UUID { return p.enrollmentID }
-func (p *Progress) VersionID() uuid.UUID    { return p.versionID }
 func (p *Progress) Markers() map[uuid.UUID]Marker {
 	return maps.Clone(p.markers)
 }
@@ -99,6 +89,27 @@ func (p *Progress) MarkElement(elementID uuid.UUID, markerType MarkerType, at ti
 
 func (p *Progress) CompletedCount() int {
 	return len(p.markers)
+}
+
+func (p *Progress) MarkCompleted(elementID uuid.UUID) error {
+	return p.MarkElement(elementID, MarkerRead, time.Now().UTC())
+}
+
+func (p *Progress) UnmarkCompleted(elementID uuid.UUID) error {
+	if err := validateID("elementID", elementID); err != nil {
+		return err
+	}
+	delete(p.markers, elementID)
+	return nil
+}
+
+func (p *Progress) IsCompleted(elementID uuid.UUID) bool {
+	_, ok := p.markers[elementID]
+	return ok
+}
+
+func (p *Progress) Percent(totalTrackedItems int) int {
+	return p.CompletionPercent(totalTrackedItems)
 }
 
 func (p *Progress) CompletionPercent(totalTrackedItems int) int {

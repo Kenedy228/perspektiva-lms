@@ -33,5 +33,5 @@ type ProgressRepository interface {
 
 type EnrollmentAccess interface {
 	CanViewCourse(ctx context.Context, accountID, courseID uuid.UUID, at time.Time) (bool, error)
-	CanEnrollVersion(ctx context.Context, versionID uuid.UUID) (bool, error)
+	CanEnrollCourse(ctx context.Context, courseID uuid.UUID) (bool, error)
 }

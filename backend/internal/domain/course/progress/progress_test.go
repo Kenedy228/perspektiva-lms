@@ -9,7 +9,7 @@ import (
 )
 
 func TestProgressMarkersAndCompletion(t *testing.T) {
-	p, err := New(uuid.New(), uuid.New())
+	p, err := New(uuid.New())
 	if err != nil {
 		t.Fatalf("create progress: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestProgressMarkersAndCompletion(t *testing.T) {
 }
 
 func TestProgressRejectsInvalidMarker(t *testing.T) {
-	p, err := New(uuid.New(), uuid.New())
+	p, err := New(uuid.New())
 	if err != nil {
 		t.Fatalf("create progress: %v", err)
 	}
@@ -35,5 +35,26 @@ func TestProgressRejectsInvalidMarker(t *testing.T) {
 	err = p.MarkElement(uuid.New(), MarkerType("unknown"), time.Now())
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected invalid marker, got %v", err)
+	}
+}
+
+func TestProgressMarkUnmarkAndCheckCompleted(t *testing.T) {
+	p, err := New(uuid.New())
+	if err != nil {
+		t.Fatalf("create progress: %v", err)
+	}
+
+	elementID := uuid.New()
+	if err := p.MarkCompleted(elementID); err != nil {
+		t.Fatalf("mark completed: %v", err)
+	}
+	if !p.IsCompleted(elementID) {
+		t.Fatal("expected element to be completed")
+	}
+	if err := p.UnmarkCompleted(elementID); err != nil {
+		t.Fatalf("unmark completed: %v", err)
+	}
+	if p.IsCompleted(elementID) {
+		t.Fatal("expected element to be not completed")
 	}
 }

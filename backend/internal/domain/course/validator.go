@@ -23,8 +23,8 @@ func validateTitle(t title.Title) error {
 }
 
 func validateBlockIDs(ids []uuid.UUID) error {
-	if len(ids) > versionsLimit {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, versionsLimit)
+	if len(ids) > blocksLimit {
+		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, blocksLimit)
 	}
 	for i := range ids {
 		if ids[i] == uuid.Nil {
@@ -41,10 +41,6 @@ func validateBlockIDs(ids []uuid.UUID) error {
 	return nil
 }
 
-func validateRequiredVersionID(id uuid.UUID) error {
-	return validateRequiredBlockID(id)
-}
-
 func validateRequiredBlockID(id uuid.UUID) error {
 	if id == uuid.Nil {
 		return fmt.Errorf("%w: invalid value", ErrInvalid)
@@ -54,8 +50,8 @@ func validateRequiredBlockID(id uuid.UUID) error {
 }
 
 func validateBlockIDsLimit(ids []uuid.UUID) error {
-	if len(ids) >= versionsLimit {
-		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, versionsLimit)
+	if len(ids) >= blocksLimit {
+		return fmt.Errorf("%w: invalid value (%d)", ErrInvalid, blocksLimit)
 	}
 
 	return nil
@@ -67,16 +63,4 @@ func validateBlockIDsDuplication(target uuid.UUID, ids []uuid.UUID) error {
 	}
 
 	return nil
-}
-
-func validateVersionIDs(ids []uuid.UUID) error {
-	return validateBlockIDs(ids)
-}
-
-func validateVersionIDsLimit(ids []uuid.UUID) error {
-	return validateBlockIDsLimit(ids)
-}
-
-func validateVersionIDsDuplication(target uuid.UUID, ids []uuid.UUID) error {
-	return validateBlockIDsDuplication(target, ids)
 }

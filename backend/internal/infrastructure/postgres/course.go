@@ -208,10 +208,6 @@ func (r *ProgressRepository) FindByEnrollmentID(ctx context.Context, enrollmentI
 		SELECT id FROM course_progress WHERE enrollment_id = $1`, enrollmentID).Scan(&id); err != nil {
 		return nil, err
 	}
-	versionID, err := r.findEnrollmentVersionID(ctx, enrollmentID)
-	if err != nil {
-		return nil, err
-	}
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT element_id, marker_type, completed_at
 		FROM course_progress_markers
@@ -228,7 +224,7 @@ func (r *ProgressRepository) FindByEnrollmentID(ctx context.Context, enrollmentI
 		if err := rows.Scan(&elementID, &markerType, &completedAt); err != nil {
 			return nil, err
 		}
-		p, err := progress.New(enrollmentID, versionID)
+		p, err := progress.New(enrollmentID)
 		if err != nil {
 			return nil, err
 		}
@@ -237,7 +233,7 @@ func (r *ProgressRepository) FindByEnrollmentID(ctx context.Context, enrollmentI
 		}
 		markers[elementID] = p.Markers()[elementID]
 	}
-	return progress.Restore(id, enrollmentID, versionID, markers)
+	return progress.Restore(id, enrollmentID, markers)
 }
 
 func (r *ProgressRepository) Save(ctx context.Context, p *progress.Progress) error {
@@ -268,17 +264,6 @@ func (r *ProgressRepository) Save(ctx context.Context, p *progress.Progress) err
 	return tx.Commit()
 }
 
-func (r *ProgressRepository) findEnrollmentVersionID(ctx context.Context, enrollmentID uuid.UUID) (uuid.UUID, error) {
-	var versionID uuid.UUID
-	if err := r.db.QueryRowContext(ctx, `
-		SELECT version_id
-		FROM enrollments
-		WHERE id = $1`, enrollmentID).Scan(&versionID); err != nil {
-		return uuid.Nil, fmt.Errorf("find enrollment version id: %w", err)
-	}
-	return versionID, nil
-}
-
 // CoursePolicy implements course access checks from enrollment/version state.
 type CoursePolicy struct{ db *sql.DB }
 
@@ -295,13 +280,13 @@ func (p *CoursePolicy) CanViewCourse(ctx context.Context, accountID, courseID uu
 	return ok, err
 }
 
-func (p *CoursePolicy) CanEnrollVersion(ctx context.Context, versionID uuid.UUID) (bool, error) {
+func (p *CoursePolicy) CanEnrollCourse(ctx context.Context, courseID uuid.UUID) (bool, error) {
 	var ok bool
 	err := p.db.QueryRowContext(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM course_versions
-			WHERE id = $1 AND status = 'published'
-		)`, versionID).Scan(&ok)
+			SELECT 1 FROM courses
+			WHERE id = $1
+		)`, courseID).Scan(&ok)
 	return ok, err
 }
 
@@ -320,30 +305,14 @@ func (q *CourseQueryService) ListVisibleForStudent(ctx context.Context, filter c
 
 func (q *CourseQueryService) GetDetailsByID(ctx context.Context, id uuid.UUID) (courseports.DetailedView, error) {
 	var view courseports.DetailedView
-	rows, err := q.db.QueryContext(ctx, `
-		SELECT c.id::text, c.title, v.id::text, v.title, v.status
+	err := q.db.QueryRowContext(ctx, `
+		SELECT c.id::text, c.title
 		FROM courses c
-		LEFT JOIN course_version_links l ON l.course_id = c.id
-		LEFT JOIN course_versions v ON v.id = l.version_id
-		WHERE c.id = $1
-		ORDER BY l.position`, id)
+		WHERE c.id = $1`, id).Scan(&view.ID, &view.Title)
 	if err != nil {
 		return courseports.DetailedView{}, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var versionID, versionTitle, status sql.NullString
-		if err := rows.Scan(&view.ID, &view.Title, &versionID, &versionTitle, &status); err != nil {
-			return courseports.DetailedView{}, err
-		}
-		if versionID.Valid {
-			view.Versions = append(view.Versions, courseports.VersionView{ID: versionID.String, Title: versionTitle.String, Status: status.String})
-		}
-	}
-	if view.ID == "" {
-		return courseports.DetailedView{}, sql.ErrNoRows
-	}
-	return view, rows.Err()
+	return view, nil
 }
 
 func (q *CourseQueryService) ListRatings(ctx context.Context, courseID uuid.UUID, limit, offset int) ([]courseports.StudentRatingView, error) {
@@ -361,19 +330,17 @@ func (q *CourseQueryService) listCourses(ctx context.Context, filter courseports
 	}
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT c.id::text, c.title,
-			bool_or(v.status = 'published') AS published,
-			count(v.id)::int AS versions_count
+			true AS published,
+			count(cbl.block_id)::int AS blocks_count
 		FROM courses c
-		LEFT JOIN course_version_links l ON l.course_id = c.id
-		LEFT JOIN course_versions v ON v.id = l.version_id
+		LEFT JOIN course_blocks_links cbl ON cbl.course_id = c.id
 		WHERE ($1 = '' OR lower(c.title) LIKE lower('%%' || $1 || '%%'))
-			AND ($2 = '' OR v.status = $2)
 			AND ($3::uuid IS NULL OR EXISTS (
 				SELECT 1 FROM enrollments e WHERE e.course_id = c.id AND e.account_id = $3
 			))
 		GROUP BY c.id, c.title
 		ORDER BY c.title, c.id
-		LIMIT $4 OFFSET $5`, filter.TitleContains, filter.Status, nullUUID(visibleAccountID), filter.Limit, filter.Offset)
+		LIMIT $4 OFFSET $5`, filter.TitleContains, nullUUID(visibleAccountID), filter.Limit, filter.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +348,7 @@ func (q *CourseQueryService) listCourses(ctx context.Context, filter courseports
 	var views []courseports.ShortView
 	for rows.Next() {
 		var view courseports.ShortView
-		if err := rows.Scan(&view.ID, &view.Title, &view.Published, &view.VersionsCount); err != nil {
+		if err := rows.Scan(&view.ID, &view.Title, &view.Published, &view.BlocksCount); err != nil {
 			return nil, err
 		}
 		views = append(views, view)
@@ -394,7 +361,7 @@ func (q *CourseQueryService) listStudentStatistics(ctx context.Context, filter c
 		filter.Limit = 50
 	}
 	rows, err := q.db.QueryContext(ctx, `
-		SELECT e.account_id::text, e.id::text, e.course_id::text, e.version_id::text,
+		SELECT e.account_id::text, e.id::text, e.course_id::text,
 			CASE WHEN cp.total_elements = 0 THEN 0 ELSE (cp.completed_elements * 100 / cp.total_elements)::int END,
 			cp.completed_elements, cp.total_elements
 		FROM enrollments e
@@ -413,7 +380,7 @@ func (q *CourseQueryService) listStudentStatistics(ctx context.Context, filter c
 	var views []courseports.StudentRatingView
 	for rows.Next() {
 		var view courseports.StudentRatingView
-		if err := rows.Scan(&view.AccountID, &view.EnrollmentID, &view.CourseID, &view.VersionID, &view.CompletionPercent, &view.CompletedItems, &view.TotalItems); err != nil {
+		if err := rows.Scan(&view.AccountID, &view.EnrollmentID, &view.CourseID, &view.CompletionPercent, &view.CompletedItems, &view.TotalItems); err != nil {
 			return nil, err
 		}
 		views = append(views, view)

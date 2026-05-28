@@ -1,5 +1,5 @@
 package course
 
 const (
-	versionsLimit int = 10
+	blocksLimit int = 10
 )

@@ -1,29 +1,21 @@
 package course
 
 type ShortView struct {
-	ID            string
-	Title         string
-	Published     bool
-	VersionsCount int
+	ID          string
+	Title       string
+	Published   bool
+	BlocksCount int
 }
 
 type DetailedView struct {
-	ID       string
-	Title    string
-	Versions []VersionView
-}
-
-type VersionView struct {
-	ID     string
-	Title  string
-	Status string
+	ID    string
+	Title string
 }
 
 type StudentRatingView struct {
 	AccountID         string
 	EnrollmentID      string
 	CourseID          string
-	VersionID         string
 	CompletionPercent int
 	CompletedItems    int
 	TotalItems        int

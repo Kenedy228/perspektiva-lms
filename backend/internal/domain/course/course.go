@@ -124,27 +124,3 @@ func (c *Course) Clone() *Course {
 		blockIDs: slices.Clone(c.blockIDs),
 	}
 }
-
-// VersionIDs is kept as a compatibility adapter while use-cases and repositories
-// still use version-centric naming.
-func (c *Course) VersionIDs() []uuid.UUID {
-	return c.BlockIDs()
-}
-
-// AddVersionID is kept as a compatibility adapter while use-cases and repositories
-// still use version-centric naming.
-func (c *Course) AddVersionID(versionID uuid.UUID) error {
-	return c.AddBlockID(versionID)
-}
-
-// RemoveVersionID is kept as a compatibility adapter while use-cases and repositories
-// still use version-centric naming.
-func (c *Course) RemoveVersionID(versionID uuid.UUID) error {
-	return c.RemoveBlockID(versionID)
-}
-
-// HasVersion is kept as a compatibility adapter while use-cases and repositories
-// still use version-centric naming.
-func (c *Course) HasVersion(versionID uuid.UUID) bool {
-	return slices.Contains(c.blockIDs, versionID)
-}
