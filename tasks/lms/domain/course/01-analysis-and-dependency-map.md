@@ -16,7 +16,7 @@
 ## Результат
 - docs/refactoring/course-module-refactoring-plan.md
 
-Прочитай файл `tasks/lms/domain/course/013.md` и выполни все задачи, описанные в нём.
+Прочитай файл `tasks/lms/domain/course/final/02-remove-version-from-progress.md` и выполни все задачи, описанные в нём.
 
 Работай строго на основе текущей кодовой базы `perspektiva-lms`.
 

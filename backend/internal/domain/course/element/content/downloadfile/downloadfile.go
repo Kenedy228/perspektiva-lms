@@ -8,8 +8,11 @@ import (
 )
 
 var allowedExtensions = map[string]struct{}{
+	".doc":  {},
 	".docx": {},
+	".ppt":  {},
 	".pptx": {},
+	".xls":  {},
 	".xlsx": {},
 	".pdf":  {},
 	".txt":  {},
@@ -22,6 +25,10 @@ var allowedExtensions = map[string]struct{}{
 	".webp": {},
 	".bmp":  {},
 	".svg":  {},
+	".avi":  {},
+	".mov":  {},
+	".mkv":  {},
+	".flv":  {},
 }
 
 type Content struct {
