@@ -5,6 +5,7 @@ import (
 
 	"gitflic.ru/lms/backend/internal/domain/course/progress"
 	"gitflic.ru/lms/backend/internal/domain/role"
+	"github.com/google/uuid"
 )
 
 type CreateCourseInput struct {
@@ -29,6 +30,12 @@ type AddBlockToCourseInput struct {
 	Title     string
 }
 
+type RemoveBlockFromCourseInput struct {
+	ActorRole role.Role
+	CourseID  string
+	BlockID   string
+}
+
 type MoveCourseBlockInput struct {
 	ActorRole role.Role
 	CourseID  string
@@ -43,11 +50,23 @@ type AddElementToBlockInput struct {
 	Content   ElementContentInput
 }
 
+type RemoveElementFromBlockInput struct {
+	ActorRole role.Role
+	BlockID   string
+	ElementID string
+}
+
 type MoveBlockElementInput struct {
 	ActorRole role.Role
 	BlockID   string
 	From      int
 	To        int
+}
+
+type ChangeElementCompletionModeInput struct {
+	ActorRole      role.Role
+	ElementID      string
+	CompletionMode string
 }
 
 type ElementContentInput struct {
@@ -64,6 +83,23 @@ type MarkProgressInput struct {
 	ElementID    string
 	MarkerType   progress.MarkerType
 	At           time.Time
+}
+
+type UnmarkElementCompletedInput struct {
+	ActorRole    role.Role
+	EnrollmentID string
+	ElementID    string
+}
+
+type GetProgressInput struct {
+	ActorRole    role.Role
+	EnrollmentID string
+}
+
+type ProgressOutput struct {
+	CompletedCount      int
+	Percent             int
+	CompletedElementIDs []uuid.UUID
 }
 
 type Output struct {

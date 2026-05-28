@@ -179,8 +179,8 @@ func (r *ElementRepository) Save(ctx context.Context, e *element.Element) error 
 		quizIDValue = quizID
 	}
 	_, err = r.db.ExecContext(ctx, `
-		INSERT INTO course_elements (id, type, title, object_key, quiz_id, payload, completion_mode, requires_read_marker, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+		INSERT INTO course_elements (id, type, title, object_key, quiz_id, payload, completion_mode, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 		ON CONFLICT (id) DO UPDATE SET
 			type = EXCLUDED.type,
 			title = EXCLUDED.title,
@@ -188,9 +188,8 @@ func (r *ElementRepository) Save(ctx context.Context, e *element.Element) error 
 			quiz_id = EXCLUDED.quiz_id,
 			payload = EXCLUDED.payload,
 			completion_mode = EXCLUDED.completion_mode,
-			requires_read_marker = EXCLUDED.requires_read_marker,
 			updated_at = now()`,
-		e.ID(), storageType, e.Title().Value(), nullString(objectKey), quizIDValue, payload, e.CompletionMode().String(), e.IsTrackable())
+		e.ID(), storageType, e.Title().Value(), nullString(objectKey), quizIDValue, payload, e.CompletionMode().String())
 	if err != nil {
 		return fmt.Errorf("save element: %w", err)
 	}

@@ -186,3 +186,29 @@ type MarkProgressRequest struct {
 	MarkerType   string `json:"marker_type"`
 	At           string `json:"at,omitempty"`
 }
+
+type MoveBlockRequest struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+type MoveElementRequest struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+type ChangeCompletionModeRequest struct {
+	CompletionMode string `json:"completion_mode"`
+}
+
+type UnmarkProgressRequest struct {
+	EnrollmentID string `json:"enrollment_id"`
+	ElementID    string `json:"element_id"`
+}
+
+type ProgressResponse struct {
+	EnrollmentID        string   `json:"enrollment_id"`
+	CompletedCount      int      `json:"completed_count"`
+	Percent             int      `json:"percent"`
+	CompletedElementIDs []string `json:"completed_element_ids"`
+}

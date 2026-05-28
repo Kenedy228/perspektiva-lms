@@ -1,2 +1,2 @@
-// Package course models course structure, versions, content, progress, ratings, and course use cases.
+// Package course defines ports (repository, query, storage, views) for course, block, element, and progress aggregates.
 package course

@@ -54,6 +54,42 @@ func (uc *AddBlockToCourseUseCase) Execute(ctx context.Context, in AddBlockToCou
 	return &Output{ID: b.ID().String()}, nil
 }
 
+type RemoveBlockFromCourseUseCase struct {
+	courses courseports.CourseRepository
+}
+
+func NewRemoveBlockFromCourseUseCase(courses courseports.CourseRepository) *RemoveBlockFromCourseUseCase {
+	if courses == nil {
+		panic("course remove block usecase requires course repository")
+	}
+	return &RemoveBlockFromCourseUseCase{courses: courses}
+}
+
+func (uc *RemoveBlockFromCourseUseCase) Execute(ctx context.Context, in RemoveBlockFromCourseInput) error {
+	if err := common.RequireManager(in.ActorRole); err != nil {
+		return err
+	}
+	courseID, err := parseRequiredUUID(in.CourseID, "course id")
+	if err != nil {
+		return err
+	}
+	blockID, err := parseRequiredUUID(in.BlockID, "block id")
+	if err != nil {
+		return err
+	}
+	c, err := uc.courses.FindByID(ctx, courseID)
+	if err != nil {
+		return fmt.Errorf("find course: %w", err)
+	}
+	if err := c.RemoveBlockID(blockID); err != nil {
+		return fmt.Errorf("remove course block: %w", err)
+	}
+	if err := uc.courses.Save(ctx, c); err != nil {
+		return fmt.Errorf("save course: %w", err)
+	}
+	return nil
+}
+
 type MoveCourseBlockUseCase struct {
 	courses courseports.CourseRepository
 }
@@ -141,6 +177,42 @@ func (uc *AddElementToBlockUseCase) Execute(ctx context.Context, in AddElementTo
 	return &Output{ID: e.ID().String()}, nil
 }
 
+type RemoveElementFromBlockUseCase struct {
+	blocks courseports.BlockRepository
+}
+
+func NewRemoveElementFromBlockUseCase(blocks courseports.BlockRepository) *RemoveElementFromBlockUseCase {
+	if blocks == nil {
+		panic("course remove element usecase requires block repository")
+	}
+	return &RemoveElementFromBlockUseCase{blocks: blocks}
+}
+
+func (uc *RemoveElementFromBlockUseCase) Execute(ctx context.Context, in RemoveElementFromBlockInput) error {
+	if err := common.RequireManager(in.ActorRole); err != nil {
+		return err
+	}
+	blockID, err := parseRequiredUUID(in.BlockID, "block id")
+	if err != nil {
+		return err
+	}
+	elementID, err := parseRequiredUUID(in.ElementID, "element id")
+	if err != nil {
+		return err
+	}
+	b, err := uc.blocks.FindByID(ctx, blockID)
+	if err != nil {
+		return fmt.Errorf("find block: %w", err)
+	}
+	if err := b.RemoveElementID(elementID); err != nil {
+		return fmt.Errorf("remove block element: %w", err)
+	}
+	if err := uc.blocks.Save(ctx, b); err != nil {
+		return fmt.Errorf("save block: %w", err)
+	}
+	return nil
+}
+
 type MoveBlockElementUseCase struct {
 	blocks courseports.BlockRepository
 }
@@ -169,6 +241,44 @@ func (uc *MoveBlockElementUseCase) Execute(ctx context.Context, in MoveBlockElem
 	}
 	if err := uc.blocks.Save(ctx, b); err != nil {
 		return fmt.Errorf("save block: %w", err)
+	}
+	return nil
+}
+
+type ChangeElementCompletionModeUseCase struct {
+	elements courseports.ElementRepository
+}
+
+func NewChangeElementCompletionModeUseCase(elements courseports.ElementRepository) *ChangeElementCompletionModeUseCase {
+	if elements == nil {
+		panic("course change element completion mode usecase requires element repository")
+	}
+	return &ChangeElementCompletionModeUseCase{elements: elements}
+}
+
+func (uc *ChangeElementCompletionModeUseCase) Execute(ctx context.Context, in ChangeElementCompletionModeInput) error {
+	if err := common.RequireManager(in.ActorRole); err != nil {
+		return err
+	}
+	elementID, err := parseRequiredUUID(in.ElementID, "element id")
+	if err != nil {
+		return err
+	}
+	mode := elementdomain.CompletionMode(in.CompletionMode)
+	switch mode {
+	case elementdomain.CompletionModeNone, elementdomain.CompletionModeManual:
+	default:
+		return fmt.Errorf("%w: unknown completion mode %q", common.ErrInvalidInput, in.CompletionMode)
+	}
+	e, err := uc.elements.FindByID(ctx, elementID)
+	if err != nil {
+		return fmt.Errorf("find element: %w", err)
+	}
+	if err := e.ChangeCompletionMode(mode); err != nil {
+		return fmt.Errorf("change element completion mode: %w", err)
+	}
+	if err := uc.elements.Save(ctx, e); err != nil {
+		return fmt.Errorf("save element: %w", err)
 	}
 	return nil
 }

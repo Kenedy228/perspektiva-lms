@@ -134,15 +134,22 @@ type attemptReader interface {
 }
 
 type CourseUseCases struct {
-	Create     *coursecommands.CreateCourseUseCase
-	Rename     *coursecommands.RenameCourseUseCase
-	AddBlock   *coursecommands.AddBlockToCourseUseCase
-	AddElement *coursecommands.AddElementToBlockUseCase
-	Progress   *coursecommands.MarkProgressUseCase
-	List       *coursequeries.ListQuery
-	Ratings    *coursequeries.RatingsQuery
-	Statistics *coursequeries.StudentStatisticsQuery
-	Query      courseports.QueryService
+	Create               *coursecommands.CreateCourseUseCase
+	Rename               *coursecommands.RenameCourseUseCase
+	AddBlock             *coursecommands.AddBlockToCourseUseCase
+	RemoveBlock          *coursecommands.RemoveBlockFromCourseUseCase
+	MoveBlock            *coursecommands.MoveCourseBlockUseCase
+	AddElement           *coursecommands.AddElementToBlockUseCase
+	RemoveElement        *coursecommands.RemoveElementFromBlockUseCase
+	MoveElement          *coursecommands.MoveBlockElementUseCase
+	ChangeCompletionMode *coursecommands.ChangeElementCompletionModeUseCase
+	Progress             *coursecommands.MarkProgressUseCase
+	UnmarkProgress       *coursecommands.UnmarkElementCompletedUseCase
+	GetProgress          *coursecommands.GetProgressUseCase
+	List                 *coursequeries.ListQuery
+	Ratings              *coursequeries.RatingsQuery
+	Statistics           *coursequeries.StudentStatisticsQuery
+	Query                courseports.QueryService
 }
 
 type EnrollmentUseCases struct {

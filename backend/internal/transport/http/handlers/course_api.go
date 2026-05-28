@@ -110,6 +110,46 @@ func (api *API) AddCourseBlock(w http.ResponseWriter, r *http.Request) {
 	writeCreated(w, "/course-blocks", out.ID)
 }
 
+func (api *API) RemoveCourseBlock(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	if err := api.Courses.RemoveBlock.Execute(r.Context(), coursecommands.RemoveBlockFromCourseInput{
+		ActorRole: actor.role,
+		CourseID:  r.PathValue("courseID"),
+		BlockID:   r.PathValue("blockID"),
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeNoContent(w)
+}
+
+func (api *API) MoveCourseBlock(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	var req MoveBlockRequest
+	if err := response.DecodeJSON(r, &req); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
+		return
+	}
+	if err := api.Courses.MoveBlock.Execute(r.Context(), coursecommands.MoveCourseBlockInput{
+		ActorRole: actor.role,
+		CourseID:  r.PathValue("courseID"),
+		From:      req.From,
+		To:        req.To,
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, map[string]string{"course_id": r.PathValue("courseID")}, nil)
+}
+
 func (api *API) AddBlockElement(w http.ResponseWriter, r *http.Request) {
 	actor, ok := actorRole(r)
 	if !ok {
@@ -138,6 +178,68 @@ func (api *API) AddBlockElement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeCreated(w, "/course-elements", out.ID)
+}
+
+func (api *API) RemoveBlockElement(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	if err := api.Courses.RemoveElement.Execute(r.Context(), coursecommands.RemoveElementFromBlockInput{
+		ActorRole: actor.role,
+		BlockID:   r.PathValue("blockID"),
+		ElementID: r.PathValue("elementID"),
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeNoContent(w)
+}
+
+func (api *API) MoveBlockElement(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	var req MoveElementRequest
+	if err := response.DecodeJSON(r, &req); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
+		return
+	}
+	if err := api.Courses.MoveElement.Execute(r.Context(), coursecommands.MoveBlockElementInput{
+		ActorRole: actor.role,
+		BlockID:   r.PathValue("blockID"),
+		From:      req.From,
+		To:        req.To,
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, map[string]string{"block_id": r.PathValue("blockID")}, nil)
+}
+
+func (api *API) ChangeElementCompletionMode(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	var req ChangeCompletionModeRequest
+	if err := response.DecodeJSON(r, &req); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
+		return
+	}
+	if err := api.Courses.ChangeCompletionMode.Execute(r.Context(), coursecommands.ChangeElementCompletionModeInput{
+		ActorRole:      actor.role,
+		ElementID:      r.PathValue("elementID"),
+		CompletionMode: req.CompletionMode,
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, map[string]string{"element_id": r.PathValue("elementID")}, nil)
 }
 
 func (api *API) MarkCourseProgress(w http.ResponseWriter, r *http.Request) {
@@ -174,6 +276,55 @@ func (api *API) MarkCourseProgress(w http.ResponseWriter, r *http.Request) {
 		"course_id":     r.PathValue("courseID"),
 		"enrollment_id": req.EnrollmentID,
 		"element_id":    req.ElementID,
+	}, nil)
+}
+
+func (api *API) UnmarkCourseProgress(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	var req UnmarkProgressRequest
+	if err := response.DecodeJSON(r, &req); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusBadRequest, "invalid_json", "request body is invalid"))
+		return
+	}
+	if err := api.Courses.UnmarkProgress.Execute(r.Context(), coursecommands.UnmarkElementCompletedInput{
+		ActorRole:    actor.role,
+		EnrollmentID: req.EnrollmentID,
+		ElementID:    req.ElementID,
+	}); err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeNoContent(w)
+}
+
+func (api *API) GetCourseProgress(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	enrollmentID := r.URL.Query().Get("enrollment_id")
+	out, err := api.Courses.GetProgress.Execute(r.Context(), coursecommands.GetProgressInput{
+		ActorRole:    actor.role,
+		EnrollmentID: enrollmentID,
+	})
+	if err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	elementStrs := make([]string, len(out.CompletedElementIDs))
+	for i, eid := range out.CompletedElementIDs {
+		elementStrs[i] = eid.String()
+	}
+	writeOK(w, r, ProgressResponse{
+		EnrollmentID:        enrollmentID,
+		CompletedCount:      out.CompletedCount,
+		Percent:             out.Percent,
+		CompletedElementIDs: elementStrs,
 	}, nil)
 }
 

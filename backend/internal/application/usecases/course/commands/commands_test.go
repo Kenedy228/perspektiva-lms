@@ -10,9 +10,12 @@ import (
 	"gitflic.ru/lms/backend/internal/domain/course/block"
 	blocktitle "gitflic.ru/lms/backend/internal/domain/course/block/title"
 	elementdomain "gitflic.ru/lms/backend/internal/domain/course/element"
+	downloadfilecontent "gitflic.ru/lms/backend/internal/domain/course/element/content/downloadfile"
+	elementtitle "gitflic.ru/lms/backend/internal/domain/course/element/title"
 	"gitflic.ru/lms/backend/internal/domain/course/progress"
 	"gitflic.ru/lms/backend/internal/domain/course/title"
 	"gitflic.ru/lms/backend/internal/domain/role"
+	"gitflic.ru/lms/backend/internal/domain/shared/file"
 	"github.com/google/uuid"
 )
 
@@ -366,6 +369,172 @@ func TestMarkProgressUseCase(t *testing.T) {
 	}
 	if repo.saved.CompletedCount() != 1 {
 		t.Fatalf("expected one marker, got %d", repo.saved.CompletedCount())
+	}
+}
+
+func TestRemoveBlockFromCourseSuccess(t *testing.T) {
+	ctx := context.Background()
+	courses := newCourseRepo()
+	tValue, _ := title.New("Course")
+	c, _ := coursedomain.New(tValue)
+	blockID := uuid.New()
+	_ = c.AddBlockID(blockID)
+	_ = courses.Save(ctx, c)
+
+	err := NewRemoveBlockFromCourseUseCase(courses).Execute(ctx, RemoveBlockFromCourseInput{
+		ActorRole: role.NewAdmin(),
+		CourseID:  c.ID().String(),
+		BlockID:   blockID.String(),
+	})
+	if err != nil {
+		t.Fatalf("remove block: %v", err)
+	}
+	updated, _ := courses.FindByID(ctx, c.ID())
+	if len(updated.BlockIDs()) != 0 {
+		t.Fatalf("expected 0 blocks, got %d", len(updated.BlockIDs()))
+	}
+}
+
+func TestRemoveBlockFromCourseRejectsStudent(t *testing.T) {
+	err := NewRemoveBlockFromCourseUseCase(newCourseRepo()).Execute(context.Background(), RemoveBlockFromCourseInput{
+		ActorRole: role.NewStudent(),
+		CourseID:  uuid.New().String(),
+		BlockID:   uuid.New().String(),
+	})
+	if err == nil {
+		t.Fatal("expected forbidden error")
+	}
+}
+
+func TestRemoveElementFromBlockSuccess(t *testing.T) {
+	ctx := context.Background()
+	blocks := newBlockRepo()
+	b, _ := block.New(mustBlockTitle(t, "Block"))
+	elementID := uuid.New()
+	_ = b.AddElementID(elementID)
+	_ = blocks.Save(ctx, b)
+
+	err := NewRemoveElementFromBlockUseCase(blocks).Execute(ctx, RemoveElementFromBlockInput{
+		ActorRole: role.NewAdmin(),
+		BlockID:   b.ID().String(),
+		ElementID: elementID.String(),
+	})
+	if err != nil {
+		t.Fatalf("remove element: %v", err)
+	}
+	updated, _ := blocks.FindByID(ctx, b.ID())
+	if len(updated.ElementIDs()) != 0 {
+		t.Fatalf("expected 0 elements, got %d", len(updated.ElementIDs()))
+	}
+}
+
+func TestRemoveElementFromBlockRejectsStudent(t *testing.T) {
+	err := NewRemoveElementFromBlockUseCase(newBlockRepo()).Execute(context.Background(), RemoveElementFromBlockInput{
+		ActorRole: role.NewStudent(),
+		BlockID:   uuid.New().String(),
+		ElementID: uuid.New().String(),
+	})
+	if err == nil {
+		t.Fatal("expected forbidden error")
+	}
+}
+
+func TestChangeElementCompletionModeSuccess(t *testing.T) {
+	ctx := context.Background()
+	elements := newElementRepo()
+	tValue, _ := elementtitle.New("Element")
+	f, _ := file.New("notes.docx", 128)
+	content, _ := downloadfilecontent.New(f)
+	e, _ := elementdomain.New(tValue, content)
+	_ = elements.Save(ctx, e)
+
+	err := NewChangeElementCompletionModeUseCase(elements).Execute(ctx, ChangeElementCompletionModeInput{
+		ActorRole:      role.NewAdmin(),
+		ElementID:      e.ID().String(),
+		CompletionMode: "manual",
+	})
+	if err != nil {
+		t.Fatalf("change completion mode: %v", err)
+	}
+	updated, _ := elements.FindByID(ctx, e.ID())
+	if updated.CompletionMode() != elementdomain.CompletionModeManual {
+		t.Fatalf("expected manual mode, got %q", updated.CompletionMode())
+	}
+}
+
+func TestChangeElementCompletionModeRejectsInvalid(t *testing.T) {
+	ctx := context.Background()
+	elements := newElementRepo()
+	tValue, _ := elementtitle.New("Element")
+	f, _ := file.New("notes.docx", 128)
+	content, _ := downloadfilecontent.New(f)
+	e, _ := elementdomain.New(tValue, content)
+	_ = elements.Save(ctx, e)
+
+	err := NewChangeElementCompletionModeUseCase(elements).Execute(ctx, ChangeElementCompletionModeInput{
+		ActorRole:      role.NewAdmin(),
+		ElementID:      e.ID().String(),
+		CompletionMode: "invalid",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid completion mode")
+	}
+}
+
+func TestUnmarkElementCompletedSuccess(t *testing.T) {
+	ctx := context.Background()
+	repo := newProgressRepo()
+	elementID := uuid.New()
+	p, _ := progress.New(uuid.New())
+	_ = p.MarkCompleted(elementID)
+	repo.item = p
+
+	err := NewUnmarkElementCompletedUseCase(repo).Execute(ctx, UnmarkElementCompletedInput{
+		ActorRole:    role.NewStudent(),
+		EnrollmentID: p.EnrollmentID().String(),
+		ElementID:    elementID.String(),
+	})
+	if err != nil {
+		t.Fatalf("unmark element: %v", err)
+	}
+	if repo.saved.CompletedCount() != 0 {
+		t.Fatalf("expected 0 markers, got %d", repo.saved.CompletedCount())
+	}
+}
+
+func TestGetProgressReturnsCompletedElementIDs(t *testing.T) {
+	ctx := context.Background()
+	repo := newProgressRepo()
+	p, _ := progress.New(uuid.New())
+	elementID := uuid.New()
+	_ = p.MarkCompleted(elementID)
+	repo.item = p
+
+	out, err := NewGetProgressUseCase(repo).Execute(ctx, GetProgressInput{
+		ActorRole:    role.NewStudent(),
+		EnrollmentID: p.EnrollmentID().String(),
+	})
+	if err != nil {
+		t.Fatalf("get progress: %v", err)
+	}
+	if out.CompletedCount != 1 {
+		t.Fatalf("expected 1 completed, got %d", out.CompletedCount)
+	}
+	if len(out.CompletedElementIDs) != 1 {
+		t.Fatalf("expected 1 element id, got %d", len(out.CompletedElementIDs))
+	}
+	if out.CompletedElementIDs[0] != elementID {
+		t.Fatal("element id mismatch")
+	}
+}
+
+func TestGetProgressRejectsNonStudent(t *testing.T) {
+	_, err := NewGetProgressUseCase(newProgressRepo()).Execute(context.Background(), GetProgressInput{
+		ActorRole:    role.NewAdmin(),
+		EnrollmentID: uuid.New().String(),
+	})
+	if err == nil {
+		t.Fatal("expected forbidden error")
 	}
 }
 
