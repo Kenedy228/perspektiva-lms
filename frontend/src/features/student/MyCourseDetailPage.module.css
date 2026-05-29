@@ -1,0 +1,135 @@
+.backRow {
+  margin-bottom: 20px;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.stateError {
+  color: var(--color-danger);
+  font-size: 14px;
+  margin: 0;
+}
+
+.empty {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+/* ── Blocks ── */
+.blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.block {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.blockTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.blockNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.emptyBlock {
+  padding: 16px 18px;
+  color: var(--color-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* ── Elements ── */
+.elements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.element {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.element:last-child {
+  border-bottom: none;
+}
+
+.elementLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.elementIcon {
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.elementTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elementType {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* ── Quiz actions ── */
+.quizActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.quizError {
+  font-size: 12px;
+  color: var(--color-danger);
+  margin: 0;
+  max-width: 200px;
+  text-align: right;
+}

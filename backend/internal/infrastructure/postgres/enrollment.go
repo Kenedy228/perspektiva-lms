@@ -15,6 +15,7 @@ var (
 	_ enrollmentports.Repository          = (*EnrollmentRepository)(nil)
 	_ enrollmentports.ProgressInitializer = (*EnrollmentRepository)(nil)
 	_ enrollmentports.OrganizationScope   = (*EnrollmentRepository)(nil)
+	_ enrollmentports.QueryService        = (*EnrollmentQueryService)(nil)
 )
 
 // EnrollmentRepository persists enrollment aggregates and initializes progress rows.
@@ -118,4 +119,69 @@ func (r *EnrollmentRepository) PersonOrganizationID(ctx context.Context, personI
 		return uuid.Nil, nil
 	}
 	return organizationID.UUID, nil
+}
+
+// EnrollmentQueryService serves enrollment read models.
+type EnrollmentQueryService struct{ db *sql.DB }
+
+func NewEnrollmentQueryService(db *sql.DB) *EnrollmentQueryService {
+	return &EnrollmentQueryService{db: db}
+}
+
+func (q *EnrollmentQueryService) GetByID(ctx context.Context, id uuid.UUID) (enrollmentports.EnrollmentView, error) {
+	var view enrollmentports.EnrollmentView
+	var deactivatedAt sql.NullString
+	err := q.db.QueryRowContext(ctx, `
+		SELECT id::text, account_id::text, course_id::text,
+		       to_char(enrolled_at, 'YYYY-MM-DD'),
+		       to_char(completed_at, 'YYYY-MM-DD'),
+		       status
+		FROM enrollments
+		WHERE id = $1`, id).Scan(
+		&view.ID, &view.AccountID, &view.CourseID,
+		&view.ActivatedAt, &deactivatedAt, &view.Status,
+	)
+	if err != nil {
+		return enrollmentports.EnrollmentView{}, err
+	}
+	view.DeactivatedAt = deactivatedAt.String
+	view.StatusTitle = enrollmentdomain.Status(view.Status).Title()
+	return view, nil
+}
+
+func (q *EnrollmentQueryService) List(ctx context.Context, filter enrollmentports.ListFilter) ([]enrollmentports.EnrollmentView, error) {
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	rows, err := q.db.QueryContext(ctx, `
+		SELECT id::text, account_id::text, course_id::text,
+		       to_char(enrolled_at, 'YYYY-MM-DD'),
+		       to_char(completed_at, 'YYYY-MM-DD'),
+		       status
+		FROM enrollments
+		WHERE ($1::uuid IS NULL OR account_id = $1)
+		  AND ($2::uuid IS NULL OR course_id = $2)
+		ORDER BY enrolled_at DESC, id
+		LIMIT $3 OFFSET $4`,
+		nullUUID(filter.AccountID), nullUUID(filter.CourseID), filter.Limit, filter.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var views []enrollmentports.EnrollmentView
+	for rows.Next() {
+		var view enrollmentports.EnrollmentView
+		var deactivatedAt sql.NullString
+		if err := rows.Scan(
+			&view.ID, &view.AccountID, &view.CourseID,
+			&view.ActivatedAt, &deactivatedAt, &view.Status,
+		); err != nil {
+			return nil, err
+		}
+		view.DeactivatedAt = deactivatedAt.String
+		view.StatusTitle = enrollmentdomain.Status(view.Status).Title()
+		views = append(views, view)
+	}
+	return views, rows.Err()
 }

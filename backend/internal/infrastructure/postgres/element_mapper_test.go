@@ -81,7 +81,7 @@ func TestUnmarshalElementContent_LegacyTypesToNewDomainTypes(t *testing.T) {
 	}{
 		{name: "legacy video -> lecture", contentType: elementStorageTypeVideo, raw: rawVideo, wantType: elementdomain.ContentTypeLectureMaterial},
 		{name: "legacy document pdf -> lecture", contentType: elementStorageTypeDocument, raw: rawPDF, wantType: elementdomain.ContentTypeLectureMaterial},
-		{name: "legacy text -> download", contentType: elementStorageTypeText, raw: rawDOCX, wantType: elementdomain.ContentTypeDownloadFile},
+		{name: "legacy text -> download", contentType: "text", raw: rawDOCX, wantType: elementdomain.ContentTypeDownloadFile},
 		{name: "legacy quiz -> test", contentType: elementStorageTypeQuiz, raw: rawQuiz, wantType: elementdomain.ContentTypeTest},
 	}
 

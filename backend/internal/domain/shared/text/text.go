@@ -7,7 +7,7 @@ const (
 )
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректный текст")
 )
 
 type Text struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	attemptports "gitflic.ru/lms/backend/internal/application/ports/attempt"
 	courseports "gitflic.ru/lms/backend/internal/application/ports/course"
 	quizports "gitflic.ru/lms/backend/internal/application/ports/quiz"
 	accountcommands "gitflic.ru/lms/backend/internal/application/usecases/account/commands"
@@ -14,6 +15,7 @@ import (
 	coursecommands "gitflic.ru/lms/backend/internal/application/usecases/course/commands"
 	coursequeries "gitflic.ru/lms/backend/internal/application/usecases/course/queries"
 	enrollmentcommands "gitflic.ru/lms/backend/internal/application/usecases/enrollment/commands"
+	enrollmentqueries "gitflic.ru/lms/backend/internal/application/usecases/enrollment/queries"
 	orgcommands "gitflic.ru/lms/backend/internal/application/usecases/organization/commands"
 	orgqueries "gitflic.ru/lms/backend/internal/application/usecases/organization/queries"
 	personcommands "gitflic.ru/lms/backend/internal/application/usecases/person/commands"
@@ -23,6 +25,7 @@ import (
 	quizcommands "gitflic.ru/lms/backend/internal/application/usecases/quiz/commands"
 	"gitflic.ru/lms/backend/internal/domain/account"
 	attemptdomain "gitflic.ru/lms/backend/internal/domain/attempt"
+	"gitflic.ru/lms/backend/internal/domain/grading/registry"
 	questdomain "gitflic.ru/lms/backend/internal/domain/question"
 	"gitflic.ru/lms/backend/internal/domain/role"
 	"gitflic.ru/lms/backend/internal/transport/http/response"
@@ -120,11 +123,13 @@ type QuizUseCases struct {
 }
 
 type AttemptUseCases struct {
-	Start      *attemptcommands.StartUseCase
-	Answer     *attemptcommands.AddAnswerUseCase
-	Finish     *attemptcommands.FinishUseCase
-	Cancel     *attemptcommands.CancelUseCase
-	Repository attemptReader
+	Start         *attemptcommands.StartUseCase
+	Answer        *attemptcommands.AddAnswerUseCase
+	Finish        *attemptcommands.FinishUseCase
+	Cancel        *attemptcommands.CancelUseCase
+	Repository    attemptReader
+	Query         attemptports.QueryService
+	GradeRegistry *registry.Registry
 }
 
 type attemptReader interface {
@@ -152,6 +157,8 @@ type CourseUseCases struct {
 
 type EnrollmentUseCases struct {
 	Create *enrollmentcommands.CreateUseCase
+	Get    *enrollmentqueries.GetByIDQuery
+	List   *enrollmentqueries.ListQuery
 }
 
 func roleFromString(value string) (role.Role, error) {

@@ -1,0 +1,146 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.filterInput {
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.filterInput::placeholder {
+  color: var(--color-muted);
+}
+
+.activeFilters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* ── States ── */
+.state {
+  color: var(--color-muted);
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.stateError {
+  color: var(--color-danger);
+  font-size: 14px;
+}
+
+.empty {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ── Table ── */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: var(--color-surface);
+}
+
+.table thead {
+  background: var(--color-surface-strong);
+}
+
+.table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-strong);
+}
+
+/* ── UUID display ── */
+.uuid {
+  font-family: monospace;
+  font-size: 12px;
+  background: var(--color-surface-strong);
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: var(--color-text);
+  cursor: default;
+}
+
+/* ── Progress bar ── */
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progressTrack {
+  width: 80px;
+  height: 6px;
+  background: var(--color-surface-strong);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  min-width: 2px;
+}
+
+.progressText {
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 36px;
+  color: var(--color-text);
+}
+
+.completedCell {
+  font-size: 13px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}

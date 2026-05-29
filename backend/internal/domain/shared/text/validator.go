@@ -21,7 +21,7 @@ func validateValue(value string) error {
 
 func validateNotEmptyValue(value string) error {
 	if strings.TrimSpace(value) == "" {
-		return errors.New("invalid value")
+		return errors.New("значение не может быть пустым")
 	}
 
 	return nil
@@ -29,7 +29,7 @@ func validateNotEmptyValue(value string) error {
 
 func validateCharsLimit(value string) error {
 	if utf8.RuneCountInString(value) > ValueCharsLimit {
-		return fmt.Errorf("invalid value (%d)", ValueCharsLimit)
+		return fmt.Errorf("превышен лимит символов (%d)", ValueCharsLimit)
 	}
 
 	return nil

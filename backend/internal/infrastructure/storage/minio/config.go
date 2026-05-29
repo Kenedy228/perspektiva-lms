@@ -2,13 +2,15 @@ package minio
 
 import (
 	"errors"
-	"net/url"
 	"strings"
 )
 
 type Config struct {
 	Endpoint  string
+	AccessKey string
+	SecretKey string
 	Bucket    string
+	UseSSL    bool
 	PublicURL string
 }
 
@@ -19,13 +21,11 @@ func (c Config) validate() error {
 	if strings.TrimSpace(c.Bucket) == "" {
 		return errors.New("minio bucket is required")
 	}
-	if _, err := url.ParseRequestURI(c.Endpoint); err != nil {
-		return err
+	if strings.TrimSpace(c.AccessKey) == "" {
+		return errors.New("minio access key is required")
 	}
-	if c.PublicURL != "" {
-		if _, err := url.ParseRequestURI(c.PublicURL); err != nil {
-			return err
-		}
+	if strings.TrimSpace(c.SecretKey) == "" {
+		return errors.New("minio secret key is required")
 	}
 	return nil
 }

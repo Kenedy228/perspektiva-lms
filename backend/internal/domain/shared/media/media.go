@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректный медиафайл")
 )
 
 type Media struct {

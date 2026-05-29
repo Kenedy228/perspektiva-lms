@@ -115,6 +115,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /quizzes/{id}/sources", s.requireAuth(api.ReplaceQuizSources))
 	mux.HandleFunc("DELETE /quizzes/{id}", s.requireAuth(api.DeleteQuiz))
 
+	mux.HandleFunc("GET /attempts", s.requireAuth(api.ListAttempts))
 	mux.HandleFunc("POST /attempts", s.requireAuth(api.StartAttempt))
 	mux.HandleFunc("GET /attempts/{id}", s.requireAuth(api.GetAttempt))
 	mux.HandleFunc("PUT /attempts/{id}/answers/{questionID}", s.requireAuth(api.AddAttemptAnswer))
@@ -137,7 +138,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /courses/{courseID}/progress", s.requireAuth(api.GetCourseProgress))
 	mux.HandleFunc("GET /courses/{id}/ratings", s.requireAuth(api.ListCourseRatings))
 
+	mux.HandleFunc("GET /enrollments", s.requireAuth(api.ListEnrollments))
 	mux.HandleFunc("POST /enrollments", s.requireAuth(api.CreateEnrollment))
+	mux.HandleFunc("GET /enrollments/{id}", s.requireAuth(api.GetEnrollment))
 	mux.HandleFunc("GET /statistics/students", s.requireAuth(api.ListStudentStatistics))
 
 	return middleware.Recover(s.logger)(

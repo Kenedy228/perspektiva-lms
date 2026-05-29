@@ -1,0 +1,78 @@
+/* ── States ── */
+.state {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.stateError {
+  color: var(--color-danger);
+  font-size: 14px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.emptyIcon {
+  color: var(--color-border);
+}
+
+/* ── Table ── */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: var(--color-surface-strong);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-strong);
+}
+
+.table tbody td {
+  padding: 10px 14px;
+  vertical-align: middle;
+}
+
+.idCell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.dateCell {
+  font-size: 13px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}

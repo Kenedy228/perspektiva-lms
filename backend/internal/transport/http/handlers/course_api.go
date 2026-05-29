@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 
@@ -303,10 +304,19 @@ func (api *API) UploadElementContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
+
+	sniff := make([]byte, 512)
+	n, _ := file.Read(sniff)
+	detectedContentType := http.DetectContentType(sniff[:n])
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		response.WriteError(w, r, response.NewError(http.StatusInternalServerError, "internal_error", ""))
+		return
+	}
+
 	if err := api.Courses.UploadContent.Execute(r.Context(), coursecommands.UploadElementContentInput{
 		ActorRole:   actor.role,
 		ElementID:   r.PathValue("elementID"),
-		ContentType: header.Header.Get("Content-Type"),
+		ContentType: detectedContentType,
 		Body:        file,
 		Size:        header.Size,
 	}); err != nil {

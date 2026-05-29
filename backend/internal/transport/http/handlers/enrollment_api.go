@@ -6,6 +6,7 @@ import (
 
 	coursequeries "gitflic.ru/lms/backend/internal/application/usecases/course/queries"
 	enrollmentcommands "gitflic.ru/lms/backend/internal/application/usecases/enrollment/commands"
+	enrollmentqueries "gitflic.ru/lms/backend/internal/application/usecases/enrollment/queries"
 	"gitflic.ru/lms/backend/internal/domain/role"
 	"gitflic.ru/lms/backend/internal/transport/http/response"
 )
@@ -63,6 +64,46 @@ func (api *API) ListStudentStatistics(w http.ResponseWriter, r *http.Request) {
 		ActorPersonID:  actor.personID,
 		AccountID:      accountID,
 		OrganizationID: organizationID,
+		Limit:          limit,
+		Offset:         offset,
+	})
+	if err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, out.Views, response.Links{"self": {Href: r.URL.RequestURI(), Method: http.MethodGet}})
+}
+
+func (api *API) GetEnrollment(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	out, err := api.Enrollments.Get.Execute(r.Context(), enrollmentqueries.GetByIDInput{
+		ActorRole:      actor.role,
+		ActorAccountID: actor.accountID,
+		EnrollmentID:   r.PathValue("id"),
+	})
+	if err != nil {
+		writeHandlerError(w, r, err)
+		return
+	}
+	writeOK(w, r, out.View, response.Links{"self": {Href: r.URL.Path, Method: http.MethodGet}})
+}
+
+func (api *API) ListEnrollments(w http.ResponseWriter, r *http.Request) {
+	actor, ok := actorRole(r)
+	if !ok {
+		response.WriteError(w, r, response.NewError(http.StatusUnauthorized, "unauthorized", "session is required"))
+		return
+	}
+	limit, offset := limitOffset(r)
+	out, err := api.Enrollments.List.Execute(r.Context(), enrollmentqueries.ListInput{
+		ActorRole:      actor.role,
+		ActorAccountID: actor.accountID,
+		AccountID:      r.URL.Query().Get("account_id"),
+		CourseID:       r.URL.Query().Get("course_id"),
 		Limit:          limit,
 		Offset:         offset,
 	})

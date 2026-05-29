@@ -14,14 +14,14 @@ const (
 )
 
 var (
-	ErrForbidden    = errors.New("person usecase forbidden")
-	ErrInvalidInput = errors.New("person usecase invalid input")
-	ErrConflict     = errors.New("person usecase conflict")
+	ErrForbidden    = errors.New("доступ к управлению профилями запрещён")
+	ErrInvalidInput = errors.New("некорректные параметры запроса к профилю")
+	ErrConflict     = errors.New("конфликт при изменении профиля")
 )
 
 func RequireAdmin(actor role.Role) error {
 	if actor.Kind() != role.TypeAdmin {
-		return fmt.Errorf("%w: only admin can interact with person usecases", ErrForbidden)
+		return fmt.Errorf("%w: управление профилями доступно только администратору", ErrForbidden)
 	}
 
 	return nil
@@ -29,7 +29,7 @@ func RequireAdmin(actor role.Role) error {
 
 func NormalizePagination(limit, offset int) (int, int, error) {
 	if offset < 0 {
-		return 0, 0, fmt.Errorf("%w: offset cannot be negative", ErrInvalidInput)
+		return 0, 0, fmt.Errorf("%w: смещение не может быть отрицательным", ErrInvalidInput)
 	}
 
 	if limit == 0 {
@@ -37,11 +37,11 @@ func NormalizePagination(limit, offset int) (int, int, error) {
 	}
 
 	if limit < 0 {
-		return 0, 0, fmt.Errorf("%w: limit cannot be negative", ErrInvalidInput)
+		return 0, 0, fmt.Errorf("%w: лимит не может быть отрицательным", ErrInvalidInput)
 	}
 
 	if limit > MaxLimit {
-		return 0, 0, fmt.Errorf("%w: limit cannot exceed %d", ErrInvalidInput, MaxLimit)
+		return 0, 0, fmt.Errorf("%w: лимит не может превышать %d", ErrInvalidInput, MaxLimit)
 	}
 
 	return limit, offset, nil

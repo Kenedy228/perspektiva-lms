@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrInvalid = errors.New("invalid value")
+	ErrInvalid = errors.New("некорректный файл")
 )
 
 type File struct {

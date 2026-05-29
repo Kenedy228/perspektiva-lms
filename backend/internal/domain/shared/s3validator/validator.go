@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	ErrEmptyS3Key      = errors.New("invalid value")
-	ErrInvalidS3Key    = errors.New("invalid value")
-	ErrTooLongS3Key    = errors.New("invalid value")
-	ErrUnsafeS3KeyPath = errors.New("invalid value")
+	ErrEmptyS3Key      = errors.New("ключ объекта хранилища не может быть пустым")
+	ErrInvalidS3Key    = errors.New("ключ объекта хранилища содержит недопустимые символы")
+	ErrTooLongS3Key    = errors.New("ключ объекта хранилища превышает допустимую длину")
+	ErrUnsafeS3KeyPath = errors.New("ключ объекта хранилища содержит небезопасный путь")
 )
 
 // Максимальный размер ключа в байтах.

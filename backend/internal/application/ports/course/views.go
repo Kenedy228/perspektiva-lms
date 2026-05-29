@@ -8,8 +8,23 @@ type ShortView struct {
 }
 
 type DetailedView struct {
-	ID    string
-	Title string
+	ID     string
+	Title  string
+	Blocks []BlockView
+}
+
+type BlockView struct {
+	ID       string
+	Title    string
+	Elements []ElementView
+}
+
+type ElementView struct {
+	ID             string
+	Title          string
+	Type           string
+	CompletionMode string
+	QuizID         string
 }
 
 type StudentRatingView struct {

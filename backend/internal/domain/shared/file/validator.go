@@ -20,7 +20,7 @@ func validateFile(fileName string, sizeBytes int64) error {
 
 func validateFileName(fileName string) error {
 	if !fs.ValidPath(fileName) {
-		return errors.New("invalid value")
+		return errors.New("некорректное имя файла")
 	}
 
 	return nil
@@ -28,7 +28,7 @@ func validateFileName(fileName string) error {
 
 func validateFileSize(sizeBytes int64) error {
 	if sizeBytes <= 0 {
-		return errors.New("invalid value")
+		return errors.New("размер файла должен быть больше нуля")
 	}
 
 	return nil

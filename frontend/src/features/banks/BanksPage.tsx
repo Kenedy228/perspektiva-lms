@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { listBanks } from '../../api/banks'
 import { Button } from '../../components/ui/Button'
@@ -47,10 +47,13 @@ export function BanksPage() {
         <>
           <section className={styles.cards}>
             {banks.map((bank) => (
-              <article key={bank.ID} className={styles.card}>
-                <h3>{bank.Title}</h3>
-                <p>Вопросов: {bank.QuestionsCount}</p>
-              </article>
+              <Link key={bank.ID} to={`/banks/${bank.ID}`} className={styles.card}>
+                <div className={styles.cardInfo}>
+                  <h3>{bank.Title}</h3>
+                  <p>Вопросов: {bank.QuestionsCount}</p>
+                </div>
+                <ChevronRight size={18} className={styles.cardArrow} aria-hidden="true" />
+              </Link>
             ))}
           </section>
 

@@ -303,14 +303,76 @@ func (q *CourseQueryService) ListVisibleForStudent(ctx context.Context, filter c
 }
 
 func (q *CourseQueryService) GetDetailsByID(ctx context.Context, id uuid.UUID) (courseports.DetailedView, error) {
-	var view courseports.DetailedView
-	err := q.db.QueryRowContext(ctx, `
-		SELECT c.id::text, c.title
+	rows, err := q.db.QueryContext(ctx, `
+		SELECT
+			c.id::text, c.title,
+			cbl.block_id::text, cb.title,
+			cbe.element_id::text, ce.title, ce.type,
+			COALESCE(ce.quiz_id::text, ''), COALESCE(ce.completion_mode, 'none')
 		FROM courses c
-		WHERE c.id = $1`, id).Scan(&view.ID, &view.Title)
+		LEFT JOIN course_blocks_links cbl ON cbl.course_id = c.id
+		LEFT JOIN course_blocks cb ON cb.id = cbl.block_id
+		LEFT JOIN course_block_elements cbe ON cbe.block_id = cbl.block_id
+		LEFT JOIN course_elements ce ON ce.id = cbe.element_id
+		WHERE c.id = $1
+		ORDER BY cbl.position NULLS LAST, cbe.position NULLS LAST`, id)
 	if err != nil {
 		return courseports.DetailedView{}, err
 	}
+	defer rows.Close()
+
+	var view courseports.DetailedView
+	blockIndex := make(map[string]int) // block_id → index in view.Blocks
+
+	for rows.Next() {
+		var courseID, courseTitle string
+		var blockID, blockTitle sql.NullString
+		var elementID, elementTitle, elementType, elementQuizID, completionMode sql.NullString
+
+		if err := rows.Scan(
+			&courseID, &courseTitle,
+			&blockID, &blockTitle,
+			&elementID, &elementTitle, &elementType, &elementQuizID, &completionMode,
+		); err != nil {
+			return courseports.DetailedView{}, err
+		}
+
+		view.ID = courseID
+		view.Title = courseTitle
+
+		if !blockID.Valid {
+			continue
+		}
+
+		if _, exists := blockIndex[blockID.String]; !exists {
+			view.Blocks = append(view.Blocks, courseports.BlockView{
+				ID:    blockID.String,
+				Title: blockTitle.String,
+			})
+			blockIndex[blockID.String] = len(view.Blocks) - 1
+		}
+
+		if !elementID.Valid {
+			continue
+		}
+
+		idx := blockIndex[blockID.String]
+		view.Blocks[idx].Elements = append(view.Blocks[idx].Elements, courseports.ElementView{
+			ID:             elementID.String,
+			Title:          elementTitle.String,
+			Type:           elementType.String,
+			CompletionMode: completionMode.String,
+			QuizID:         elementQuizID.String,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return courseports.DetailedView{}, err
+	}
+
+	if view.ID == "" {
+		return courseports.DetailedView{}, sql.ErrNoRows
+	}
+
 	return view, nil
 }
 

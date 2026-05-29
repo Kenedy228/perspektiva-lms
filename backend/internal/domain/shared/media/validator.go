@@ -1,7 +1,6 @@
 package media
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 
@@ -10,7 +9,7 @@ import (
 
 func validateType(t Type) error {
 	if !t.IsValid() {
-		return fmt.Errorf("%w: invalid value", ErrInvalid)
+		return fmt.Errorf("%w: неизвестный тип медиафайла", ErrInvalid)
 	}
 
 	return nil
@@ -18,15 +17,15 @@ func validateType(t Type) error {
 
 func validateFileForType(t Type, f file.File) error {
 	if err := validateFileComplete(f); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalid, err)
+		return err
 	}
 
 	if err := validateFileExtension(f.Extension(), t.AllowedExtensions()); err != nil {
-		return fmt.Errorf("%w: invalid value (%v) (%q)", ErrInvalid, err, t.Title())
+		return fmt.Errorf("%w: %v для типа %q", ErrInvalid, err, t.Title())
 	}
 
 	if err := validateFileSize(f.SizeBytes(), t.MaxSizeInBytes()); err != nil {
-		return fmt.Errorf("%w: invalid value (%v) (%d)", ErrInvalid, err, t.MaxSizeInBytes())
+		return fmt.Errorf("%w: %v (лимит %d байт)", ErrInvalid, err, t.MaxSizeInBytes())
 	}
 
 	return nil
@@ -34,7 +33,7 @@ func validateFileForType(t Type, f file.File) error {
 
 func validateFileComplete(f file.File) error {
 	if f.IsIncomplete() {
-		return errors.New("invalid value")
+		return fmt.Errorf("%w: медиафайл не заполнен", ErrInvalid)
 	}
 
 	return nil
@@ -42,7 +41,7 @@ func validateFileComplete(f file.File) error {
 
 func validateFileExtension(actual string, allowed []string) error {
 	if !slices.Contains(allowed, actual) {
-		return errors.New("invalid value")
+		return fmt.Errorf("недопустимое расширение файла %q", actual)
 	}
 
 	return nil
@@ -50,7 +49,7 @@ func validateFileExtension(actual string, allowed []string) error {
 
 func validateFileSize(actual, maxSize int64) error {
 	if actual > maxSize {
-		return errors.New("invalid value")
+		return fmt.Errorf("превышен максимальный размер файла")
 	}
 
 	return nil

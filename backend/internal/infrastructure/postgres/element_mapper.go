@@ -20,8 +20,6 @@ type elementPayload struct {
 }
 
 const (
-	elementStorageTypeText     = "text"
-	elementStorageTypeSlides   = "slides"
 	elementStorageTypeDocument = "document"
 	elementStorageTypeVideo    = "video"
 	elementStorageTypeQuiz     = "quiz"
@@ -89,7 +87,8 @@ func unmarshalElementContent(contentType string, raw []byte) (elementdomain.Cont
 	}
 
 	switch contentType {
-	case elementStorageTypeText, elementStorageTypeSlides, elementStorageTypeDocument, elementStorageTypeVideo:
+	// "text" и "slides" — устаревшие типы до миграции 00005; оставлены для обратной совместимости.
+	case "text", "slides", elementStorageTypeDocument, elementStorageTypeVideo:
 		f, err := file.New(payload.FileName, payload.SizeBytes)
 		if err != nil {
 			return nil, err

@@ -134,15 +134,14 @@ func (p *AttemptPolicy) CanStartQuiz(ctx context.Context, accountID, enrollmentI
 		SELECT EXISTS (
 			SELECT 1
 			FROM enrollments e
-			JOIN course_version_links cvl ON cvl.course_id = e.course_id AND cvl.version_id = e.version_id
-			JOIN course_version_blocks cvb ON cvb.version_id = cvl.version_id
-			JOIN course_block_elements cbe ON cbe.block_id = cvb.block_id
+			JOIN course_blocks_links cbl ON cbl.course_id = e.course_id
+			JOIN course_block_elements cbe ON cbe.block_id = cbl.block_id
 			JOIN course_elements ce ON ce.id = cbe.element_id
 			WHERE e.id = $1
 				AND e.account_id = $2
+				AND ce.quiz_id = $3
 				AND e.enrolled_at <= $4
 				AND e.completed_at >= $4
-				AND ce.quiz_id = $3
 		)`, enrollmentID, accountID, quizID, at).Scan(&ok)
 	return ok, err
 }

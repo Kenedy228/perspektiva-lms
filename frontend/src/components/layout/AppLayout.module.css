@@ -10,6 +10,8 @@
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
   padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
 }
 
 .brand {
@@ -24,6 +26,7 @@
 .nav {
   display: grid;
   gap: 4px;
+  flex: 1;
 }
 
 .navLink {
@@ -47,6 +50,46 @@
 .active {
   background: var(--color-accent-soft);
   color: var(--color-accent);
+}
+
+.sidebarFooter {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roleLabel {
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.logoutBtn:hover {
+  background: var(--color-surface-strong);
+  color: var(--color-text);
 }
 
 .main {
@@ -80,6 +123,10 @@
 
   .navLink {
     flex: 0 0 auto;
+  }
+
+  .sidebarFooter {
+    display: none;
   }
 
   .main {

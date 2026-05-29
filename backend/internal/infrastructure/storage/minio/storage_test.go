@@ -2,59 +2,84 @@ package minio
 
 import (
 	"context"
-	"io"
-	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
-func TestObjectStoragePutAndDownloadURL(t *testing.T) {
-	var method string
-	var path string
-	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-		method = r.Method
-		path = r.URL.Path
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader("")),
-			Header:     make(http.Header),
-		}, nil
-	})}
+// PutObject, DeleteObject и GetDownloadURL (presign) требуют реального MinIO —
+// покрываются интеграционным тестом postgres_integration_test.go.
 
-	storage, err := NewObjectStorage(Config{
-		Endpoint:  "http://minio.local",
-		Bucket:    "courses",
-		PublicURL: "http://cdn.local",
-	}, client)
-	if err != nil {
-		t.Fatalf("create storage: %v", err)
+func TestNewObjectStorage_InvalidConfig(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  Config
+	}{
+		{name: "missing endpoint", cfg: Config{AccessKey: "key", SecretKey: "secret", Bucket: "b"}},
+		{name: "missing bucket", cfg: Config{Endpoint: "localhost:9000", AccessKey: "key", SecretKey: "secret"}},
+		{name: "missing access key", cfg: Config{Endpoint: "localhost:9000", SecretKey: "secret", Bucket: "b"}},
+		{name: "missing secret key", cfg: Config{Endpoint: "localhost:9000", AccessKey: "key", Bucket: "b"}},
 	}
-
-	obj, err := storage.PutObject(context.Background(), "lesson.pdf", strings.NewReader("pdf"), 3, "application/pdf")
-	if err != nil {
-		t.Fatalf("put object: %v", err)
-	}
-	if method != http.MethodPut {
-		t.Fatalf("expected PUT, got %s", method)
-	}
-	if path != "/courses/lesson.pdf" {
-		t.Fatalf("expected object path, got %s", path)
-	}
-	if obj.ContentURL != "http://cdn.local/courses/lesson.pdf" {
-		t.Fatalf("unexpected content url: %s", obj.ContentURL)
-	}
-
-	url, err := storage.GetDownloadURL(context.Background(), "lesson.pdf", 0)
-	if err != nil {
-		t.Fatalf("get url: %v", err)
-	}
-	if url != obj.ContentURL {
-		t.Fatalf("expected %s, got %s", obj.ContentURL, url)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewObjectStorage(tc.cfg)
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+		})
 	}
 }
 
-type roundTripFunc func(*http.Request) (*http.Response, error)
+func TestGetDownloadURL_EmptyKey(t *testing.T) {
+	s, err := NewObjectStorage(Config{
+		Endpoint:  "localhost:9000",
+		AccessKey: "minioadmin",
+		SecretKey: "minioadmin",
+		Bucket:    "lms",
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	_, err = s.GetDownloadURL(context.Background(), "   ", 15*time.Minute)
+	if err == nil {
+		t.Fatal("expected error for empty key, got nil")
+	}
+}
 
-func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
-	return f(r)
+func TestPublicObjectURL_WithPublicURL(t *testing.T) {
+	s, err := NewObjectStorage(Config{
+		Endpoint:  "localhost:9000",
+		AccessKey: "minioadmin",
+		SecretKey: "minioadmin",
+		Bucket:    "lms",
+		PublicURL: "https://cdn.example.com",
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	got := s.publicObjectURL("lessons/video.mp4")
+	want := "https://cdn.example.com/lms/lessons/video.mp4"
+	if got != want {
+		t.Fatalf("expected %q, got %q", want, got)
+	}
+}
+
+func TestPublicObjectURL_WithoutPublicURL_HTTP(t *testing.T) {
+	s, err := NewObjectStorage(Config{
+		Endpoint:  "localhost:9000",
+		AccessKey: "minioadmin",
+		SecretKey: "minioadmin",
+		Bucket:    "lms",
+		UseSSL:    false,
+	})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	got := s.publicObjectURL("doc.pdf")
+	if !strings.HasPrefix(got, "http://") {
+		t.Fatalf("expected http scheme, got: %s", got)
+	}
+	if !strings.Contains(got, "lms/doc.pdf") {
+		t.Fatalf("expected bucket/key in url, got: %s", got)
+	}
 }

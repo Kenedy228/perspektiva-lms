@@ -17,6 +17,7 @@ import (
 	coursecommands "gitflic.ru/lms/backend/internal/application/usecases/course/commands"
 	coursequeries "gitflic.ru/lms/backend/internal/application/usecases/course/queries"
 	enrollmentcommands "gitflic.ru/lms/backend/internal/application/usecases/enrollment/commands"
+	enrollmentqueries "gitflic.ru/lms/backend/internal/application/usecases/enrollment/queries"
 	orgcommands "gitflic.ru/lms/backend/internal/application/usecases/organization/commands"
 	orgqueries "gitflic.ru/lms/backend/internal/application/usecases/organization/queries"
 	personcommands "gitflic.ru/lms/backend/internal/application/usecases/person/commands"
@@ -66,6 +67,7 @@ func main() {
 	questionRepo := postgres.NewQuestionRepository(db)
 	quizRepo := postgres.NewQuizRepository(db)
 	attemptRepo := postgres.NewAttemptRepository(db)
+	attemptQuery := postgres.NewAttemptQueryService(db)
 	attemptPolicy := postgres.NewAttemptPolicy(db)
 	courseRepo := postgres.NewCourseRepository(db)
 	blockRepo := postgres.NewBlockRepository(db)
@@ -74,14 +76,18 @@ func main() {
 
 	courseQuery := postgres.NewCourseQueryService(db)
 	enrollmentRepo := postgres.NewEnrollmentRepository(db)
+	enrollmentQuery := postgres.NewEnrollmentQueryService(db)
 
 	passwordComparer := auth.NewBcryptPasswordComparer()
 
 	objectStorage, err := minio.NewObjectStorage(minio.Config{
 		Endpoint:  cfg.minioEndpoint,
+		AccessKey: cfg.minioAccessKey,
+		SecretKey: cfg.minioSecretKey,
 		Bucket:    cfg.minioBucket,
+		UseSSL:    cfg.minioUseSSL,
 		PublicURL: cfg.minioPublicURL,
-	}, nil)
+	})
 	if err != nil {
 		logger.Error("create minio storage", "error", err)
 		os.Exit(1)
@@ -180,11 +186,13 @@ func main() {
 			Repository:    quizRepo,
 		},
 		Attempts: handlers.AttemptUseCases{
-			Start:      attemptcommands.NewStartUseCase(attemptRepo, quizRepo, attemptPolicy, questionRepo, attemptinfra.NewMathRandQuestionShuffler()),
-			Answer:     attemptcommands.NewAddAnswerUseCase(attemptRepo),
-			Finish:     attemptcommands.NewFinishUseCase(attemptRepo),
-			Cancel:     attemptcommands.NewCancelUseCase(attemptRepo),
-			Repository: attemptRepo,
+			Start:         attemptcommands.NewStartUseCase(attemptRepo, quizRepo, attemptPolicy, questionRepo, attemptinfra.NewMathRandQuestionShuffler()),
+			Answer:        attemptcommands.NewAddAnswerUseCase(attemptRepo),
+			Finish:        attemptcommands.NewFinishUseCase(attemptRepo),
+			Cancel:        attemptcommands.NewCancelUseCase(attemptRepo),
+			Repository:    attemptRepo,
+			Query:         attemptQuery,
+			GradeRegistry: checkerRegistry,
 		},
 		Courses: handlers.CourseUseCases{
 			Create:               coursecommands.NewCreateCourseUseCase(courseRepo),
@@ -206,6 +214,8 @@ func main() {
 		},
 		Enrollments: handlers.EnrollmentUseCases{
 			Create: enrollmentcommands.NewCreateUseCase(enrollmentRepo, enrollmentRepo),
+			Get:    enrollmentqueries.NewGetByIDQuery(enrollmentQuery),
+			List:   enrollmentqueries.NewListQuery(enrollmentQuery),
 		},
 	}
 
@@ -237,7 +247,10 @@ type config struct {
 	sessionSecret  string
 	sessionTTL     time.Duration
 	minioEndpoint  string
+	minioAccessKey string
+	minioSecretKey string
 	minioBucket    string
+	minioUseSSL    bool
 	minioPublicURL string
 }
 
@@ -247,8 +260,11 @@ func configFromEnv() config {
 		databaseURL:    env("DATABASE_URL", "postgres://lms:lms@localhost:5433/lms?sslmode=disable"),
 		sessionSecret:  env("SESSION_SECRET", "local-development-secret-change-me"),
 		sessionTTL:     durationEnv("SESSION_TTL", 8*time.Hour),
-		minioEndpoint:  env("MINIO_ENDPOINT", "http://localhost:9000"),
+		minioEndpoint:  env("MINIO_ENDPOINT", "localhost:9000"),
+		minioAccessKey: env("MINIO_ACCESS_KEY", "minioadmin"),
+		minioSecretKey: env("MINIO_SECRET_KEY", "minioadmin"),
 		minioBucket:    env("MINIO_BUCKET", "lms"),
+		minioUseSSL:    boolEnv("MINIO_USE_SSL", false),
 		minioPublicURL: env("MINIO_PUBLIC_URL", ""),
 	}
 }
@@ -271,4 +287,16 @@ func durationEnv(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return parsed
+}
+
+func boolEnv(key string, fallback bool) bool {
+	value := os.Getenv(key)
+	switch value {
+	case "true", "1", "yes":
+		return true
+	case "false", "0", "no":
+		return false
+	default:
+		return fallback
+	}
 }

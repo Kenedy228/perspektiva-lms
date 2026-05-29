@@ -9,6 +9,28 @@ type RequestOptions = {
   auth?: boolean
 }
 
+export async function upload<T>(path: string, file: File): Promise<T> {
+  const formData = new FormData()
+  formData.append('content', file)
+
+  const headers = new Headers()
+  headers.set('Accept', 'application/json')
+  const token = getSessionToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  const response = await fetch(`${baseURL}${path}`, {
+    method: 'PUT',
+    headers,
+    body: formData,
+  })
+
+  const payload = await readJSON(response)
+  if (!response.ok) throw toApiError(response.status, payload)
+
+  const envelope = payload as ApiEnvelope<T>
+  return envelope.data as T
+}
+
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers()
   headers.set('Accept', 'application/json')
